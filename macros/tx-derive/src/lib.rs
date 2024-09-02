@@ -1,31 +1,47 @@
-use darling::{util::Flag, FromAttributes, FromDeriveInput};
+use darling::{util::Flag, FromAttributes, FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
-use syn::parse_macro_input;
+use quote::ToTokens;
+use syn::{parse_macro_input, Path};
 
 mod enum_impl;
 mod struct_impl;
 
 #[derive(FromDeriveInput, Default)]
-#[darling(default, attributes(tx_msg))]
+#[darling(default, attributes(msg))]
 struct MessageArg {
     #[darling(default)]
     pub gears: Flag,
     #[darling(default)]
     pub url: String,
     #[darling(default)]
-    pub amino_url: String,
+    pub amino_url: Option<String>,
 }
 
 #[derive(FromAttributes, Default)]
-#[darling(default, attributes(tx_msg), forward_attrs(allow, doc, cfg))]
+#[darling(default, attributes(msg), forward_attrs(allow, doc, cfg))]
 struct MessageAttr {
     #[darling(default)]
-    pub url: String,
+    pub url: Option<PathOrString>,
     #[darling(default)]
     pub signer: Flag,
 }
 
-#[proc_macro_derive(AppMessage, attributes(tx_msg))]
+#[derive(Debug, FromMeta)]
+enum PathOrString {
+    Path(Path),
+    String(String),
+}
+
+impl ToTokens for PathOrString {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        match self {
+            PathOrString::Path(var) => var.to_tokens(tokens),
+            PathOrString::String(var) => var.to_tokens(tokens),
+        }
+    }
+}
+
+#[proc_macro_derive(AppMessage, attributes(msg))]
 pub fn message_derive(input: TokenStream) -> TokenStream {
     inner::expand_macro(parse_macro_input!(input))
         .unwrap_or_else(syn::Error::into_compile_error)

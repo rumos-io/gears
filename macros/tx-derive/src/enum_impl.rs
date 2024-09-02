@@ -39,9 +39,12 @@ pub fn expand_macro(
         let ident = &v.ident;
 
         let MessageAttr { url, signer: _ } = MessageAttr::from_attributes(attr)?;
-        let url = match url.is_empty() {
-            false => quote! { #url },
-            true => quote! { Self::TYPE_URL },
+        let url = match url {
+            Some(url) => quote! { #url },
+            None => Err(syn::Error::new(
+                proc_macro2::Span::call_site(),
+                "`url` attribute is required for enum variant",
+            ))?,
         };
 
         from_any.push(quote! {

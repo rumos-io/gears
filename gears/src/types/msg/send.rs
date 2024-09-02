@@ -1,11 +1,10 @@
-use bytes::Bytes;
-use core_types::{any::google::Any, Protobuf};
+use core_types::Protobuf;
 use serde::{Deserialize, Serialize};
+use tx_derive::AppMessage;
 
 use crate::types::{
     address::AccAddress,
     base::{coin::UnsignedCoin, coins::UnsignedCoins, errors::CoinError},
-    tx::TxMessage,
 };
 
 mod inner {
@@ -18,8 +17,14 @@ mod inner {
 pub struct MsgSendParseError(pub String);
 
 /// MsgSend represents a message to send coins from one account to another.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, AppMessage)]
+#[msg(
+    url = "/cosmos.bank.v1beta1.MsgSend",
+    amino_url = "cosmos-sdk/MsgSend",
+    gears
+)]
 pub struct MsgSend {
+    // TODO: WHAT FIELD IS SIGNERS?
     pub from_address: AccAddress,
     pub to_address: AccAddress,
     pub amount: UnsignedCoins,
@@ -64,36 +69,3 @@ impl From<MsgSend> for inner::MsgSend {
 }
 
 impl Protobuf<inner::MsgSend> for MsgSend {}
-
-//TODO: should to Any be implemented at the individual message type?
-impl From<MsgSend> for Any {
-    fn from(msg: MsgSend) -> Self {
-        Any {
-            type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
-            value: msg.encode_vec(),
-        }
-    }
-}
-
-impl TxMessage for MsgSend {
-    fn get_signers(&self) -> Vec<&AccAddress> {
-        todo!()
-    }
-
-    fn type_url(&self) -> &'static str {
-        "/cosmos.bank.v1beta1.MsgSend"
-    }
-
-    fn amino_url(&self) -> &'static str {
-        "cosmos-sdk/MsgSend"
-    }
-}
-
-impl TryFrom<Any> for MsgSend {
-    type Error = core_types::errors::CoreError;
-
-    fn try_from(value: Any) -> Result<Self, Self::Error> {
-        MsgSend::decode::<Bytes>(value.value.clone().into())
-            .map_err(|e| core_types::errors::CoreError::DecodeAny(e.to_string()))
-    }
-}

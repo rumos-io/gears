@@ -9,21 +9,35 @@ pub fn expand_macro(
     type_ident: Ident,
     crate_prefix: proc_macro2::TokenStream,
     url: String,
-    amino_url: String,
+    amino_url: Option<String>,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let (url, amino_url) = match (url.is_empty(), amino_url.is_empty()) {
-        (false, false) => Ok((url, amino_url)),
-        _ => Err(syn::Error::new(
+    let url = match url.is_empty() {
+        false => Ok(url),
+        true => Err(syn::Error::new(
             proc_macro2::Span::call_site(),
             "`url` attribute is required for structure",
         )),
     }?;
 
+    let (amino_url, empty_amino) = match amino_url {
+        Some(amino_url) => match amino_url.is_empty() {
+            true => Err(syn::Error::new(
+                proc_macro2::Span::call_site(),
+                "`amino_url` attribute can't be empty",
+            ))?,
+            false => (
+                quote! {  pub const AMINO_URL : &'static str = #amino_url; },
+                false,
+            ),
+        },
+        None => (quote! {}, true),
+    };
+
     let type_url_impl = quote! {
         impl #type_ident
         {
            pub const TYPE_URL : &'static str = #url;
-           pub const AMINO_URL : &'static str = #amino_url;
+           #amino_url
         }
     };
 
@@ -43,6 +57,9 @@ pub fn expand_macro(
             type Error = #crate_prefix::core::errors::CoreError;
 
             fn try_from(value: #crate_prefix::core::any::google::Any) -> ::std::result::Result<Self, Self::Error> {
+
+                use #crate_prefix::core::Protobuf;
+
                 match ::std::string::String::as_str(&value.type_url)
                 {
                     Self::TYPE_URL => {
@@ -82,14 +99,13 @@ pub fn expand_macro(
         }
     };
 
-    let type_urls_fns_impl = quote! {
-        fn type_url(&self) -> &'static str {
-            Self::TYPE_URL
-        }
-
-        fn amino_url(&self) -> &'static str {
-            Self::AMINO_URL
-        }
+    let amino_impl = match empty_amino {
+        true => quote! {},
+        false => quote! {
+            fn amino_url(&self) -> &'static str {
+                Self::AMINO_URL
+            }
+        },
     };
 
     let tx_message_impl = quote! {
@@ -97,7 +113,11 @@ pub fn expand_macro(
         {
             #signers_impl
 
-            #type_urls_fns_impl
+            fn type_url(&self) -> &'static str {
+                Self::TYPE_URL
+            }
+
+            #amino_impl
         }
     };
 
