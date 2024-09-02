@@ -1,6 +1,6 @@
-use darling::{util::Flag, FromAttributes, FromDeriveInput, FromMeta};
+use darling::{util::Flag, FromAttributes, FromDeriveInput};
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, spanned::Spanned};
+use syn::parse_macro_input;
 
 mod enum_impl;
 mod struct_impl;
@@ -11,43 +11,18 @@ struct MessageArg {
     #[darling(default)]
     pub gears: Flag,
     #[darling(default)]
-    pub url: Url,
+    pub url: String,
     #[darling(default)]
-    pub amino_url: Url,
+    pub amino_url: String,
 }
 
 #[derive(FromAttributes, Default)]
 #[darling(default, attributes(tx_msg), forward_attrs(allow, doc, cfg))]
 struct MessageAttr {
-    #[darling(default, flatten)]
-    pub url: Url,
+    #[darling(default)]
+    pub url: String,
     #[darling(default)]
     pub signer: Flag,
-}
-
-#[derive(FromMeta, Default)]
-#[darling(and_then = Self::validate)]
-struct Url {
-    url: Option<String>,
-}
-
-impl Url {
-    fn validate(self) -> darling::Result<Self> {
-        match &self.url {
-            Some(var) => {
-                match var.is_empty() {
-                    true => Err(darling::Error::custom("Cannot set `url` to empty")
-                        .with_span(&self.url.span())),
-                    false => Ok(self),
-                }
-            }
-            None => Ok(self),
-        }
-    }
-
-    fn into_inner(self) -> Option<String> {
-        self.url
-    }
 }
 
 #[proc_macro_derive(AppMessage, attributes(tx_msg))]

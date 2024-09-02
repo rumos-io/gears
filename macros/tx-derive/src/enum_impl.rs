@@ -39,9 +39,9 @@ pub fn expand_macro(
         let ident = &v.ident;
 
         let MessageAttr { url, signer: _ } = MessageAttr::from_attributes(attr)?;
-        let url = match url.into_inner() {
-            Some(var) => quote! { #var },
-            None => quote! { Self::TYPE_URL },
+        let url = match url.is_empty() {
+            false => quote! { #url },
+            true => quote! { Self::TYPE_URL },
         };
 
         from_any.push(quote! {

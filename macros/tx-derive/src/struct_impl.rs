@@ -2,28 +2,20 @@ use darling::FromAttributes;
 use quote::quote;
 use syn::{spanned::Spanned, DataStruct, Field, Ident};
 
-use crate::{MessageAttr, Url};
+use crate::MessageAttr;
 
 pub fn expand_macro(
     DataStruct { fields, .. }: DataStruct,
     type_ident: Ident,
     crate_prefix: proc_macro2::TokenStream,
-    url: Url,
-    amino_url: Url,
+    url: String,
+    amino_url: String,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let url = match url.into_inner() {
-        Some(url) => Ok(url),
-        None => Err(syn::Error::new(
+    let (url, amino_url) = match (url.is_empty(), amino_url.is_empty()) {
+        (false, false) => Ok((url, amino_url)),
+        _ => Err(syn::Error::new(
             proc_macro2::Span::call_site(),
             "`url` attribute is required for structure",
-        )),
-    }?;
-
-    let amino_url = match amino_url.into_inner() {
-        Some(amino_url) => Ok(amino_url),
-        None => Err(syn::Error::new(
-            proc_macro2::Span::call_site(),
-            "`amino_url` attribute is required for structure",
         )),
     }?;
 
@@ -36,10 +28,10 @@ pub fn expand_macro(
     };
 
     let from_msg_to_any_impl = quote! {
-        impl ::std::conver::From<#type_ident> for  #crate_prefix::any::google::Any  {
+        impl ::std::convert::From<#type_ident> for  #crate_prefix::core::any::google::Any  {
             fn from(msg: #type_ident) -> Self {
-                #crate_prefix::any::google::Any {
-                    type_url: Self::TYPE_URL.to_string(),
+                #crate_prefix::core::any::google::Any {
+                    type_url: #type_ident::TYPE_URL.to_string(),
                     value: #crate_prefix::core::Protobuf::encode_vec(&msg),
                 }
             }
@@ -47,19 +39,19 @@ pub fn expand_macro(
     };
 
     let try_from_any_to_msg_impl = quote! {
-        impl TryFrom<#crate_prefix::any::google::Any> for #type_ident {
-            type Error = #crate_prefix::errors::CoreError;
+        impl TryFrom<#crate_prefix::core::any::google::Any> for #type_ident {
+            type Error = #crate_prefix::core::errors::CoreError;
 
-            fn try_from(value: #crate_prefix::any::google::Any) -> ::std::result::Result<Self, Self::Error> {
+            fn try_from(value: #crate_prefix::core::any::google::Any) -> ::std::result::Result<Self, Self::Error> {
                 match ::std::string::String::as_str(&value.type_url)
                 {
                     Self::TYPE_URL => {
-                        let msg = <Self as ::prost::Message>::decode::<::prost::bytes::Bytes>(::std::convert::Into::into(value.value))
-                         .map_err(|e| #crate_prefix::errors::CoreError::DecodeProtobuf(::std::string::ToString::to_string(&e)))?;
+                        let msg = Self::decode::<::prost::bytes::Bytes>(::std::convert::Into::into(value.value))
+                         .map_err(|e| #crate_prefix::core::errors::CoreError::DecodeProtobuf(::std::string::ToString::to_string(&e)))?;
 
                         Ok(msg)
                     },
-                      _ => Err( #crate_prefix::errors::CoreError::DecodeGeneral(
+                      _ => Err( #crate_prefix::core::errors::CoreError::DecodeGeneral(
                         ::std::convert::Into::into("message type not recognized"),
                     ))
                 }
@@ -85,7 +77,7 @@ pub fn expand_macro(
     let signers_impl = quote! {
         fn get_signers(&self) -> ::std::vec::Vec<&#crate_prefix::types::address::AccAddress> {
             ::std::vec![
-                #(#signers),*
+                #(&self.#signers),*
             ]
         }
     };
@@ -101,9 +93,12 @@ pub fn expand_macro(
     };
 
     let tx_message_impl = quote! {
-        #signers_impl
+        impl #crate_prefix::types::tx::TxMessage for #type_ident
+        {
+            #signers_impl
 
-        #type_urls_fns_impl
+            #type_urls_fns_impl
+        }
     };
 
     Ok(quote! {
