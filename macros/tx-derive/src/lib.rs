@@ -1,3 +1,6 @@
+#![cfg(not(doctest))]
+#![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"),"/","Readme.md"))]
+
 use darling::{util::Flag, FromAttributes, FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
 use quote::ToTokens;
