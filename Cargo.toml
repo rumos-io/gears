@@ -6,11 +6,11 @@ members = [
   "core-types",
 
   # with local deps
-  # "address",
-  # "trees",
-  # "kv_store",
-  # "keyring",
-  # "gears",
+  "address",
+  "trees",
+  "kv_store",
+  "keyring",
+  "gears",
 
   # macros
   "macros/tx-derive",

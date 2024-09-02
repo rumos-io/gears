@@ -10,8 +10,10 @@ mod struct_impl;
 struct MessageArg {
     #[darling(default)]
     pub gears: Flag,
-    #[darling(default, flatten)]
+    #[darling(default)]
     pub url: Url,
+    #[darling(default)]
+    pub amino_url: Url,
 }
 
 #[derive(FromAttributes, Default)]
@@ -19,6 +21,8 @@ struct MessageArg {
 struct MessageAttr {
     #[darling(default, flatten)]
     pub url: Url,
+    #[darling(default)]
+    pub signer: Flag,
 }
 
 #[derive(FromMeta, Default)]
@@ -58,10 +62,14 @@ mod inner {
     use quote::quote;
     use syn::DeriveInput;
 
-    use crate::{enum_impl, MessageArg};
+    use crate::{enum_impl, struct_impl, MessageArg};
 
     pub fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
-        let MessageArg { gears, url } = MessageArg::from_derive_input(&input)?;
+        let MessageArg {
+            gears,
+            url,
+            amino_url,
+        } = MessageArg::from_derive_input(&input)?;
         let DeriveInput { ident, data, .. } = input;
 
         let crate_prefix = match gears.is_present() {
@@ -70,112 +78,14 @@ mod inner {
         };
 
         match data {
-            syn::Data::Struct(data) => Ok(quote! {}),
+            syn::Data::Struct(data) => {
+                struct_impl::expand_macro(data, ident, crate_prefix, url, amino_url)
+            }
             syn::Data::Enum(data) => enum_impl::expand_macro(data, ident, crate_prefix),
             syn::Data::Union(_) => Err(syn::Error::new(
                 proc_macro2::Span::call_site(),
-                "Query can't be derived for `Union`",
+                "TODO can't be derived for `Union`",
             )),
         }
     }
 }
-
-// fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
-//     let name = &ast.ident;
-
-//     let data = &ast.data;
-
-//     match data {
-//         syn::Data::Struct(_) => panic!("Message can only be derived for enums"),
-//         syn::Data::Union(_) => panic!("Message can only be derived for enums"),
-//         syn::Data::Enum(enum_data) => {
-//             let get_signers = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
-//                 quote! {
-//                     Self::#i(msg) => ::gears::types::tx::TxMessage::get_signers(msg)
-//                 }
-//             });
-
-//             let type_url = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
-//                 quote! {
-//                     Self::#i(msg) => ::gears::types::tx::TxMessage::type_url(msg)
-//                 }
-//             });
-
-//             let amino_url = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
-//                 quote! {
-//                     Self::#i(msg) => ::gears::types::tx::TxMessage::amino_url(msg)
-//                 }
-//             });
-
-//             let into_any = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
-//                 quote! {
-//                     #name ::#i(msg) => msg.into()
-//                 }
-//             });
-
-//             let from_any = enum_data.variants.iter().map(|v| {
-//                 let attr = &v.attrs;
-//                 let ident = &v.ident;
-
-//                 let attrs = Gears::parse_attrs(attr).unwrap();
-//                 let url = attrs.url;
-
-//                 quote! {
-//                     if value.type_url.starts_with(#url) {
-//                         Ok(Self::#ident(::gears::core::any::google::Any::try_into(value)?))
-//                     }
-//                 }
-//             });
-
-//             let gen = quote! {
-//                 impl  ::gears::types::tx::TxMessage for #name {
-
-//                     fn get_signers(&self) -> Vec<&::gears::types::address::AccAddress> {
-
-//                         match self {
-//                             #(#get_signers),*
-//                         }
-//                     }
-
-//                     fn type_url(&self) -> &'static str {
-//                         match self {
-//                             #(#type_url),*
-//                         }
-//                     }
-
-//                     fn amino_url(&self) -> &'static str {
-//                         match self {
-//                             #(#amino_url),*
-//                         }
-//                     }
-
-//                 }
-
-//                 impl From<#name> for ::gears::core::any::google::Any {
-//                     fn from(msg: #name) -> Self {
-//                         match msg {
-//                             #(#into_any),*
-//                         }
-//                     }
-//                 }
-
-//                 impl TryFrom<::gears::core::any::google::Any> for #name {
-//                     type Error = ::gears::core::errors::CoreError;
-
-//                     fn try_from(value: ::gears::core::any::google::Any) -> Result<Self, Self::Error> {
-
-//                         #(#from_any) else*
-
-//                          else {
-//                             Err(::gears::core::errors::CoreError::DecodeGeneral(
-//                                 "message type not recognized".into(),
-//                             ))
-//                         }
-//                     }
-//                 }
-
-//             };
-//             gen.into()
-//         }
-//     }
-// }
