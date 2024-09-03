@@ -1,3 +1,4 @@
+use crate::ext::{IteratorPaginateByOffset, PaginationByOffset};
 use crate::rest::error::HTTPError;
 use crate::types::pagination::response::PaginationResponse;
 use crate::types::request::tx::BroadcastTxRequest;
@@ -6,6 +7,7 @@ use crate::types::response::tx::{
     BroadcastTxResponse, BroadcastTxResponseLight, TxResponse, TxResponseLight,
 };
 use crate::types::response::tx_event::GetTxsEventResponse;
+use crate::types::response::validators::GetLatestValidatorSetResponse;
 use crate::types::tx::{Tx, TxMessage};
 use axum::extract::{Path, Query as AxumQuery, State};
 use axum::Json;
@@ -18,7 +20,6 @@ use tendermint::informal::Hash;
 use tendermint::rpc::client::{Client, HttpClient, HttpClientUrl};
 use tendermint::rpc::query::Query;
 use tendermint::rpc::response::tx::search::Response;
-use tendermint::rpc::response::validators::Response as ValidatorsResponse;
 use tendermint::rpc::url::Url;
 use tendermint::rpc::Order;
 
@@ -55,7 +56,7 @@ pub async fn node_info(
 pub async fn validatorsets_latest(
     AxumQuery(pagination): AxumQuery<Pagination>,
     State(tendermint_rpc_address): State<HttpClientUrl>,
-) -> Result<Json<ValidatorsResponse>, HTTPError> {
+) -> Result<Json<GetLatestValidatorSetResponse>, HTTPError> {
     let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
 
     let (page, limit) = parse_pagination(&pagination);
@@ -68,6 +69,22 @@ pub async fn validatorsets_latest(
         .map_err(|e| {
             tracing::error!("Error connecting to Tendermint: {e}");
             HTTPError::gateway_timeout()
+        })
+        .map(|res| {
+            let (pagination_result, iter) = res
+                .validators
+                .into_iter()
+                .map(Into::into)
+                .paginate_by_offset(PaginationByOffset::from((
+                    page as usize - 1,
+                    limit as usize,
+                )));
+            let validators = iter.collect();
+            GetLatestValidatorSetResponse {
+                block_height: res.block_height.into(),
+                validators,
+                pagination: Some(pagination_result.into()),
+            }
         })?;
     Ok(Json(res))
 }
@@ -76,7 +93,7 @@ pub async fn validatorsets(
     Path(height): Path<u32>,
     AxumQuery(pagination): AxumQuery<Pagination>,
     State(tendermint_rpc_address): State<HttpClientUrl>,
-) -> Result<Json<ValidatorsResponse>, HTTPError> {
+) -> Result<Json<GetLatestValidatorSetResponse>, HTTPError> {
     let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
 
     let (page, limit) = parse_pagination(&pagination);
@@ -92,7 +109,24 @@ pub async fn validatorsets(
         .map_err(|e| {
             tracing::error!("Error connecting to Tendermint: {e}");
             HTTPError::gateway_timeout()
+        })
+        .map(|res| {
+            let (pagination_result, iter) = res
+                .validators
+                .into_iter()
+                .map(Into::into)
+                .paginate_by_offset(PaginationByOffset::from((
+                    page as usize - 1,
+                    limit as usize,
+                )));
+            let validators = iter.collect();
+            GetLatestValidatorSetResponse {
+                block_height: res.block_height.into(),
+                validators,
+                pagination: Some(pagination_result.into()),
+            }
         })?;
+
     Ok(Json(res))
 }
 
