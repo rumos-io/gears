@@ -3,7 +3,7 @@ use bank::cli::tx::{BankCommands, BankTxCli};
 use gaia_rs::{
     client::{GaiaQueryCommands, GaiaTxCommands, WrappedGaiaQueryCommands, WrappedGaiaTxCommands},
     query::GaiaQueryResponse,
-    GaiaCoreClient,
+    GaiaCoreClient, QueryNodeFetcher,
 };
 use gears::{
     commands::client::{
@@ -56,6 +56,7 @@ fn run_tx_local(
             inner: WrappedGaiaTxCommands(command),
         },
         &GaiaCoreClient,
+        &QueryNodeFetcher,
     )?
     .broadcast()
     .expect("broadcast tx inside");

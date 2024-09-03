@@ -6,7 +6,7 @@ use tendermint::rpc::client::{Client, HttpClient};
 use tendermint::rpc::response::tx::broadcast::Response;
 use tendermint::types::chain_id::ChainId;
 
-use crate::application::handlers::client::{TxExecutionResult, TxHandler};
+use crate::application::handlers::client::{NodeFetcher, TxExecutionResult, TxHandler};
 use crate::commands::client::query::execute_query;
 use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::ledger::LedgerProxyKey;
@@ -120,9 +120,10 @@ impl From<TxExecutionResult> for RuntxResult {
     }
 }
 
-pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
+pub fn run_tx<C, H: TxHandler<TxCommands = C>, F: NodeFetcher + Clone>(
     command: TxCommand<C>,
     handler: &H,
+    fetcher: &F,
 ) -> anyhow::Result<RuntxResult> {
     match command.keyring {
         Keyring::Ledger => {
@@ -140,6 +141,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                         command.fees,
                         SignMode::Textual,
                         ctx,
+                        fetcher,
                     )?,
                     ctx,
                 )
@@ -178,6 +180,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                                     command.fees.clone(),
                                     SignMode::Direct,
                                     ctx,
+                                    fetcher,
                                 )?,
                                 ctx,
                             )?
@@ -198,6 +201,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                             command.fees,
                             SignMode::Direct,
                             ctx,
+                            fetcher,
                         )?,
                         ctx,
                     )

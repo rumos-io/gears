@@ -4,10 +4,15 @@ use crate::query::GaiaQueryResponse;
 use crate::store_keys::GaiaParamsStoreKey;
 use anyhow::Result;
 use auth::cli::query::AuthQueryHandler;
+use auth::query::QueryAccountRequest;
+use auth::query::QueryAccountResponse;
 use auth::AuthNodeQueryRequest;
 use auth::AuthNodeQueryResponse;
 use axum::Router;
 use bank::cli::query::BankQueryHandler;
+use bank::types::query::QueryDenomMetadataRequest;
+use bank::types::query::QueryDenomMetadataResponse;
+use bank::types::query::RawQueryDenomMetadataResponse;
 use bank::BankNodeQueryRequest;
 use bank::BankNodeQueryResponse;
 use clap::Subcommand;
@@ -15,16 +20,19 @@ use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use client::WrappedGaiaQueryCommands;
 use gears::application::client::Client;
+use gears::application::handlers::client::NodeFetcher;
 use gears::application::handlers::client::{QueryHandler, TxHandler};
 use gears::application::handlers::AuxHandler;
 use gears::application::node::Node;
 use gears::application::ApplicationInfo;
 use gears::baseapp::NodeQueryHandler;
 use gears::baseapp::{QueryRequest, QueryResponse};
+use gears::commands::client::query::execute_query;
 use gears::commands::client::tx::ClientTxContext;
 use gears::commands::node::run::RouterBuilder;
 use gears::commands::NilAux;
 use gears::commands::NilAuxCommand;
+use gears::core::Protobuf;
 use gears::grpc::health::health_server;
 use gears::grpc::tx::tx_server;
 use gears::rest::RestState;
@@ -141,7 +149,7 @@ impl AuxHandler for GaiaCoreClient {
                     genutil::collect_txs::gen_app_state_from_config(cmd, "bank", "genutil")?;
                 }
                 genutil::cmd::GenesisCmd::Gentx(cmd) => {
-                    genutil::gentx::gentx_cmd(cmd, "bank", "staking", "auth")?;
+                    genutil::gentx::gentx_cmd(cmd, "bank", "staking", &QueryNodeFetcher)?;
                 }
             },
         }
@@ -297,5 +305,50 @@ impl AuxHandler for GaiaCore {
     fn prepare_aux(&self, _: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
         println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
         Ok(NilAux)
+    }
+}
+
+mod inner {
+    pub use gears::core::query::response::auth::QueryAccountResponse;
+}
+
+#[derive(Debug, Clone)]
+pub struct QueryNodeFetcher;
+
+impl NodeFetcher for QueryNodeFetcher {
+    fn latest_account(
+        &self,
+        address: AccAddress,
+        node: impl AsRef<str>,
+    ) -> anyhow::Result<Option<gears::types::account::Account>> {
+        let query = QueryAccountRequest { address };
+
+        Ok(
+            execute_query::<QueryAccountResponse, inner::QueryAccountResponse>(
+                "/cosmos.auth.v1beta1.Query/Account".into(),
+                query.encode_vec(),
+                node.as_ref(),
+                None,
+            )?
+            .account,
+        )
+    }
+
+    fn denom_metadata(
+        &self,
+        base: gears::types::denom::Denom,
+        node: impl AsRef<str>,
+    ) -> anyhow::Result<Option<gears::types::tx::metadata::Metadata>> {
+        let query = QueryDenomMetadataRequest { denom: base };
+
+        Ok(
+            execute_query::<QueryDenomMetadataResponse, RawQueryDenomMetadataResponse>(
+                "/cosmos.bank.v1beta1.Query/DenomMetadata".into(),
+                query.encode_vec(),
+                node.as_ref(),
+                None,
+            )?
+            .metadata,
+        )
     }
 }
