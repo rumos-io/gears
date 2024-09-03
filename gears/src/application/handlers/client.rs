@@ -113,8 +113,11 @@ pub trait TxHandler {
         let fee = Fee {
             amount: ctx.fees.clone(),
             gas_limit: ctx.gas_limit.clone(),
-            payer: None,        //TODO: remove hard coded payer
-            granter: "".into(), //TODO: remove hard coded granter
+            payer: ctx.fee_payer.clone(),
+            granter: match ctx.fee_granter.clone() {
+                Some(var) => var,
+                None => "".to_owned(),
+            },
         };
 
         let address = key.get_address();

@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use address::AccAddress;
 use core_types::tx::mode_info::SignMode;
 use prost::Message;
 use tendermint::rpc::client::{Client, HttpClient};
@@ -41,6 +42,8 @@ pub struct ClientTxContext {
     pub chain_id: ChainId,
     pub fees: Option<UnsignedCoins>,
     pub timeout_height: Option<u32>,
+    pub fee_payer: Option<AccAddress>,
+    pub fee_granter: Option<String>,
 }
 
 impl ClientTxContext {
@@ -75,6 +78,8 @@ impl ClientTxContext {
             fees: None,
             memo: None,
             timeout_height: None,
+            fee_payer: None,
+            fee_granter: None,
         }
     }
 }

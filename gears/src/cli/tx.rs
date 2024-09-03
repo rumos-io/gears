@@ -1,5 +1,6 @@
 use std::{marker::PhantomData, path::PathBuf, str::FromStr};
 
+use address::AccAddress;
 use clap::{ArgAction, Args, Subcommand, ValueEnum, ValueHint};
 use strum::Display;
 use tendermint::types::chain_id::ChainId;
@@ -25,9 +26,16 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     /// the network chain-id
     #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = ChainId::from_str( "test-chain" ).expect("unreachable: default should be valid"))]
     pub chain_id: ChainId,
-    /// TODO
+
+    /// Fees to pay along with transaction; eg: 10uatom
     #[arg(long, global = true, action = ArgAction::Set)]
     pub fees: Option<UnsignedCoins>,
+    /// Fee payer pays fees for the transaction instead of deducting from the signer
+    #[arg(long, global = true, action = ArgAction::Set, required = false )]
+    pub fee_payer: Option<AccAddress>,
+    /// Fee granter grants fees for the transaction
+    #[arg(long, global = true, action = ArgAction::Set, required = false )]
+    pub fee_granter: Option<String>,
 
     #[arg(long, short, default_value_t = Keyring::Local)]
     pub keyring: Keyring,
@@ -130,6 +138,8 @@ where
             gas_limit,
             note,
             timeout_height,
+            fee_payer,
+            fee_granter,
             command,
         } = value;
 
@@ -180,6 +190,10 @@ where
 
         let gas_limit = Gas::try_from(gas_limit)?;
 
+        if fee_granter.as_ref().is_some_and(|this| this.is_empty()) {
+            Err(anyhow::anyhow!("`fee-granter` can't be empty"))?
+        }
+
         Ok(Self {
             inner: command.try_into()?,
             ctx: ClientTxContext {
@@ -192,6 +206,8 @@ where
                 gas_limit,
                 memo: note,
                 timeout_height,
+                fee_payer,
+                fee_granter,
             },
         })
     }
