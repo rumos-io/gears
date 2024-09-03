@@ -160,23 +160,22 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
 
         let mut res = vec![];
         for slice in msgs.chunks(chunk_size) {
-            res.push(
-                handler
-                    .handle_tx(
-                        handler.sign_msg(
-                            slice
-                                .to_vec()
-                                .try_into()
-                                .expect("chunking of the messages excludes empty vectors"),
-                            &key,
-                            SignMode::Direct,
-                            &mut ctx,
-                        )?,
-                        &mut ctx,
-                    )?
-                    .broadcast()
-                    .ok_or(anyhow::anyhow!("tx is not broadcasted"))?,
-            );
+            let tx_result = handler.handle_tx(
+                handler.sign_msg(
+                    slice
+                        .to_vec()
+                        .try_into()
+                        .expect("chunking of the messages excludes empty vectors"),
+                    &key,
+                    SignMode::Direct,
+                    &mut ctx,
+                )?,
+                &mut ctx,
+            )?;
+
+            if let TxExecutionResult::Broadcast(tx_result) = tx_result {
+                res.push(tx_result);
+            }
         }
         Ok(RuntxResult::Broadcast(res))
     } else {
