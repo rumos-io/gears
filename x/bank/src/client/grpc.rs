@@ -15,6 +15,8 @@ use tracing::info;
 
 use crate::{BankNodeQueryRequest, BankNodeQueryResponse};
 
+const ERROR_STATE_MSG: &str = "An internal error occurred while querying the application state.";
+
 #[derive(Debug, Default)]
 pub struct BankService<QH, QReq, QRes> {
     app: QH,
@@ -43,17 +45,22 @@ where
         if let BankNodeQueryResponse::Balance(response) = response {
             Ok(Response::new(response.into()))
         } else {
-            Err(Status::internal(
-                "An internal error occurred while querying the application state.",
-            ))
+            Err(Status::internal(ERROR_STATE_MSG))
         }
     }
 
     async fn all_balances(
         &self,
-        _request: Request<QueryAllBalancesRequest>,
+        request: Request<QueryAllBalancesRequest>,
     ) -> Result<Response<QueryAllBalancesResponse>, Status> {
-        unimplemented!() //TODO: implement
+        let req = BankNodeQueryRequest::AllBalances(request.into_inner().try_into()?);
+        let response: BankNodeQueryResponse = self.app.typed_query(req)?.try_into()?;
+
+        if let BankNodeQueryResponse::AllBalances(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(ERROR_STATE_MSG))
+        }
     }
 
     async fn spendable_balances(
@@ -65,9 +72,16 @@ where
 
     async fn total_supply(
         &self,
-        _request: Request<QueryTotalSupplyRequest>,
+        request: Request<QueryTotalSupplyRequest>,
     ) -> Result<Response<QueryTotalSupplyResponse>, Status> {
-        unimplemented!() //TODO: implement
+        let req = BankNodeQueryRequest::TotalSupply(request.into_inner().try_into()?);
+        let response: BankNodeQueryResponse = self.app.typed_query(req)?.try_into()?;
+
+        if let BankNodeQueryResponse::TotalSupply(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(ERROR_STATE_MSG))
+        }
     }
 
     async fn supply_of(
@@ -79,23 +93,44 @@ where
 
     async fn params(
         &self,
-        _request: Request<QueryParamsRequest>,
+        request: Request<QueryParamsRequest>,
     ) -> Result<Response<QueryParamsResponse>, Status> {
-        unimplemented!() //TODO: implement
+        let req = BankNodeQueryRequest::Params(request.into_inner().try_into()?);
+        let response: BankNodeQueryResponse = self.app.typed_query(req)?.try_into()?;
+
+        if let BankNodeQueryResponse::Params(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(ERROR_STATE_MSG))
+        }
     }
 
     async fn denom_metadata(
         &self,
-        _request: Request<QueryDenomMetadataRequest>,
+        request: Request<QueryDenomMetadataRequest>,
     ) -> Result<Response<QueryDenomMetadataResponse>, Status> {
-        unimplemented!() //TODO: implement
+        let req = BankNodeQueryRequest::DenomMetadata(request.into_inner().try_into()?);
+        let response: BankNodeQueryResponse = self.app.typed_query(req)?.try_into()?;
+
+        if let BankNodeQueryResponse::DenomMetadata(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(ERROR_STATE_MSG))
+        }
     }
 
     async fn denoms_metadata(
         &self,
-        _request: Request<QueryDenomsMetadataRequest>,
+        request: Request<QueryDenomsMetadataRequest>,
     ) -> Result<Response<QueryDenomsMetadataResponse>, Status> {
-        unimplemented!() //TODO: implement
+        let req = BankNodeQueryRequest::DenomsMetadata(request.into_inner().try_into()?);
+        let response: BankNodeQueryResponse = self.app.typed_query(req)?.try_into()?;
+
+        if let BankNodeQueryResponse::DenomsMetadata(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(ERROR_STATE_MSG))
+        }
     }
 
     async fn denom_owners(
