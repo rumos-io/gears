@@ -3,7 +3,11 @@ use core_types::errors::CoreError;
 use cosmwasm_std::Decimal256RangeExceeded;
 use tendermint::error::Error as TendermintError;
 
-use crate::types::{base::errors::CoinError, errors::DenomError, tx::metadata::MetadataParseError};
+use crate::types::{
+    base::errors::{CoinError, CoinsError},
+    errors::DenomError,
+    tx::metadata::MetadataParseError,
+};
 
 pub const POISONED_LOCK: &str = "poisoned lock";
 
@@ -37,7 +41,9 @@ pub enum ProtobufError {
     #[error("{0}")]
     StdError(#[from] cosmwasm_std::StdError),
     #[error("{0}")]
-    Coins(#[from] CoinError),
+    Coins(#[from] CoinsError),
+    #[error("{0}")]
+    Coin(#[from] CoinError),
     #[error("{0}")]
     MissingField(String),
     #[error("{0}")]

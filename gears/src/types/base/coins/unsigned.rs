@@ -1,9 +1,13 @@
 use cosmwasm_std::Uint256;
 
-use crate::types::base::{coin::UnsignedCoin, errors::CoinsError};
+use crate::types::base::{
+    coin::{inner::Coin as IbcCoin, UnsignedCoin},
+    errors::CoinsError,
+};
 
-use super::Coins;
+use super::{Coins, ProtoCoinsRaw};
 
+pub type UnsignedCoinsRaw = ProtoCoinsRaw<IbcCoin>;
 pub type UnsignedCoins = Coins<Uint256, UnsignedCoin>;
 
 impl UnsignedCoins {
