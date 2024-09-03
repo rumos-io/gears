@@ -7,9 +7,8 @@ use gaia_rs::{
 };
 use gears::{
     commands::client::{
-        keys::KeyringBackend,
         query::{run_query, QueryCommand},
-        tx::{run_tx, ClientTxContext, Keyring, LocalInfo, TxCommand},
+        tx::{run_tx, ClientTxContext, TxCommand},
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
     tendermint::{rpc::response::tx::broadcast::Response, types::chain_id::ChainId},
@@ -46,19 +45,13 @@ fn run_tx_local(
     let mut responses = run_tx(
         TxCommand {
             inner: WrappedGaiaTxCommands(command),
-            ctx: ClientTxContext {
-                account: gears::commands::client::tx::AccountProvider::Online,
-                gas_limit: 200_000_u32.try_into().expect("default gas is valid"),
+            ctx: ClientTxContext::new_online(
                 home,
-                keyring: Keyring::Local(LocalInfo {
-                    keyring_backend: KeyringBackend::Test,
-                    from_key: from_key.to_owned(),
-                }),
-                node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-                chain_id: ChainId::from_str("test-chain")?,
-                fees: None,
-                memo: None,
-            },
+                200_000_u32.try_into().expect("default gas is valid"),
+                DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
+                ChainId::from_str("test-chain")?,
+                from_key,
+            ),
         },
         &GaiaCoreClient,
     )?

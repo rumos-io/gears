@@ -132,8 +132,11 @@ pub trait TxHandler {
         let tx_body = TxBody {
             messages: msgs.into_msgs(),
             memo: ctx.memo.clone().unwrap_or_default(),
-            timeout_height: 0,                      // TODO: remove hard coded
-            extension_options: vec![],              // TODO: remove hard coded
+            timeout_height: match ctx.timeout_height {
+                Some(height) => height,
+                None => 0,
+            },
+            extension_options: vec![], // TODO: remove hard coded
             non_critical_extension_options: vec![], // TODO: remove hard coded
         };
 

@@ -46,8 +46,12 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     pub gas_limit: u64,
 
     /// Note to add a description to the transaction
-    #[arg(long, global = true, action = ArgAction::Set,  required = false )]
+    #[arg(long, global = true, action = ArgAction::Set, required = false )]
     pub note: Option<String>,
+
+    /// Set a block timeout height to prevent the tx from being committed past a certain height
+    #[arg(long, global = true, action = ArgAction::Set, required = false )]
+    pub timeout_height: Option<u32>,
 
     #[command(flatten)]
     pub command: C,
@@ -125,6 +129,7 @@ where
             mode,
             gas_limit,
             note,
+            timeout_height,
             command,
         } = value;
 
@@ -186,6 +191,7 @@ where
                 account,
                 gas_limit,
                 memo: note,
+                timeout_height,
             },
         })
     }

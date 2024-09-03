@@ -40,6 +40,7 @@ pub struct ClientTxContext {
     pub gas_limit: Gas,
     pub chain_id: ChainId,
     pub fees: Option<UnsignedCoins>,
+    pub timeout_height: Option<u32>,
 }
 
 impl ClientTxContext {
@@ -52,6 +53,29 @@ impl ClientTxContext {
         <Response as TryFrom<Raw>>::Error: std::fmt::Display,
     {
         execute_query(path, query_bytes, self.node.as_str(), None)
+    }
+
+    pub fn new_online(
+        home: PathBuf,
+        gas_limit: Gas,
+        node: url::Url,
+        chain_id: ChainId,
+        from_key: &str,
+    ) -> Self {
+        Self {
+            account: crate::commands::client::tx::AccountProvider::Online,
+            gas_limit,
+            home,
+            keyring: Keyring::Local(LocalInfo {
+                keyring_backend: KeyringBackend::Test,
+                from_key: from_key.to_owned(),
+            }),
+            node,
+            chain_id,
+            fees: None,
+            memo: None,
+            timeout_height: None,
+        }
     }
 }
 
