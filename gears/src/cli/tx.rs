@@ -11,13 +11,13 @@ use crate::{
         tx::{AccountProvider, Keyring as TxKeyring, LocalInfo, TxCommand},
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
-    types::base::coins::UnsignedCoins,
+    types::{auth::gas::Gas, base::coins::UnsignedCoins},
 };
 
 /// Transaction subcommands
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
-    #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
+    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
     home: PathBuf,
     /// <host>:<port> to Tendermint RPC interface for this chain
     #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]
@@ -39,6 +39,11 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     #[command(flatten)]
     #[group(id = "Broadcast mode", global = true)]
     pub mode: Mode,
+
+    // TODO: Cosmos has "auto" feature to calculate gas price if needed
+    /// gas limit to set per-transaction
+    #[arg(long, short, global = true, action = ArgAction::Set, default_value_t = 200_000)]
+    pub gas_limit: u64,
 
     #[command(flatten)]
     pub command: C,
@@ -114,6 +119,7 @@ where
             keyring,
             local,
             mode,
+            gas_limit,
             command,
         } = value;
 
@@ -162,6 +168,8 @@ where
             _ => AccountProvider::Online,
         };
 
+        let gas_limit = Gas::try_from(gas_limit)?;
+
         Ok(Self {
             home,
             node,
@@ -170,6 +178,7 @@ where
             keyring,
             inner: command.try_into()?,
             account,
+            gas_limit,
         })
     }
 }

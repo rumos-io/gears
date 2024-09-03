@@ -55,6 +55,7 @@ fn run_tx_local(
             fees: None,
             inner: WrappedGaiaTxCommands(command),
             account: gears::commands::client::tx::AccountProvider::Online,
+            gas_limit: 200_000_u32.try_into().expect("default gas is valid"),
         },
         &GaiaCoreClient,
     )?

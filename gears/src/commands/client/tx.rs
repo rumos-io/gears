@@ -12,6 +12,7 @@ use crate::crypto::any_key::AnyKey;
 use crate::crypto::keys::GearsPublicKey;
 use crate::crypto::ledger::LedgerProxyKey;
 use crate::runtime::runtime;
+use crate::types::auth::gas::Gas;
 use crate::types::base::coins::UnsignedCoins;
 use crate::types::tx::raw::TxRaw;
 
@@ -31,6 +32,7 @@ pub struct TxCommand<C> {
     pub account: AccountProvider,
     pub fees: Option<UnsignedCoins>,
     pub keyring: Keyring,
+    pub gas_limit: Gas,
     pub inner: C,
 }
 
@@ -42,6 +44,7 @@ pub struct ClientTxContext {
     pub keyring: Keyring,
     pub memo: Option<String>,
     pub account: AccountProvider,
+    pub gas_limit: Gas,
     chain_id: ChainId,
     fees: Option<UnsignedCoins>,
 }
@@ -69,6 +72,7 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
             fees,
             keyring,
             account,
+            gas_limit,
             inner: _,
         }: &TxCommand<C>,
     ) -> Self {
@@ -79,6 +83,7 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
             fees: fees.clone(),
             keyring: keyring.clone(),
             account: account.clone(),
+            gas_limit : gas_limit.clone(),
             memo: None,
         }
     }
