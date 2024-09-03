@@ -45,6 +45,10 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     #[arg(long, short, global = true, action = ArgAction::Set, default_value_t = 200_000)]
     pub gas_limit: u64,
 
+    /// Note to add a description to the transaction
+    #[arg(long, global = true, action = ArgAction::Set,  required = false )]
+    pub note: Option<String>,
+
     #[command(flatten)]
     pub command: C,
 
@@ -58,13 +62,13 @@ pub struct Mode {
     /// As a result, the account and sequence number queries will not be performed and
     /// it is required to set such parameters manually. Note, invalid values will cause
     /// the transaction to fail.
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = false, help_heading = "Broadcast mode")]
     pub offline: bool,
     /// The sequence number of the signing account (offline mode only)
-    #[arg(long, required = false)]
+    #[arg(long, required = false, help_heading = "Broadcast mode")]
     pub sequence: Option<u64>,
     /// The account number of the signing account (offline mode only)
-    #[arg(long, required = false)]
+    #[arg(long, required = false, help_heading = "Broadcast mode")]
     pub account_number: Option<u64>,
 }
 
@@ -120,6 +124,7 @@ where
             local,
             mode,
             gas_limit,
+            note,
             command,
         } = value;
 
@@ -180,7 +185,7 @@ where
                 keyring,
                 account,
                 gas_limit,
-                memo: None,
+                memo: note,
             },
         })
     }
