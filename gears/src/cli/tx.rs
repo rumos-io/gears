@@ -12,7 +12,10 @@ use crate::{
         tx::{AccountProvider, ClientTxContext, Keyring as TxKeyring, LocalInfo, TxCommand},
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
-    types::{auth::gas::Gas, base::coins::UnsignedCoins},
+    types::{
+        auth::{fee::Fee, gas::Gas},
+        base::coins::UnsignedCoins,
+    },
 };
 
 /// Transaction subcommands
@@ -27,15 +30,8 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = ChainId::from_str( "test-chain" ).expect("unreachable: default should be valid"))]
     pub chain_id: ChainId,
 
-    /// Fees to pay along with transaction; eg: 10uatom
-    #[arg(long, global = true, action = ArgAction::Set)]
-    pub fees: Option<UnsignedCoins>,
-    /// Fee payer pays fees for the transaction instead of deducting from the signer
-    #[arg(long, global = true, action = ArgAction::Set, required = false )]
-    pub fee_payer: Option<AccAddress>,
-    /// Fee granter grants fees for the transaction
-    #[arg(long, global = true, action = ArgAction::Set, required = false )]
-    pub fee_granter: Option<String>,
+    #[command(flatten)]
+    pub fee: FeeCli,
 
     #[arg(long, short, default_value_t = Keyring::Local)]
     pub keyring: Keyring,
@@ -47,11 +43,6 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     #[command(flatten)]
     #[group(id = "Broadcast mode", global = true)]
     pub mode: Mode,
-
-    // TODO: Cosmos has "auto" feature to calculate gas price if needed
-    /// gas limit to set per-transaction
-    #[arg(long, short, global = true, action = ArgAction::Set, default_value_t = 200_000)]
-    pub gas_limit: u64,
 
     /// Note to add a description to the transaction
     #[arg(long, global = true, action = ArgAction::Set, required = false )]
@@ -66,6 +57,52 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
 
     #[arg(skip)]
     _marker: PhantomData<T>,
+}
+
+#[derive(Debug, Clone, ::clap::Args)]
+pub struct FeeCli {
+    // TODO: Cosmos has "auto" feature to calculate gas price if needed
+    /// gas limit to set per-transaction
+    #[arg(long, short, global = true, action = ArgAction::Set, default_value_t = 200_000)]
+    pub gas_limit: u64,
+    /// Fees to pay along with transaction; eg: 10uatom
+    #[arg(long, global = true, action = ArgAction::Set)]
+    pub fees: Option<UnsignedCoins>,
+    /// Fee payer pays fees for the transaction instead of deducting from the signer
+    #[arg(long = "fee-payer", global = true, action = ArgAction::Set, required = false )]
+    pub payer: Option<AccAddress>,
+    /// Fee granter grants fees for the transaction
+    #[arg(long = "fee-granter", global = true, action = ArgAction::Set, required = false )]
+    pub granter: Option<String>,
+}
+
+impl TryFrom<FeeCli> for Fee {
+    type Error = anyhow::Error;
+
+    fn try_from(
+        FeeCli {
+            gas_limit,
+            fees,
+            payer,
+            granter,
+        }: FeeCli,
+    ) -> Result<Self, Self::Error> {
+        let gas_limit = Gas::try_from(gas_limit)?;
+
+        if granter.as_ref().is_some_and(|this| this.is_empty()) {
+            Err(anyhow::anyhow!("`fee-granter` can't be empty"))?
+        }
+
+        Ok(Self {
+            amount: fees,
+            gas_limit,
+            payer,
+            granter: match granter {
+                Some(var) => var,
+                None => "".to_owned(),
+            },
+        })
+    }
 }
 
 #[derive(Debug, Clone, ::clap::Args)]
@@ -130,16 +167,13 @@ where
             home,
             node,
             chain_id,
-            fees: fee,
             _marker,
             keyring,
             local,
             mode,
-            gas_limit,
             note,
             timeout_height,
-            fee_payer,
-            fee_granter,
+            fee,
             command,
         } = value;
 
@@ -188,26 +222,17 @@ where
             _ => AccountProvider::Online,
         };
 
-        let gas_limit = Gas::try_from(gas_limit)?;
-
-        if fee_granter.as_ref().is_some_and(|this| this.is_empty()) {
-            Err(anyhow::anyhow!("`fee-granter` can't be empty"))?
-        }
-
         Ok(Self {
             inner: command.try_into()?,
             ctx: ClientTxContext {
                 home,
                 node,
                 chain_id,
-                fees: fee,
                 keyring,
                 account,
-                gas_limit,
                 memo: note,
                 timeout_height,
-                fee_payer,
-                fee_granter,
+                fee: fee.try_into()?,
             },
         })
     }

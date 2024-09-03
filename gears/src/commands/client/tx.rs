@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use address::AccAddress;
 use core_types::tx::mode_info::SignMode;
 use prost::Message;
 use tendermint::rpc::client::{Client, HttpClient};
@@ -13,8 +12,8 @@ use crate::crypto::any_key::AnyKey;
 use crate::crypto::keys::GearsPublicKey;
 use crate::crypto::ledger::LedgerProxyKey;
 use crate::runtime::runtime;
+use crate::types::auth::fee::Fee;
 use crate::types::auth::gas::Gas;
-use crate::types::base::coins::UnsignedCoins;
 use crate::types::tx::raw::TxRaw;
 
 use super::keys::KeyringBackend;
@@ -38,12 +37,10 @@ pub struct ClientTxContext {
     pub keyring: Keyring,
     pub memo: Option<String>,
     pub account: AccountProvider,
-    pub gas_limit: Gas,
     pub chain_id: ChainId,
-    pub fees: Option<UnsignedCoins>,
     pub timeout_height: Option<u32>,
-    pub fee_payer: Option<AccAddress>,
-    pub fee_granter: Option<String>,
+
+    pub fee: Fee,
 }
 
 impl ClientTxContext {
@@ -67,7 +64,6 @@ impl ClientTxContext {
     ) -> Self {
         Self {
             account: crate::commands::client::tx::AccountProvider::Online,
-            gas_limit,
             home,
             keyring: Keyring::Local(LocalInfo {
                 keyring_backend: KeyringBackend::Test,
@@ -75,11 +71,14 @@ impl ClientTxContext {
             }),
             node,
             chain_id,
-            fees: None,
             memo: None,
             timeout_height: None,
-            fee_payer: None,
-            fee_granter: None,
+            fee: Fee {
+                amount: None,
+                gas_limit,
+                payer: None,
+                granter: "".to_owned(),
+            },
         }
     }
 }

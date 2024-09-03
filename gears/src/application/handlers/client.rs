@@ -16,7 +16,6 @@ use crate::{
     types::{
         account::{Account, BaseAccount},
         address::AccAddress,
-        auth::fee::Fee,
         denom::Denom,
         tx::{body::TxBody, Messages, Tx, TxMessage},
     },
@@ -110,16 +109,6 @@ pub trait TxHandler {
         mode: SignMode,
         ctx: &mut ClientTxContext,
     ) -> anyhow::Result<Tx<Self::Message>> {
-        let fee = Fee {
-            amount: ctx.fees.clone(),
-            gas_limit: ctx.gas_limit.clone(),
-            payer: ctx.fee_payer.clone(),
-            granter: match ctx.fee_granter.clone() {
-                Some(var) => var,
-                None => "".to_owned(),
-            },
-        };
-
         let address = key.get_address();
 
         let account = self
@@ -149,7 +138,7 @@ pub trait TxHandler {
             SignMode::Direct => create_signed_transaction_direct(
                 signing_infos,
                 ctx.chain_id.clone(),
-                fee,
+                ctx.fee.clone(),
                 tip,
                 tx_body,
             )
@@ -157,7 +146,7 @@ pub trait TxHandler {
             SignMode::Textual => create_signed_transaction_textual(
                 signing_infos,
                 ctx.chain_id.clone(),
-                fee,
+                ctx.fee.clone(),
                 tip,
                 ctx.node.clone(),
                 tx_body,
