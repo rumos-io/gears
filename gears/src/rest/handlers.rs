@@ -3,6 +3,7 @@ use crate::rest::error::HTTPError;
 use crate::types::pagination::response::PaginationResponse;
 use crate::types::request::tx::BroadcastTxRequest;
 use crate::types::response::any::AnyTx;
+use crate::types::response::block::GetBlockByHeightResponse;
 use crate::types::response::tx::{
     BroadcastTxResponse, BroadcastTxResponseLight, TxResponse, TxResponseLight,
 };
@@ -289,12 +290,20 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
 
 pub async fn block_latest(
     State(tendermint_rpc_address): State<HttpClientUrl>,
-) -> Result<Json<tendermint::rpc::endpoint::Response>, HTTPError> {
+) -> Result<Json<GetBlockByHeightResponse>, HTTPError> {
     let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
 
-    let res = client.latest_block().await.map_err(|e| {
-        tracing::error!("Error connecting to Tendermint: {e}");
-        HTTPError::gateway_timeout()
-    })?;
+    let res = client
+        .latest_block()
+        .await
+        .map_err(|e| {
+            tracing::error!("Error connecting to Tendermint: {e}");
+            HTTPError::gateway_timeout()
+        })
+        .map(|res| GetBlockByHeightResponse {
+            block_id: Some(res.block_id.into()),
+            block: Some(res.block.clone()),
+            sdk_block: Some(res.block),
+        })?;
     Ok(Json(res))
 }
