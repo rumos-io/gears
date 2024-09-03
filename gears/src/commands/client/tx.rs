@@ -26,18 +26,11 @@ pub enum AccountProvider {
 
 #[derive(Debug, Clone, former::Former)]
 pub struct TxCommand<C> {
-    pub home: PathBuf,
-    pub node: url::Url,
-    pub chain_id: ChainId,
-    pub account: AccountProvider,
-    pub fees: Option<UnsignedCoins>,
-    pub keyring: Keyring,
-    pub gas_limit: Gas,
+    pub ctx: ClientTxContext,
     pub inner: C,
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct ClientTxContext {
     pub node: url::Url,
     pub home: PathBuf,
@@ -45,8 +38,8 @@ pub struct ClientTxContext {
     pub memo: Option<String>,
     pub account: AccountProvider,
     pub gas_limit: Gas,
-    chain_id: ChainId,
-    fees: Option<UnsignedCoins>,
+    pub chain_id: ChainId,
+    pub fees: Option<UnsignedCoins>,
 }
 
 impl ClientTxContext {
@@ -59,33 +52,6 @@ impl ClientTxContext {
         <Response as TryFrom<Raw>>::Error: std::fmt::Display,
     {
         execute_query(path, query_bytes, self.node.as_str(), None)
-    }
-}
-
-impl<C> From<&TxCommand<C>> for ClientTxContext {
-    fn from(
-        // to keep structure after changes in TxCommand
-        TxCommand {
-            home,
-            node,
-            chain_id,
-            fees,
-            keyring,
-            account,
-            gas_limit,
-            inner: _,
-        }: &TxCommand<C>,
-    ) -> Self {
-        Self {
-            home: home.clone(),
-            node: node.clone(),
-            chain_id: chain_id.clone(),
-            fees: fees.clone(),
-            keyring: keyring.clone(),
-            account: account.clone(),
-            gas_limit : gas_limit.clone(),
-            memo: None,
-        }
     }
 }
 
@@ -154,13 +120,12 @@ fn handle_key(client_tx_context: &ClientTxContext) -> anyhow::Result<AnyKey> {
 }
 
 pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
-    command: TxCommand<C>,
+    TxCommand { mut ctx, inner }: TxCommand<C>,
     handler: &H,
 ) -> anyhow::Result<RuntxResult> {
-    let ctx = &mut (&command).into();
-    let key = handle_key(ctx)?;
+    let key = handle_key(&mut ctx)?;
 
-    let messages = handler.prepare_tx(ctx, command.inner, key.get_gears_public_key())?;
+    let messages = handler.prepare_tx(&mut ctx, inner, key.get_gears_public_key())?;
 
     if messages.chunk_size() > 0
     // TODO: uncomment and update logic when command will be extended by broadcast_mode
@@ -180,13 +145,10 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                                 .try_into()
                                 .expect("chunking of the messages excludes empty vectors"),
                             &key,
-                            &command.node,
-                            command.chain_id.clone(),
-                            command.fees.clone(),
                             SignMode::Direct,
-                            ctx,
+                            &mut ctx,
                         )?,
-                        ctx,
+                        &mut ctx,
                     )?
                     .broadcast()
                     .ok_or(anyhow::anyhow!("tx is not broadcasted"))?,
@@ -197,16 +159,8 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
         // TODO: can be reduced by changing variable `step`. Do we need it?
         handler
             .handle_tx(
-                handler.sign_msg(
-                    messages,
-                    &key,
-                    &command.node,
-                    command.chain_id,
-                    command.fees,
-                    SignMode::Direct,
-                    ctx,
-                )?,
-                ctx,
+                handler.sign_msg(messages, &key, SignMode::Direct, &mut ctx)?,
+                &mut ctx,
             )
             .map(Into::into)
     }

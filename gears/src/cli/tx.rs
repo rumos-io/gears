@@ -8,7 +8,7 @@ use crate::{
     application::ApplicationInfo,
     commands::client::{
         keys::KeyringBackend,
-        tx::{AccountProvider, Keyring as TxKeyring, LocalInfo, TxCommand},
+        tx::{AccountProvider, ClientTxContext, Keyring as TxKeyring, LocalInfo, TxCommand},
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
     types::{auth::gas::Gas, base::coins::UnsignedCoins},
@@ -171,14 +171,17 @@ where
         let gas_limit = Gas::try_from(gas_limit)?;
 
         Ok(Self {
-            home,
-            node,
-            chain_id,
-            fees: fee,
-            keyring,
             inner: command.try_into()?,
-            account,
-            gas_limit,
+            ctx: ClientTxContext {
+                home,
+                node,
+                chain_id,
+                fees: fee,
+                keyring,
+                account,
+                gas_limit,
+                memo: None,
+            },
         })
     }
 }
