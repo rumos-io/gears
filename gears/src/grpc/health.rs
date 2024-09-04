@@ -9,10 +9,10 @@ use ibc_proto::cosmos::base::tendermint::v1beta1::{
 use tonic::{Request, Response, Status};
 use tracing::info;
 
-pub struct GearsHealthService;
+pub struct DefaultHealthService;
 
 #[tonic::async_trait]
-impl HealthService for GearsHealthService {
+impl HealthService for DefaultHealthService {
     async fn abci_query(
         &self,
         _request: Request<AbciQueryRequest>,
@@ -71,6 +71,6 @@ impl HealthService for GearsHealthService {
     }
 }
 
-pub fn health_server() -> HealthServer<GearsHealthService> {
-    HealthServer::new(GearsHealthService)
+pub fn health_server() -> HealthServer<DefaultHealthService> {
+    HealthServer::new(DefaultHealthService)
 }
