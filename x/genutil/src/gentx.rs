@@ -2,9 +2,10 @@ use std::{net::SocketAddr, path::PathBuf};
 
 use gears::{
     application::handlers::client::TxHandler,
-    commands::client::tx::{ClientTxContext, TxCommand},
+    commands::client::tx::{AccountProvider, ClientTxContext, TxCommand},
     crypto::{ed25519::Ed25519PubKey, public::PublicKey},
     types::{
+        account::{Account, BaseAccount},
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
         decimal256::Decimal256,
         tx::Messages,
@@ -40,7 +41,6 @@ pub fn gentx_cmd(
     cmd: TxCommand<GentxCmd>,
     balance_sk: &'static str,
     staking_sk: &'static str,
-    
 ) -> anyhow::Result<()> {
     let gentx_handler = GentxTxHandler::new(cmd.inner.output.clone(), balance_sk, staking_sk)?;
 
@@ -91,6 +91,27 @@ impl TxHandler for GentxTxHandler {
     type Message = CreateValidator;
 
     type TxCommands = GentxCmd;
+
+    fn account(
+        &self,
+        address: gears::types::address::AccAddress,
+        client_tx_context: &mut ClientTxContext,
+    ) -> anyhow::Result<Option<gears::types::account::Account>> {
+        match client_tx_context.account {
+                AccountProvider::Offline {
+                    sequence,
+                    account_number,
+                } => Ok(Some(Account::Base(BaseAccount {
+                    address,
+                    pub_key: None,
+                    account_number,
+                    sequence,
+                }))),
+                AccountProvider::Online => {
+                   Err(anyhow::anyhow!("Can't use online mode for gentx account. You need to specify `account-number` and `sequence`"))
+                }
+            }
+    }
 
     fn prepare_tx(
         &self,

@@ -18,7 +18,6 @@ pub enum CollectMode {
 pub struct CollectGentxCmd {
     pub(crate) gentx_dir: PathBuf,
     pub(crate) home: PathBuf,
-    pub moniker: String,
     pub mode: CollectMode,
 }
 
@@ -26,7 +25,6 @@ pub fn gen_app_state_from_config(
     CollectGentxCmd {
         gentx_dir,
         home,
-        moniker,
         mode,
     }: CollectGentxCmd,
     balance_sk: &str,
@@ -36,7 +34,8 @@ pub fn gen_app_state_from_config(
 
     let txs_iter = GenesisBalanceIter::new(balance_sk, &genesis_file)?; // todo: better way to get path to genesis file
 
-    let (persistent_peers, app_gen_txs) = collect_txs(gentx_dir, moniker, txs_iter)?;
+    let (persistent_peers, app_gen_txs) =
+        collect_txs(gentx_dir, read_moniker_cfg(&home)?, txs_iter)?;
 
     if app_gen_txs.is_empty() {
         return Err(anyhow::anyhow!("there must be at least one genesis tx"));
@@ -122,6 +121,24 @@ pub fn gen_app_state_from_config(
     }
 
     Ok(())
+}
+
+fn read_moniker_cfg(home: impl AsRef<Path>) -> anyhow::Result<String> {
+    let tendermint_config: toml_edit::DocumentMut =
+        std::fs::read_to_string(home.as_ref().join("config/config.toml"))?.parse()?;
+
+    let moniker = tendermint_config
+        .get("moniker")
+        .ok_or(anyhow::anyhow!(
+            "Failed to find `moniker` in tendermint config"
+        ))?
+        .as_str()
+        .ok_or(anyhow::anyhow!(
+            "Failed to read `moniker` in tendermint config"
+        ))?
+        .to_owned();
+
+    Ok(moniker)
 }
 
 fn add_peers_to_tm_toml_config(
