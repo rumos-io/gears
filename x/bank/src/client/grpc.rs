@@ -39,8 +39,7 @@ where
     ) -> Result<Response<RawQueryBalanceResponse>, Status> {
         info!("Received a gRPC request bank::balance");
         let req = BankNodeQueryRequest::Balance(request.into_inner().try_into()?);
-        let response = self.app.typed_query(req)?;
-        let response: BankNodeQueryResponse = response.try_into()?;
+        let response: BankNodeQueryResponse = self.app.typed_query(req)?.try_into()?;
 
         if let BankNodeQueryResponse::Balance(response) = response {
             Ok(Response::new(response.into()))
@@ -86,9 +85,16 @@ where
 
     async fn supply_of(
         &self,
-        _request: Request<QuerySupplyOfRequest>,
+        request: Request<QuerySupplyOfRequest>,
     ) -> Result<Response<QuerySupplyOfResponse>, Status> {
-        unimplemented!() //TODO: implement
+        let req = BankNodeQueryRequest::SupplyOf(request.into_inner().try_into()?);
+        let response: BankNodeQueryResponse = self.app.typed_query(req)?.try_into()?;
+
+        if let BankNodeQueryResponse::SupplyOf(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(ERROR_STATE_MSG))
+        }
     }
 
     async fn params(

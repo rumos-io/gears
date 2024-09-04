@@ -15,6 +15,7 @@ use crate::BankParams;
 
 mod inner {
 
+    // TODO: Remove re-export of this
     pub use gears::core::query::request::bank::QueryAllBalancesRequest;
     pub use gears::core::query::request::bank::QueryBalanceRequest;
     pub use gears::core::query::request::bank::QueryDenomMetadataRequest;
@@ -141,4 +142,18 @@ pub struct QueryDenomMetadataResponse {
 pub struct QueryParamsResponse {
     #[proto(optional)]
     pub params: BankParams,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QuerySupplyOfRequest")]
+#[query(url = "/cosmos.bank.v1beta1.Query/TotalSupply")]
+pub struct QuerySupplyOfRequest {
+    pub denom: Denom,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QuerySupplyOfResponse")]
+pub struct QuerySupplyOfResponse {
+    #[proto(optional)]
+    pub amount: Option<UnsignedCoin>,
 }

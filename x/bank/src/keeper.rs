@@ -633,15 +633,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         )
     }
 
-    pub fn supply<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn supply<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
         denom: &Denom,
     ) -> Result<Option<UnsignedCoin>, GasStoreErrors> {
-        let store = ctx.kv_store(&self.store_key);
-        let supply_store = store.prefix_store(SUPPLY_KEY);
+        let supply_store = ctx.kv_store(&self.store_key).prefix_store(SUPPLY_KEY);
 
-        let amount_bytes = supply_store.get(denom.as_str().as_bytes())?;
+        let amount_bytes = supply_store.get(denom)?;
 
         match amount_bytes {
             Some(bytes) => Ok(Some(UnsignedCoin {

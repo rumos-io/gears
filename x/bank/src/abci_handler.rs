@@ -22,8 +22,8 @@ use crate::errors::BankTxError;
 use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
     QueryDenomMetadataRequest, QueryDenomMetadataResponse, QueryDenomsMetadataRequest,
-    QueryDenomsMetadataResponse, QueryParamsRequest, QueryParamsResponse, QueryTotalSupplyRequest,
-    QueryTotalSupplyResponse,
+    QueryDenomsMetadataResponse, QueryParamsRequest, QueryParamsResponse, QuerySupplyOfRequest,
+    QuerySupplyOfResponse, QueryTotalSupplyRequest, QueryTotalSupplyResponse,
 };
 use crate::{GenesisState, Keeper, Message};
 
@@ -47,6 +47,7 @@ pub enum BankNodeQueryRequest {
     DenomsMetadata(QueryDenomsMetadataRequest),
     DenomMetadata(QueryDenomMetadataRequest),
     Params(QueryParamsRequest),
+    SupplyOf(QuerySupplyOfRequest),
 }
 
 impl QueryRequest for BankNodeQueryRequest {
@@ -64,6 +65,7 @@ pub enum BankNodeQueryResponse {
     DenomsMetadata(QueryDenomsMetadataResponse),
     DenomMetadata(QueryDenomMetadataResponse),
     Params(QueryParamsResponse),
+    SupplyOf(QuerySupplyOfResponse),
 }
 
 impl<
@@ -114,6 +116,10 @@ impl<
                 BankNodeQueryResponse::Params(QueryParamsResponse {
                     params: self.keeper.params(ctx),
                 })
+            }
+            BankNodeQueryRequest::SupplyOf(req) => {
+                let amount = self.keeper.supply(ctx, &req.denom).unwrap_gas();
+                BankNodeQueryResponse::SupplyOf(QuerySupplyOfResponse { amount })
             }
         }
     }
