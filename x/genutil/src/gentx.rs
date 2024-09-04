@@ -22,7 +22,7 @@ use gears::tendermint::types::proto::crypto::PublicKey as TendermintPublicKey;
 pub struct GentxCmd {
     pub pubkey: Option<TendermintPublicKey>,
     pub amount: UnsignedCoin,
-    pub moniker: String,
+    pub moniker: Option<String>,
     pub identity: String,
     pub website: String,
     pub security_contact: String,
@@ -193,7 +193,7 @@ impl TxHandler for GentxTxHandler {
 
         let tx = Messages::from(CreateValidator {
             description: Description {
-                moniker,
+                moniker: moniker.unwrap_or_default(),
                 identity,
                 website,
                 security_contact,
