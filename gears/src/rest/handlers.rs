@@ -1,9 +1,12 @@
+use crate::application::ApplicationInfo;
+use crate::baseapp::NodeQueryHandler;
 use crate::ext::{IteratorPaginateByOffset, PaginationByOffset};
 use crate::rest::error::HTTPError;
 use crate::types::pagination::response::PaginationResponse;
 use crate::types::request::tx::BroadcastTxRequest;
 use crate::types::response::any::AnyTx;
 use crate::types::response::block::GetBlockByHeightResponse;
+use crate::types::response::node_info::{GetNodeInfoResponse, VersionInfo};
 use crate::types::response::tx::{
     BroadcastTxResponse, BroadcastTxResponseLight, TxResponse, TxResponseLight,
 };
@@ -15,8 +18,7 @@ use axum::Json;
 use bytes::Bytes;
 use core_types::Protobuf;
 use ibc_proto::cosmos::tx::v1beta1::BroadcastMode;
-use serde::{Deserialize, Serialize};
-use tendermint::informal::node::Info;
+use serde::Deserialize;
 use tendermint::informal::Hash;
 use tendermint::rpc::client::{Client, HttpClient, HttpClientUrl};
 use tendermint::rpc::query::Query;
@@ -24,32 +26,35 @@ use tendermint::rpc::response::tx::search::Response;
 use tendermint::rpc::url::Url;
 use tendermint::rpc::Order;
 
-use super::{parse_pagination, Pagination};
+use super::{parse_pagination, Pagination, RestState};
 
 // TODO:
 // 1. handle multiple events in /cosmos/tx/v1beta1/txs request
-// 2. include application information in NodeInfoResponse
 // 3. get block in /cosmos/tx/v1beta1/txs so that the timestamp can be added to TxResponse
 
-#[derive(Serialize, Deserialize)]
-pub struct NodeInfoResponse {
-    #[serde(rename = "default_node_info")]
-    node_info: Info,
-    //TODO: application_version
-}
-
-pub async fn node_info(
-    State(tendermint_rpc_address): State<HttpClientUrl>,
-) -> Result<Json<NodeInfoResponse>, HTTPError> {
-    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+pub async fn node_info<QReq, QRes, App: NodeQueryHandler<QReq, QRes> + ApplicationInfo>(
+    State(state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<GetNodeInfoResponse>, HTTPError> {
+    let client = HttpClient::new::<Url>(state.tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
 
     let res = client.status().await.map_err(|e| {
         tracing::error!("Error connecting to Tendermint: {e}");
         HTTPError::gateway_timeout()
     })?;
 
-    let node_info = NodeInfoResponse {
-        node_info: res.node_info,
+    let node_info = GetNodeInfoResponse {
+        default_node_info: Some(res.node_info.into()),
+        // TODO: extend ApplicationInfo trait and add member to form the version info
+        application_version: Some(VersionInfo {
+            name: App::APP_NAME.to_string(),
+            app_name: App::APP_NAME.to_string(),
+            version: App::APP_VERSION.to_string(),
+            git_commit: "".to_string(),
+            build_tags: "".to_string(),
+            rust_version: "1".to_string(),
+            build_deps: vec![],
+            cosmos_sdk_version: "".to_string(),
+        }),
     };
     Ok(Json(node_info))
 }

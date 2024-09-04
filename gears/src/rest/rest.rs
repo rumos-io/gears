@@ -1,4 +1,5 @@
 use crate::{
+    application::ApplicationInfo,
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
     rest::handlers::{
         block_latest, node_info, send_tx, tx, txs, validatorsets, validatorsets_latest,
@@ -18,7 +19,7 @@ pub fn run_rest_server<
     M: TxMessage,
     QReq: QueryRequest,
     QRes: QueryResponse,
-    App: NodeQueryHandler<QReq, QRes>,
+    App: NodeQueryHandler<QReq, QRes> + ApplicationInfo,
 >(
     app: App,
     listen_addr: SocketAddr,
@@ -61,7 +62,7 @@ async fn launch<
     M: TxMessage,
     QReq: QueryRequest,
     QRes: QueryResponse,
-    App: NodeQueryHandler<QReq, QRes>,
+    App: NodeQueryHandler<QReq, QRes> + ApplicationInfo,
 >(
     app: App,
     listen_addr: SocketAddr,
@@ -79,7 +80,10 @@ async fn launch<
     };
 
     let app = Router::new()
-        .route("/cosmos/base/tendermint/v1beta1/node_info", get(node_info))
+        .route(
+            "/cosmos/base/tendermint/v1beta1/node_info",
+            get(node_info::<QReq, QRes, App>),
+        )
         .route(
             "/cosmos/base/tendermint/v1beta1/validatorsets/latest",
             get(validatorsets_latest),
