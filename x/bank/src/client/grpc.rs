@@ -16,6 +16,7 @@ use tracing::info;
 use crate::{BankNodeQueryRequest, BankNodeQueryResponse};
 
 const ERROR_STATE_MSG: &str = "An internal error occurred while querying the application state.";
+const UNIMPLEMENTED_MSG: &str = "Unimplemented";
 
 #[derive(Debug, Default)]
 pub struct BankService<QH, QReq, QRes> {
@@ -66,7 +67,7 @@ where
         &self,
         _request: Request<QuerySpendableBalancesRequest>,
     ) -> Result<Response<QuerySpendableBalancesResponse>, Status> {
-        unimplemented!() //TODO: implement
+        Err(Status::internal(UNIMPLEMENTED_MSG))
     }
 
     async fn total_supply(
@@ -143,7 +144,7 @@ where
         &self,
         _request: Request<QueryDenomOwnersRequest>,
     ) -> Result<Response<QueryDenomOwnersResponse>, Status> {
-        unimplemented!() //TODO: implement
+        Err(Status::internal(UNIMPLEMENTED_MSG))
     }
 }
 
