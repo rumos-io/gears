@@ -15,6 +15,8 @@ use tracing::info;
 
 use crate::{AuthNodeQueryRequest, AuthNodeQueryResponse};
 
+const ERROR_STATE_MSG: &str = "An internal error occurred while querying the application state.";
+
 #[derive(Debug, Default)]
 pub struct AuthService<QH, QReq, QRes> {
     app: QH,
@@ -40,9 +42,7 @@ where
         let response = self.app.typed_query(req)?;
         let response: AuthNodeQueryResponse = response.try_into()?;
         let AuthNodeQueryResponse::Accounts(response) = response else {
-            return Err(Status::internal(
-                "An internal error occurred while querying the application state.",
-            ));
+            return Err(Status::internal(ERROR_STATE_MSG));
         };
         Ok(Response::new(response.into()))
     }
@@ -56,9 +56,7 @@ where
         let response = self.app.typed_query(req)?;
         let response: AuthNodeQueryResponse = response.try_into()?;
         let AuthNodeQueryResponse::Account(response) = response else {
-            return Err(Status::internal(
-                "An internal error occurred while querying the application state.",
-            ));
+            return Err(Status::internal(ERROR_STATE_MSG));
         };
         Ok(Response::new(response.into()))
     }
@@ -79,9 +77,7 @@ where
         let response = self.app.typed_query(req)?;
         let response: AuthNodeQueryResponse = response.try_into()?;
         let AuthNodeQueryResponse::Params(response) = response else {
-            return Err(Status::internal(
-                "An internal error occurred while querying the application state.",
-            ));
+            return Err(Status::internal(ERROR_STATE_MSG));
         };
         Ok(Response::new(response.into()))
     }
