@@ -100,7 +100,9 @@ where
         &self,
         _request: Request<Bech32PrefixRequest>,
     ) -> Result<Response<Bech32PrefixResponse>, Status> {
-        unimplemented!() //TODO: implement
+        Ok(Response::new(Bech32PrefixResponse {
+            bech32_prefix: std::env!("BECH_32_MAIN_PREFIX").to_owned(),
+        }))
     }
 
     async fn address_bytes_to_string(
