@@ -91,14 +91,16 @@ where
         &self,
         _request: Request<QueryModuleAccountsRequest>,
     ) -> Result<Response<QueryModuleAccountsResponse>, Status> {
-        unimplemented!() //TODO: implement
+        // TODO: Discuss implementation of this. Easiest way is to implement them with strum enum iterator
+        Err(Status::internal(UNIMPLEMENTED_MSG))
     }
 
     async fn module_account_by_name(
         &self,
         _request: Request<QueryModuleAccountByNameRequest>,
     ) -> Result<Response<QueryModuleAccountByNameResponse>, Status> {
-        unimplemented!() //TODO: implement
+        // TODO: Discuss implementation of this. Easiest way is to implement them with strum enum iterator
+        Err(Status::internal(UNIMPLEMENTED_MSG))
     }
 
     async fn bech32_prefix(
