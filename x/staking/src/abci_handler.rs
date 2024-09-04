@@ -120,6 +120,7 @@ impl<
         &self,
         _: &mut TxContext<'_, DB, Self::StoreKey>,
         _: &gears::types::tx::raw::TxWithRaw<Self::Message>,
+        _: bool,
     ) -> Result<(), TxError> {
         Ok(())
     }
@@ -130,7 +131,10 @@ impl<
         msg: &Self::Message,
     ) -> Result<(), TxError> {
         let result = match msg {
-            Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
+            Message::CreateValidator(msg) => {
+                self.keeper
+                    .create_validator(ctx, ctx.consensus_params().validator.clone(), msg)
+            }
             Message::EditValidator(msg) => self.keeper.edit_validator(ctx, msg),
             Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
             Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),
@@ -152,7 +156,7 @@ impl<
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
-    ) -> Result<prost::bytes::Bytes, QueryError> {
+    ) -> Result<Vec<u8>, QueryError> {
         match query.path.as_str() {
             "/cosmos.staking.v1beta1.Query/Validator" => {
                 let req = QueryValidatorRequest::decode(query.data)?;

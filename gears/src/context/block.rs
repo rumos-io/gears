@@ -66,6 +66,10 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for BlockContext<'_, D
         self.height
     }
 
+    fn chain_id(&self) -> &ChainId {
+        &self.header.chain_id
+    }
+
     fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
         Store::from(self.kv_store(store_key))
     }

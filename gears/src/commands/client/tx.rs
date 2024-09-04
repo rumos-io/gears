@@ -8,7 +8,8 @@ use tendermint::types::chain_id::ChainId;
 
 use crate::application::handlers::client::{TxExecutionResult, TxHandler};
 use crate::commands::client::query::execute_query;
-use crate::crypto::keys::ReadAccAddress;
+use crate::crypto::any_key::AnyKey;
+use crate::crypto::keys::GearsPublicKey;
 use crate::crypto::ledger::LedgerProxyKey;
 use crate::runtime::runtime;
 use crate::types::base::coins::UnsignedCoins;
@@ -16,11 +17,18 @@ use crate::types::tx::raw::TxRaw;
 
 use super::keys::KeyringBackend;
 
+#[derive(Debug, Clone)]
+pub enum AccountProvider {
+    Offline { sequence: u64, account_number: u64 },
+    Online,
+}
+
 #[derive(Debug, Clone, former::Former)]
 pub struct TxCommand<C> {
     pub home: PathBuf,
     pub node: url::Url,
     pub chain_id: ChainId,
+    pub account: AccountProvider,
     pub fees: Option<UnsignedCoins>,
     pub keyring: Keyring,
     pub inner: C,
@@ -31,10 +39,11 @@ pub struct TxCommand<C> {
 pub struct ClientTxContext {
     pub node: url::Url,
     pub home: PathBuf,
+    pub keyring: Keyring,
+    pub memo: Option<String>,
+    pub account: AccountProvider,
     chain_id: ChainId,
     fees: Option<UnsignedCoins>,
-    keyring: Keyring,
-    pub memo: Option<String>,
 }
 
 impl ClientTxContext {
@@ -59,6 +68,7 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
             chain_id,
             fees,
             keyring,
+            account,
             inner: _,
         }: &TxCommand<C>,
     ) -> Self {
@@ -68,6 +78,7 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
             chain_id: chain_id.clone(),
             fees: fees.clone(),
             keyring: keyring.clone(),
+            account: account.clone(),
             memo: None,
         }
     }
@@ -120,90 +131,79 @@ impl From<TxExecutionResult> for RuntxResult {
     }
 }
 
+fn handle_key(client_tx_context: &ClientTxContext) -> anyhow::Result<AnyKey> {
+    match client_tx_context.keyring {
+        Keyring::Ledger => Ok(AnyKey::Ledger(LedgerProxyKey::new()?)),
+        Keyring::Local(ref local) => {
+            let keyring_home = client_tx_context
+                .home
+                .join(local.keyring_backend.get_sub_dir());
+            let key = keyring::key_by_name(
+                &local.from_key,
+                local.keyring_backend.to_keyring_backend(&keyring_home),
+            )?;
+
+            Ok(AnyKey::Local(key))
+        }
+    }
+}
+
 pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     command: TxCommand<C>,
     handler: &H,
 ) -> anyhow::Result<RuntxResult> {
-    match command.keyring {
-        Keyring::Ledger => {
-            let key = LedgerProxyKey::new()?;
+    let ctx = &mut (&command).into();
+    let key = handle_key(ctx)?;
 
-            let ctx = &mut (&command).into();
-            let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
-            handler
-                .handle_tx(
-                    handler.sign_msg(
-                        messages,
-                        &key,
-                        &command.node,
-                        command.chain_id,
-                        command.fees,
-                        SignMode::Textual,
-                        ctx,
-                    )?,
-                    ctx,
-                )
-                .map(Into::into)
-        }
-        Keyring::Local(ref info) => {
-            let keyring_home = command.home.join(info.keyring_backend.get_sub_dir());
-            let key = keyring::key_by_name(
-                &info.from_key,
-                info.keyring_backend.to_keyring_backend(&keyring_home),
-            )?;
+    let messages = handler.prepare_tx(ctx, command.inner, key.get_gears_public_key())?;
 
-            let ctx = &mut (&command).into();
-            let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
+    if messages.chunk_size() > 0
+    // TODO: uncomment and update logic when command will be extended by broadcast_mode
+    /* && command.broadcast_mode == BroadcastMode::Block */
+    {
+        let chunk_size = messages.chunk_size();
+        let msgs = messages.into_msgs();
 
-            if messages.chunk_size() > 0
-            // TODO: uncomment and update logic when command will be extended by broadcast_mode
-            /* && command.broadcast_mode == BroadcastMode::Block */
-            {
-                let chunk_size = messages.chunk_size();
-                let msgs = messages.into_msgs();
-
-                let mut res = vec![];
-                for slice in msgs.chunks(chunk_size) {
-                    res.push(
-                        handler
-                            .handle_tx(
-                                handler.sign_msg(
-                                    slice
-                                        .to_vec()
-                                        .try_into()
-                                        .expect("chunking of the messages excludes empty vectors"),
-                                    &key,
-                                    &command.node,
-                                    command.chain_id.clone(),
-                                    command.fees.clone(),
-                                    SignMode::Direct,
-                                    ctx,
-                                )?,
-                                ctx,
-                            )?
-                            .broadcast()
-                            .ok_or(anyhow::anyhow!("tx is not broadcasted"))?,
-                    );
-                }
-                Ok(RuntxResult::Broadcast(res))
-            } else {
-                // TODO: can be reduced by changing variable `step`. Do we need it?
+        let mut res = vec![];
+        for slice in msgs.chunks(chunk_size) {
+            res.push(
                 handler
                     .handle_tx(
                         handler.sign_msg(
-                            messages,
+                            slice
+                                .to_vec()
+                                .try_into()
+                                .expect("chunking of the messages excludes empty vectors"),
                             &key,
                             &command.node,
-                            command.chain_id,
-                            command.fees,
+                            command.chain_id.clone(),
+                            command.fees.clone(),
                             SignMode::Direct,
                             ctx,
                         )?,
                         ctx,
-                    )
-                    .map(Into::into)
-            }
+                    )?
+                    .broadcast()
+                    .ok_or(anyhow::anyhow!("tx is not broadcasted"))?,
+            );
         }
+        Ok(RuntxResult::Broadcast(res))
+    } else {
+        // TODO: can be reduced by changing variable `step`. Do we need it?
+        handler
+            .handle_tx(
+                handler.sign_msg(
+                    messages,
+                    &key,
+                    &command.node,
+                    command.chain_id,
+                    command.fees,
+                    SignMode::Direct,
+                    ctx,
+                )?,
+                ctx,
+            )
+            .map(Into::into)
     }
 }
 

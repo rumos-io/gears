@@ -7,14 +7,15 @@ use kv_store::{
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event, time::timestamp::Timestamp};
 
-use crate::types::store::kv::mutable::StoreMut;
 use crate::types::store::kv::Store;
+use crate::{baseapp::ConsensusParams, types::store::kv::mutable::StoreMut};
 
 use super::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
     multi_store: &'a mut ApplicationMultiBank<DB, SK>,
+    consensus_params: ConsensusParams,
     pub(crate) height: u32,
     pub(crate) time: Timestamp,
     pub events: Vec<Event>,
@@ -27,6 +28,7 @@ impl<'a, DB, SK> InitContext<'a, DB, SK> {
         height: u32,
         time: Timestamp,
         chain_id: ChainId,
+        consensus_params: ConsensusParams,
     ) -> Self {
         InitContext {
             multi_store,
@@ -34,15 +36,16 @@ impl<'a, DB, SK> InitContext<'a, DB, SK> {
             time,
             events: Vec::new(),
             chain_id,
+            consensus_params,
         }
-    }
-
-    pub fn chain_id(&self) -> &ChainId {
-        &self.chain_id
     }
 }
 
 impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
+    pub fn consensus_params(&self) -> &ConsensusParams {
+        &self.consensus_params
+    }
+
     pub fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         KVStore::from(self.multi_store.kv_store(store_key))
     }
@@ -55,6 +58,10 @@ impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for InitContext<'_, DB, SK> {
     fn height(&self) -> u32 {
         self.height
+    }
+
+    fn chain_id(&self) -> &ChainId {
+        &self.chain_id
     }
 
     fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {

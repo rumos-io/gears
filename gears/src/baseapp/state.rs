@@ -88,12 +88,27 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         height: u32,
         time: Timestamp,
         chain_id: ChainId,
+        consensus_params: ConsensusParams,
     ) -> InitContext<'_, DB, AH::StoreKey> {
-        InitContext::new(&mut self.multi_store, height, time, chain_id)
+        InitContext::new(
+            &mut self.multi_store,
+            height,
+            time,
+            chain_id,
+            consensus_params,
+        )
     }
 
-    pub fn simple_ctx(&mut self, height: u32) -> SimpleContext<'_, DB, AH::StoreKey> {
-        SimpleContext::new(SimpleBackend::Application(&mut self.multi_store), height)
+    pub fn simple_ctx(
+        &mut self,
+        height: u32,
+        chain_id: ChainId,
+    ) -> SimpleContext<'_, DB, AH::StoreKey> {
+        SimpleContext::new(
+            SimpleBackend::Application(&mut self.multi_store),
+            height,
+            chain_id,
+        )
     }
 
     pub fn block_ctx(
