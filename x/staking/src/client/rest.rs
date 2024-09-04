@@ -1,6 +1,7 @@
 use crate::{
-    QueryDelegatorDelegationsRequest, QueryDelegatorUnbondingDelegationsRequest, QueryPoolRequest,
-    StakingNodeQueryRequest, StakingNodeQueryResponse,
+    QueryDelegationRequest, QueryDelegatorDelegationsRequest,
+    QueryDelegatorUnbondingDelegationsRequest, QueryPoolRequest, StakingNodeQueryRequest,
+    StakingNodeQueryResponse,
 };
 use axum::{
     extract::{Path, Query, State},
@@ -10,7 +11,10 @@ use axum::{
 use gears::{
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
     rest::{error::HTTPError, Pagination, RestState},
-    types::{address::AccAddress, pagination::request::PaginationRequest},
+    types::{
+        address::{AccAddress, ValAddress},
+        pagination::request::PaginationRequest,
+    },
     x::types::validator::BondStatus,
 };
 use serde::{Deserialize, Serialize};
@@ -43,7 +47,7 @@ pub async fn validators<
     Ok(Json(res))
 }
 
-pub async fn delegations<
+pub async fn delegator_delegations<
     QReq: QueryRequest + From<StakingNodeQueryRequest>,
     QRes: QueryResponse + TryInto<StakingNodeQueryResponse>,
     App: NodeQueryHandler<QReq, QRes>,
@@ -55,6 +59,23 @@ pub async fn delegations<
     let req = StakingNodeQueryRequest::Delegations(QueryDelegatorDelegationsRequest {
         delegator_addr,
         pagination: Some(PaginationRequest::from(pagination)),
+    });
+    let res = rest_state.app.typed_query(req)?;
+    Ok(Json(res))
+}
+
+pub async fn delegation<
+    QReq: QueryRequest + From<StakingNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<StakingNodeQueryResponse>,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    Path(validator_addr): Path<ValAddress>,
+    Path(delegator_addr): Path<AccAddress>,
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<QRes>, HTTPError> {
+    let req = StakingNodeQueryRequest::Delegation(QueryDelegationRequest {
+        delegator_addr,
+        validator_addr,
     });
     let res = rest_state.app.typed_query(req)?;
     Ok(Json(res))
@@ -109,7 +130,14 @@ pub fn get_router<
 >() -> Router<RestState<QReq, QRes, App>> {
     Router::new()
         .route("/v1beta1/validators", get(validators))
-        .route("/v1beta1/delegations/:delegator_addr", get(delegations))
+        .route(
+            "/v1beta1/validators/:validator_addr/delegations/:delegator_addr",
+            get(delegation),
+        )
+        .route(
+            "/v1beta1/delegations/:delegator_addr",
+            get(delegator_delegations),
+        )
         .route(
             "/v1beta1/delegators/:delegator_addr/unbonding_delegations",
             get(unbonding_delegations),
