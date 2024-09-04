@@ -19,6 +19,7 @@ use tracing::info;
 use crate::{AuthNodeQueryRequest, AuthNodeQueryResponse};
 
 const ERROR_STATE_MSG: &str = "An internal error occurred while querying the application state.";
+const UNIMPLEMENTED_MSG: &str = "Unimplemented";
 
 #[derive(Debug, Default)]
 pub struct AuthService<QH, QReq, QRes> {
@@ -68,7 +69,8 @@ where
         &self,
         _request: Request<QueryAccountAddressByIdRequest>,
     ) -> Result<Response<QueryAccountAddressByIdResponse>, Status> {
-        unimplemented!() //TODO: implement
+        // We currently don't save anything to `accountNumber` prefix, so I omitted this impl
+        Err(Status::internal(UNIMPLEMENTED_MSG))
     }
 
     async fn params(
