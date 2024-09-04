@@ -17,6 +17,7 @@ use self::kind::MeterKind;
 #[no_link]
 extern crate derive_more;
 
+use infinite_meter::InfiniteGasMeter;
 use tracing::debug;
 
 pub type FiniteGas = super::auth::gas::Gas;
@@ -103,6 +104,13 @@ impl<DS> GasMeter<DS> {
     pub fn new(meter: Box<dyn PlainGasMeter>) -> Self {
         Self {
             meter,
+            _descriptor: PhantomData,
+        }
+    }
+
+    pub fn infinite() -> Self {
+        Self {
+            meter: Box::<InfiniteGasMeter>::default(),
             _descriptor: PhantomData,
         }
     }

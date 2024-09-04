@@ -48,6 +48,10 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<DB, S
     fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
         Store::from(self.kv_store(store_key))
     }
+
+    fn chain_id(&self) -> &ChainId {
+        &self.chain_id
+    }
 }
 
 impl<DB: Database, SK: StoreKey> InfallibleContext<DB, SK> for QueryContext<DB, SK> {
