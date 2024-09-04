@@ -46,6 +46,8 @@ impl TxMessage for Message {
     fn amino_url(&self) -> &'static str {
         match self {
             Message::Delegate(_) => "cosmos-sdk/MsgDelegate",
+            Message::Redelegate(_) => "cosmos-sdk/MsgBeginRedelegate",
+            Message::Undelegate(_) => "cosmos-sdk/MsgUndelegate",
             _ => self.type_url(),
         }
     }
