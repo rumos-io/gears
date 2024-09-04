@@ -1,4 +1,7 @@
-use gears::baseapp::{NodeQueryHandler, QueryRequest, QueryResponse};
+use gears::{
+    baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
+    types::address::AccAddress,
+};
 use ibc_proto::cosmos::auth::v1beta1::{
     query_server::{Query, QueryServer},
     AddressBytesToStringRequest, AddressBytesToStringResponse, AddressStringToBytesRequest,
@@ -107,16 +110,34 @@ where
 
     async fn address_bytes_to_string(
         &self,
-        _request: Request<AddressBytesToStringRequest>,
+        request: Request<AddressBytesToStringRequest>,
     ) -> Result<Response<AddressBytesToStringResponse>, Status> {
-        unimplemented!() //TODO: implement
+        let AddressBytesToStringRequest { address_bytes } = request.into_inner();
+
+        let address_string = match AccAddress::try_from(address_bytes) {
+            Ok(addr) => addr.to_string(),
+            Err(e) => Err(Status::invalid_argument(format!("Invalid address: {e}")))?,
+        };
+
+        Ok(Response::new(AddressBytesToStringResponse {
+            address_string,
+        }))
     }
 
     async fn address_string_to_bytes(
         &self,
-        _request: Request<AddressStringToBytesRequest>,
+        request: Request<AddressStringToBytesRequest>,
     ) -> Result<Response<AddressStringToBytesResponse>, Status> {
-        unimplemented!() //TODO: implement
+        let AddressStringToBytesRequest { address_string } = request.into_inner();
+
+        let address_bytes: Vec<u8> = match AccAddress::from_bech32(&address_string) {
+            Ok(addr) => addr.into(),
+            Err(e) => Err(Status::invalid_argument(format!("Invalid address: {e}")))?,
+        };
+
+        Ok(Response::new(AddressStringToBytesResponse {
+            address_bytes,
+        }))
     }
 }
 
