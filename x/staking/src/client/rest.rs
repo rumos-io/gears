@@ -1,7 +1,7 @@
 use crate::{
     QueryDelegationRequest, QueryDelegatorDelegationsRequest,
-    QueryDelegatorUnbondingDelegationsRequest, QueryPoolRequest, StakingNodeQueryRequest,
-    StakingNodeQueryResponse,
+    QueryDelegatorUnbondingDelegationsRequest, QueryPoolRequest, QueryValidatorRequest,
+    QueryValidatorsRequest, StakingNodeQueryRequest, StakingNodeQueryResponse,
 };
 use axum::{
     extract::{Path, Query, State},
@@ -18,6 +18,19 @@ use gears::{
     x::types::validator::BondStatus,
 };
 use serde::{Deserialize, Serialize};
+
+pub async fn validator<
+    QReq: QueryRequest + From<StakingNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<StakingNodeQueryResponse>,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    Path(validator_addr): Path<ValAddress>,
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<QRes>, HTTPError> {
+    let req = StakingNodeQueryRequest::Validator(QueryValidatorRequest { validator_addr });
+    let res = rest_state.app.typed_query(req)?;
+    Ok(Json(res))
+}
 
 #[derive(Deserialize, Serialize)]
 pub struct ValidatorsQuery {
@@ -39,9 +52,25 @@ pub async fn validators<
     }): Query<ValidatorsQuery>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
-    let req = StakingNodeQueryRequest::Validators(crate::QueryValidatorsRequest {
+    let req = StakingNodeQueryRequest::Validators(QueryValidatorsRequest {
         status: status.unwrap_or(BondStatus::Unspecified),
         pagination: Some(PaginationRequest::from(Pagination::new(offset, limit))),
+    });
+    let res = rest_state.app.typed_query(req)?;
+    Ok(Json(res))
+}
+
+pub async fn delegation<
+    QReq: QueryRequest + From<StakingNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<StakingNodeQueryResponse>,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    Path((validator_addr, delegator_addr)): Path<(ValAddress, AccAddress)>,
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<QRes>, HTTPError> {
+    let req = StakingNodeQueryRequest::Delegation(QueryDelegationRequest {
+        delegator_addr,
+        validator_addr,
     });
     let res = rest_state.app.typed_query(req)?;
     Ok(Json(res))
@@ -59,23 +88,6 @@ pub async fn delegator_delegations<
     let req = StakingNodeQueryRequest::Delegations(QueryDelegatorDelegationsRequest {
         delegator_addr,
         pagination: Some(PaginationRequest::from(pagination)),
-    });
-    let res = rest_state.app.typed_query(req)?;
-    Ok(Json(res))
-}
-
-pub async fn delegation<
-    QReq: QueryRequest + From<StakingNodeQueryRequest>,
-    QRes: QueryResponse + TryInto<StakingNodeQueryResponse>,
-    App: NodeQueryHandler<QReq, QRes>,
->(
-    Path(validator_addr): Path<ValAddress>,
-    Path(delegator_addr): Path<AccAddress>,
-    State(rest_state): State<RestState<QReq, QRes, App>>,
-) -> Result<Json<QRes>, HTTPError> {
-    let req = StakingNodeQueryRequest::Delegation(QueryDelegationRequest {
-        delegator_addr,
-        validator_addr,
     });
     let res = rest_state.app.typed_query(req)?;
     Ok(Json(res))
@@ -130,6 +142,7 @@ pub fn get_router<
 >() -> Router<RestState<QReq, QRes, App>> {
     Router::new()
         .route("/v1beta1/validators", get(validators))
+        .route("/v1beta1/validators/:validator_addr", get(validator))
         .route(
             "/v1beta1/validators/:validator_addr/delegations/:delegator_addr",
             get(delegation),
