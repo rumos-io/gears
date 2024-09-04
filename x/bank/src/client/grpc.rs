@@ -65,9 +65,16 @@ where
 
     async fn spendable_balances(
         &self,
-        _request: Request<QuerySpendableBalancesRequest>,
+        request: Request<QuerySpendableBalancesRequest>,
     ) -> Result<Response<QuerySpendableBalancesResponse>, Status> {
-        Err(Status::internal(UNIMPLEMENTED_MSG))
+        let req = BankNodeQueryRequest::Spendable(request.into_inner().try_into()?);
+        let response: BankNodeQueryResponse = self.app.typed_query(req)?.try_into()?;
+
+        if let BankNodeQueryResponse::Spendable(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(ERROR_STATE_MSG))
+        }
     }
 
     async fn total_supply(

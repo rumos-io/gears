@@ -157,3 +157,21 @@ pub struct QuerySupplyOfResponse {
     #[proto(optional)]
     pub amount: Option<UnsignedCoin>,
 }
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QuerySpendableBalancesRequest")]
+#[query(url = "/cosmos.bank.v1beta1.Query/SpendableBalances")]
+pub struct QuerySpendableBalancesRequest {
+    pub address: AccAddress,
+    #[proto(optional)]
+    pub pagination: Option<PaginationRequest>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QuerySpendableBalancesResponse")]
+pub struct QuerySpendableBalancesResponse {
+    #[proto(repeated)]
+    pub balances: Vec<UnsignedCoin>,
+    #[proto(optional)]
+    pub pagination: Option<PaginationResponse>,
+}

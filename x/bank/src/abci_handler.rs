@@ -22,7 +22,8 @@ use crate::errors::BankTxError;
 use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
     QueryDenomMetadataRequest, QueryDenomMetadataResponse, QueryDenomsMetadataRequest,
-    QueryDenomsMetadataResponse, QueryParamsRequest, QueryParamsResponse, QuerySupplyOfRequest,
+    QueryDenomsMetadataResponse, QueryParamsRequest, QueryParamsResponse,
+    QuerySpendableBalancesRequest, QuerySpendableBalancesResponse, QuerySupplyOfRequest,
     QuerySupplyOfResponse, QueryTotalSupplyRequest, QueryTotalSupplyResponse,
 };
 use crate::{GenesisState, Keeper, Message};
@@ -48,6 +49,7 @@ pub enum BankNodeQueryRequest {
     DenomMetadata(QueryDenomMetadataRequest),
     Params(QueryParamsRequest),
     SupplyOf(QuerySupplyOfRequest),
+    Spendable(QuerySpendableBalancesRequest),
 }
 
 impl QueryRequest for BankNodeQueryRequest {
@@ -66,6 +68,7 @@ pub enum BankNodeQueryResponse {
     DenomMetadata(QueryDenomMetadataResponse),
     Params(QueryParamsResponse),
     SupplyOf(QuerySupplyOfResponse),
+    Spendable(QuerySpendableBalancesResponse),
 }
 
 impl<
@@ -120,6 +123,20 @@ impl<
             BankNodeQueryRequest::SupplyOf(req) => {
                 let amount = self.keeper.supply(ctx, &req.denom).unwrap_gas();
                 BankNodeQueryResponse::SupplyOf(QuerySupplyOfResponse { amount })
+            }
+            BankNodeQueryRequest::Spendable(QuerySpendableBalancesRequest {
+                address,
+                pagination,
+            }) => {
+                let (spendable, _total, pagination_result) = self
+                    .keeper
+                    .spendable_coins(ctx, &address, pagination.map(Pagination::from))
+                    .unwrap(); // TODO: remove unwrap
+
+                BankNodeQueryResponse::Spendable(QuerySpendableBalancesResponse {
+                    balances: spendable.map(Vec::from).unwrap_or_default(),
+                    pagination: pagination_result.map(PaginationResponse::from),
+                })
             }
         }
     }
