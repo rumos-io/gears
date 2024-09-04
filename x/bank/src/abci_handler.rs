@@ -128,14 +128,18 @@ impl<
                 address,
                 pagination,
             }) => {
-                let (spendable, _total, pagination_result) = self
+                // TODO: edit error "handling"
+                let (spendable, pagination_result) = self
                     .keeper
                     .spendable_coins(ctx, &address, pagination.map(Pagination::from))
-                    .unwrap(); // TODO: remove unwrap
+                    .map(|(spendable, _, pag)| {
+                        (spendable.map(Vec::from), pag.map(PaginationResponse::from))
+                    })
+                    .unwrap_or_default();
 
                 BankNodeQueryResponse::Spendable(QuerySpendableBalancesResponse {
-                    balances: spendable.map(Vec::from).unwrap_or_default(),
-                    pagination: pagination_result.map(PaginationResponse::from),
+                    balances: spendable.unwrap_or_default(),
+                    pagination: pagination_result,
                 })
             }
         }
