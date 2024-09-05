@@ -495,10 +495,7 @@ impl<
                             _phantom: PhantomData,
                         };
 
-                        handler
-                            .sign_bytes_get(&f, signer_data, &tx.tx.body, &tx.tx.auth_info)
-                            .unwrap()
-                        //TODO: remove unwrap
+                        handler.sign_bytes_get(&f, signer_data, &tx.tx.body, &tx.tx.auth_info)?
                     }
                     mode => {
                         return Err(AnteError::Validation(format!(
@@ -569,6 +566,7 @@ impl<
 //     use database::MemDB;
 //     use proto_messages::cosmos::auth::v1beta1::{Account, BaseAccount};
 //     use proto_types::AccAddress;
+//     use extensions::testing::UnwrapCorrupt;
 
 //     use crate::store::MultiStore;
 //     use crate::types::tests::get_signed_tx;
@@ -587,13 +585,13 @@ impl<
 //         let mut ctx = InitContext::new(&mut store, 0, "unit-testing".into());
 //         let account = BaseAccount {
 //             address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
-//                 .unwrap(),
+//                 .unwrap_test(),
 //             pub_key: None,
 //             account_number: 1,
 //             sequence: 1,
 //         };
 //         Auth::set_account(&mut ctx.as_any(), Account::Base(account));
-//         set_pub_key_ante_handler(&mut ctx.as_any(), &tx).unwrap();
-//         sig_verification_handler(&mut ctx.as_any(), &tx).unwrap();
+//         set_pub_key_ante_handler(&mut ctx.as_any(), &tx).unwrap_test();
+//         sig_verification_handler(&mut ctx.as_any(), &tx).unwrap_test();
 //     }
 // }

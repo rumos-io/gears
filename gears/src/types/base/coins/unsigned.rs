@@ -32,6 +32,7 @@ impl UnsignedCoins {
 mod tests {
 
     use cosmwasm_std::Uint256;
+    use extensions::testing::UnwrapTesting;
     use std::str::FromStr;
 
     use crate::types::base::errors::CoinsError;
@@ -41,41 +42,41 @@ mod tests {
     #[test]
     fn coin_from_string_successes() {
         let raw = "32454uatom";
-        let coin = raw.parse::<UnsignedCoin>().unwrap();
+        let coin = raw.parse::<UnsignedCoin>().unwrap_test();
         assert_eq!(
             UnsignedCoin {
-                denom: String::from("uatom").try_into().unwrap(),
-                amount: "32454".try_into().unwrap()
+                denom: String::from("uatom").try_into().unwrap_test(),
+                amount: "32454".try_into().unwrap_test()
             },
             coin
         );
 
         let raw = "0uatom";
-        let coin = raw.parse::<UnsignedCoin>().unwrap();
+        let coin = raw.parse::<UnsignedCoin>().unwrap_test();
         assert_eq!(
             UnsignedCoin {
-                denom: String::from("uatom").try_into().unwrap(),
-                amount: "0".try_into().unwrap()
+                denom: String::from("uatom").try_into().unwrap_test(),
+                amount: "0".try_into().unwrap_test()
             },
             coin
         );
 
         let raw = "0001uatom";
-        let coin = raw.parse::<UnsignedCoin>().unwrap();
+        let coin = raw.parse::<UnsignedCoin>().unwrap_test();
         assert_eq!(
             UnsignedCoin {
-                denom: String::from("uatom").try_into().unwrap(),
-                amount: "1".try_into().unwrap()
+                denom: String::from("uatom").try_into().unwrap_test(),
+                amount: "1".try_into().unwrap_test()
             },
             coin
         );
 
         let raw = "12uatom56";
-        let coin = raw.parse::<UnsignedCoin>().unwrap();
+        let coin = raw.parse::<UnsignedCoin>().unwrap_test();
         assert_eq!(
             UnsignedCoin {
-                denom: String::from("uatom56").try_into().unwrap(),
-                amount: "12".try_into().unwrap()
+                denom: String::from("uatom56").try_into().unwrap_test(),
+                amount: "12".try_into().unwrap_test()
             },
             coin
         );
@@ -103,15 +104,15 @@ mod tests {
     fn validate_coins_success() {
         let coins = vec![
             UnsignedCoin {
-                denom: String::from("atom").try_into().unwrap(),
+                denom: String::from("atom").try_into().unwrap_test(),
                 amount: Uint256::one(),
             },
             UnsignedCoin {
-                denom: String::from("atom1").try_into().unwrap(),
+                denom: String::from("atom1").try_into().unwrap_test(),
                 amount: Uint256::one(),
             },
         ];
-        UnsignedCoins::new(coins).unwrap();
+        UnsignedCoins::new(coins).unwrap_test();
 
         // ibc denoms
         let coins = vec![
@@ -120,7 +121,7 @@ mod tests {
                     "ibc/7F1D3FCF4AE79E1554D670D1AD949A9BA4E4A3C76C63093E17E446A46061A7A2",
                 )
                 .try_into()
-                .unwrap(),
+                .unwrap_test(),
                 amount: Uint256::one(),
             },
             UnsignedCoin {
@@ -128,24 +129,24 @@ mod tests {
                     "ibc/876563AAAACF739EB061C67CDB5EDF2B7C9FD4AA9D876450CC21210807C2820A",
                 )
                 .try_into()
-                .unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                .unwrap_test(),
+                amount: Uint256::from_str("3").unwrap_test(),
             },
         ];
-        UnsignedCoins::new(coins).unwrap();
+        UnsignedCoins::new(coins).unwrap_test();
 
         // prefix lexicographical ordering
         let coins = vec![
             UnsignedCoin {
-                denom: String::from("big").try_into().unwrap(),
+                denom: String::from("big").try_into().unwrap_test(),
                 amount: Uint256::one(),
             },
             UnsignedCoin {
-                denom: String::from("bigger").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                denom: String::from("bigger").try_into().unwrap_test(),
+                amount: Uint256::from_str("3").unwrap_test(),
             },
         ];
-        UnsignedCoins::new(coins).unwrap();
+        UnsignedCoins::new(coins).unwrap_test();
     }
 
     #[test]
@@ -157,7 +158,7 @@ mod tests {
 
         // not positive
         let coins = vec![UnsignedCoin {
-            denom: String::from("truer").try_into().unwrap(),
+            denom: String::from("truer").try_into().unwrap_test(),
             amount: Uint256::zero(),
         }];
         let err = UnsignedCoins::new(coins);
@@ -166,15 +167,15 @@ mod tests {
         // not all positive
         let coins = vec![
             UnsignedCoin {
-                denom: String::from("gas").try_into().unwrap(),
+                denom: String::from("gas").try_into().unwrap_test(),
                 amount: Uint256::one(),
             },
             UnsignedCoin {
-                denom: String::from("true").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                denom: String::from("true").try_into().unwrap_test(),
+                amount: Uint256::from_str("3").unwrap_test(),
             },
             UnsignedCoin {
-                denom: String::from("truer").try_into().unwrap(),
+                denom: String::from("truer").try_into().unwrap_test(),
                 amount: Uint256::zero(),
             },
         ];
@@ -184,15 +185,15 @@ mod tests {
         // duplicate denomination
         let coins = vec![
             UnsignedCoin {
-                denom: String::from("gas").try_into().unwrap(),
+                denom: String::from("gas").try_into().unwrap_test(),
                 amount: Uint256::one(),
             },
             UnsignedCoin {
-                denom: String::from("truer").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                denom: String::from("truer").try_into().unwrap_test(),
+                amount: Uint256::from_str("3").unwrap_test(),
             },
             UnsignedCoin {
-                denom: String::from("truer").try_into().unwrap(),
+                denom: String::from("truer").try_into().unwrap_test(),
                 amount: Uint256::one(),
             },
         ];
@@ -202,16 +203,16 @@ mod tests {
         // not sorted
         let coins = vec![
             UnsignedCoin {
-                denom: String::from("tree").try_into().unwrap(),
+                denom: String::from("tree").try_into().unwrap_test(),
                 amount: Uint256::one(),
             },
             UnsignedCoin {
-                denom: String::from("gas").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                denom: String::from("gas").try_into().unwrap_test(),
+                amount: Uint256::from_str("3").unwrap_test(),
             },
             UnsignedCoin {
-                denom: String::from("mineral").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                denom: String::from("mineral").try_into().unwrap_test(),
+                amount: Uint256::from_str("3").unwrap_test(),
             },
         ];
         let err = UnsignedCoins::new(coins);
@@ -220,16 +221,16 @@ mod tests {
         // not sorted 2
         let coins = vec![
             UnsignedCoin {
-                denom: String::from("gas").try_into().unwrap(),
+                denom: String::from("gas").try_into().unwrap_test(),
                 amount: Uint256::one(),
             },
             UnsignedCoin {
-                denom: String::from("true").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                denom: String::from("true").try_into().unwrap_test(),
+                amount: Uint256::from_str("3").unwrap_test(),
             },
             UnsignedCoin {
-                denom: String::from("mineral").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                denom: String::from("mineral").try_into().unwrap_test(),
+                amount: Uint256::from_str("3").unwrap_test(),
             },
         ];
         let err = UnsignedCoins::new(coins);
@@ -239,7 +240,7 @@ mod tests {
     #[test]
     fn coins_from_string_successes() {
         let raw_coins = "100atom,30uatom";
-        UnsignedCoins::from_str(raw_coins).unwrap();
+        UnsignedCoins::from_str(raw_coins).unwrap_test();
     }
 
     #[test]

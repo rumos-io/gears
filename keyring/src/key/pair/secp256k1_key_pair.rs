@@ -1,4 +1,5 @@
 use bip32::{DerivationPath, Mnemonic, XPrv};
+use extensions::testing::UnwrapTesting;
 use hex::{FromHex, ToHex};
 use k256::ecdsa::signature::Signer;
 use k256::ecdsa::SigningKey;
@@ -66,19 +67,20 @@ impl Secp256k1KeyPair {
         // TODO: remove unwraps
 
         // 14 = log_2(16384), 32 bytes = 256 bits
-        let scrypt_params = scrypt::Params::new(14, 8, 1, 32).unwrap();
-        let pbes2_params = pbes2::Parameters::scrypt_aes256cbc(scrypt_params, &salt, &iv).unwrap();
+        let scrypt_params = scrypt::Params::new(14, 8, 1, 32).unwrap_test();
+        let pbes2_params =
+            pbes2::Parameters::scrypt_aes256cbc(scrypt_params, &salt, &iv).unwrap_test();
 
-        let plain_text_der = self.0.to_pkcs8_der().unwrap();
-        let private_key_info = PrivateKeyInfo::try_from(plain_text_der.as_bytes()).unwrap();
+        let plain_text_der = self.0.to_pkcs8_der().unwrap_test();
+        let private_key_info = PrivateKeyInfo::try_from(plain_text_der.as_bytes()).unwrap_test();
 
         let secret_doc = private_key_info
             .encrypt_with_params(pbes2_params, password.as_ref())
-            .unwrap();
+            .unwrap_test();
 
         secret_doc
             .to_pem(EncryptedPrivateKeyInfo::PEM_LABEL, LineEnding::LF)
-            .unwrap()
+            .unwrap_test()
     }
 
     /// Returns a key pair from a PKCS8 PEM encoded private key.
@@ -144,7 +146,7 @@ mod tests {
         let expected_pem = "-----BEGIN PRIVATE KEY-----\nMIGEAgEAMBAGByqGSM49AgEGBSuBBAAKBG0wawIBAQQg9v3Q6I45iMwQhpDigYRQ\nhHH0jrooPuth/OhY97epZC+hRANCAAT1BLBR27K+NJ00ploewlmEWRxsH+HKUS7S\nZWkTuFQKKsUHT9nzm6axXiI797T+92b2kfW3JACbcvQ2uTZQWoFE\n-----END PRIVATE KEY-----\n".to_string();
         let expected_pem = Zeroizing::new(expected_pem);
         let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap_test();
         let key_pair = Secp256k1KeyPair::from_mnemonic(&mnemonic);
 
         let pem = key_pair.to_pkcs8_pem();
@@ -155,7 +157,7 @@ mod tests {
     #[test]
     fn from_pkcs8_pem_works() {
         let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap_test();
         let expected_key_pair = Secp256k1KeyPair::from_mnemonic(&mnemonic);
 
         let pem_key_pair = Secp256k1KeyPair::from_pkcs8_pem(
@@ -168,7 +170,7 @@ mod tests {
     #[test]
     fn encrypted_scenario_works() {
         let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap_test();
         let key_pair = Secp256k1KeyPair::from_mnemonic(&mnemonic);
 
         let pem = key_pair.to_pkcs8_encrypted_pem("password");
@@ -182,12 +184,12 @@ mod tests {
     #[test]
     fn sandpit() {
         let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap_test();
         let key_pair = Secp256k1KeyPair::from_mnemonic(&mnemonic);
 
         let pem = key_pair.to_pkcs8_encrypted_pem("password");
 
         // write pem string to file
-        std::fs::write("./tmp/pem.pem", pem.as_bytes()).unwrap();
+        std::fs::write("./tmp/pem.pem", pem.as_bytes()).unwrap_test();
     }
 }

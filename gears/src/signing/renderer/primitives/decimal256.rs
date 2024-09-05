@@ -25,6 +25,7 @@ impl PrimitiveValueRenderer<Decimal256> for DefaultPrimitiveRenderer {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::Decimal256;
+    use extensions::testing::UnwrapTesting;
 
     use crate::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
@@ -50,9 +51,9 @@ mod tests {
         ];
 
         for (i, expected) in test_data {
-            let actual = DefaultPrimitiveRenderer::format(Decimal256::from_str(i).unwrap());
+            let actual = DefaultPrimitiveRenderer::format(Decimal256::from_str(i).unwrap_test());
 
-            assert_eq!(Content::try_new(expected).unwrap(), actual);
+            assert_eq!(Content::try_new(expected).unwrap_test(), actual);
         }
     }
 }

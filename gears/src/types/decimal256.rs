@@ -38,23 +38,25 @@ impl CosmosDecimalProtoString for Decimal256 {
 #[cfg(test)]
 mod tests {
 
+    use extensions::testing::UnwrapTesting;
+
     use super::*;
 
     #[test]
     fn decimal256_from_cosmos_proto_string_works() {
         assert_eq!(
-            Decimal256::from_cosmos_proto_string("123000000000000000000").unwrap(),
-            Decimal256::from_str("123").unwrap(),
+            Decimal256::from_cosmos_proto_string("123000000000000000000").unwrap_test(),
+            Decimal256::from_str("123").unwrap_test(),
         );
 
         assert_eq!(
-            Decimal256::from_cosmos_proto_string("123456000000000000000").unwrap(),
-            Decimal256::from_str("123.456").unwrap(),
+            Decimal256::from_cosmos_proto_string("123456000000000000000").unwrap_test(),
+            Decimal256::from_str("123.456").unwrap_test(),
         );
 
         assert_eq!(
-            Decimal256::from_cosmos_proto_string("123456000000000000001").unwrap(),
-            Decimal256::from_str("123.456000000000000001").unwrap(),
+            Decimal256::from_cosmos_proto_string("123456000000000000001").unwrap_test(),
+            Decimal256::from_str("123.456000000000000001").unwrap_test(),
         );
     }
 
@@ -62,21 +64,21 @@ mod tests {
     fn decimal256_to_cosmos_proto_string_works() {
         assert_eq!(
             Decimal256::from_str("123")
-                .unwrap()
+                .unwrap_test()
                 .to_cosmos_proto_string(),
             "123000000000000000000"
         );
 
         assert_eq!(
             Decimal256::from_str("123.456")
-                .unwrap()
+                .unwrap_test()
                 .to_cosmos_proto_string(),
             "123456000000000000000"
         );
 
         assert_eq!(
             Decimal256::from_str("123.456000000000000001")
-                .unwrap()
+                .unwrap_test()
                 .to_cosmos_proto_string(),
             "123456000000000000001"
         );
