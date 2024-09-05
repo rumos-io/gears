@@ -259,6 +259,7 @@ pub enum AddressError {
 mod tests {
 
     use bech32::ToBase32;
+    use extensions::testing::UnwrapCorrupt;
 
     use super::*;
 
@@ -386,7 +387,7 @@ mod tests {
     fn string_from_self_success() {
         let addr = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string();
 
-        let acc_addr = AccAddress::from_bech32(&addr).expect("hardcoded is valid");
+        let acc_addr = AccAddress::from_bech32(&addr).testing();
 
         assert_eq!(addr, String::from(acc_addr));
     }

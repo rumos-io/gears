@@ -4,6 +4,7 @@ use std::{
     ops::{Div, Mul},
 };
 
+use gears::extensions::gas::GasResultExt;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
@@ -16,7 +17,7 @@ use gears::{
     types::{
         address::{AccAddress, ValAddress},
         decimal256::Decimal256,
-        store::gas::{errors::GasStoreErrors, ext::GasResultExt},
+        store::gas::errors::GasStoreErrors,
     },
     x::{
         keepers::{gov::GovernanceBankKeeper, staking::GovStakingKeeper},

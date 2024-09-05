@@ -3,8 +3,6 @@ use std::borrow::Cow;
 use itertools::Itertools;
 use vec1::Vec1;
 
-use crate::types::{base::coin::UnsignedCoin, store::gas::errors::GasStoreErrors};
-
 use super::{PaginationResultElement, TwoIterators};
 
 pub type PaginationByKeyResult = PaginationResultElement<Vec<u8>>;
@@ -85,12 +83,6 @@ impl<T: Iterator<Item = U>, U: PaginationKey> IteratorPaginateByKey for T {
     }
 }
 
-impl PaginationKey for UnsignedCoin {
-    fn iterator_key(&self) -> Cow<'_, [u8]> {
-        Cow::Borrowed(self.denom.as_ref())
-    }
-}
-
 impl<T> PaginationKey for (Cow<'_, Vec<u8>>, T) {
     fn iterator_key(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.0.as_ref())
@@ -109,18 +101,19 @@ impl PaginationKey for Vec<u8> {
     }
 }
 
-impl<T: PaginationKey> PaginationKey for Result<T, GasStoreErrors> {
+impl<T: PaginationKey, ERR: PaginationKey> PaginationKey for Result<T, ERR> {
     fn iterator_key(&self) -> Cow<'_, [u8]> {
         match self {
             Ok(var) => var.iterator_key(),
-            Err(var) => Cow::Borrowed(&var.key),
+            Err(var) => var.iterator_key(),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::ext::UnwrapPagination;
+
+    use crate::pagination::UnwrapPagination;
 
     use super::*;
     use vec1::vec1;

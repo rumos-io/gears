@@ -1,9 +1,11 @@
 use std::marker::PhantomData;
 
 use bytes::Bytes;
+use gears::baseapp::QueryResponse;
+use gears::extensions::gas::GasResultExt;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
-    baseapp::{errors::QueryError, QueryResponse},
+    baseapp::errors::QueryError,
     context::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         TransactionalContext,
@@ -18,7 +20,7 @@ use gears::{
         },
         request::{end_block::RequestEndBlock, query::RequestQuery},
     },
-    types::{store::gas::ext::GasResultExt, tx::raw::TxWithRaw},
+    types::tx::raw::TxWithRaw,
     x::{
         keepers::{gov::GovernanceBankKeeper, staking::GovStakingKeeper},
         module::Module,

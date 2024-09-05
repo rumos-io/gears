@@ -18,6 +18,7 @@ dependencies = [
  "bech32 0.9.1",
  "constcat",
  "data-encoding",
+ "extensions",
  "serde",
  "serde_json",
  "thiserror",
@@ -1671,6 +1672,10 @@ dependencies = [
 [[package]]
 name = "extensions"
 version = "0.1.0"
+dependencies = [
+ "itertools 0.13.0",
+ "vec1",
+]
 
 [[package]]
 name = "eyre"

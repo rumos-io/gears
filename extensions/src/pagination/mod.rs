@@ -1,8 +1,6 @@
 mod key;
 mod offset;
 
-use crate::types::pagination::response::PaginationResponse;
-
 pub use self::key::*;
 pub use self::offset::*;
 
@@ -135,18 +133,3 @@ impl<T> PaginationResultElement<T> {
     }
 }
 
-impl<T: PaginationKey> From<PaginationResultElement<T>> for PaginationResponse {
-    fn from(
-        PaginationResultElement {
-            total,
-            next_key: next_element,
-        }: PaginationResultElement<T>,
-    ) -> Self {
-        Self {
-            next_key: next_element
-                .map(|this| this.iterator_key().into_owned())
-                .unwrap_or_default(),
-            total: total as u64,
-        }
-    }
-}

@@ -5,7 +5,7 @@ use crate::{
 };
 use gears::{
     context::query::QueryContext,
-    ext::{IteratorPaginate, Pagination, PaginationResult},
+    extensions::pagination::{IteratorPaginate, Pagination, PaginationResult},
 };
 
 impl<

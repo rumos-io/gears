@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-pub const TESTING_MSG: &str = "invalid data in database - possible database corruption";
+pub const TESTING_MSG: &str = "unwrap value in test";
 
 pub trait UnwrapCorrupt {
     type Output;

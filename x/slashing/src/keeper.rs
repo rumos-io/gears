@@ -7,14 +7,17 @@ use crate::{
     GenesisState, MsgUnjail, QueryParamsRequest, QueryParamsResponse, QuerySigningInfoRequest,
     QuerySigningInfoResponse, SlashingParamsKeeper, ValidatorSigningInfo,
 };
+use gears::extensions::gas::GasResultExt;
 use gears::{
     context::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         InfallibleContextMut, QueryableContext, TransactionalContext,
     },
     core::Protobuf,
-    ext::{IteratorPaginate, Pagination, PaginationResult},
-    extensions::corruption::UnwrapCorrupt,
+    extensions::{
+        corruption::UnwrapCorrupt,
+        pagination::{IteratorPaginate, Pagination, PaginationResult},
+    },
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -28,7 +31,7 @@ use gears::{
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
         decimal256::Decimal256,
-        store::gas::{errors::GasStoreErrors, ext::GasResultExt},
+        store::gas::errors::GasStoreErrors,
     },
     x::{
         errors::AccountNotFound,

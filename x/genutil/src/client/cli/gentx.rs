@@ -3,11 +3,9 @@ use std::{net::SocketAddr, path::PathBuf};
 
 use clap::{ArgAction, Args, ValueHint};
 use gears::application::ApplicationInfo;
+use gears::extensions::socket_addr;
 use gears::tendermint::types::proto::crypto::PublicKey as TendermintPublicKey;
-use gears::{
-    socket_addr,
-    types::{base::coin::UnsignedCoin, decimal256::Decimal256, uint::Uint256},
-};
+use gears::types::{base::coin::UnsignedCoin, decimal256::Decimal256, uint::Uint256};
 
 use crate::gentx::GentxCmd;
 

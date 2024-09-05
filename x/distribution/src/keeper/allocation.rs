@@ -6,6 +6,7 @@ use crate::{
 use gears::{
     context::block::BlockContext,
     error::{MathOperation, NumericError},
+    extensions::gas::GasResultExt,
     tendermint::types::proto::{
         event::{Event, EventAttribute},
         info::VoteInfo,

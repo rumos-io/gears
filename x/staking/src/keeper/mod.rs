@@ -3,6 +3,7 @@ use crate::{
     Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Redelegation,
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
+use gears::extensions::gas::GasResultExt;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
@@ -22,7 +23,7 @@ use gears::{
         address::{AccAddress, ValAddress},
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
         decimal256::Decimal256,
-        store::gas::{errors::GasStoreErrors, ext::GasResultExt},
+        store::gas::errors::GasStoreErrors,
         uint::Uint256,
     },
     x::{

@@ -1,7 +1,6 @@
+use extensions::pagination::{Pagination, PaginationByKey, PaginationByOffset};
 use serde::Deserialize;
 use vec1::Vec1;
-
-use crate::ext::{Pagination, PaginationByKey, PaginationByOffset};
 
 pub(crate) const QUERY_DEFAULT_LIMIT: u8 = 100;
 

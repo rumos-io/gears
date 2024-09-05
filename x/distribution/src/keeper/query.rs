@@ -10,7 +10,7 @@ use crate::{
 use gears::{
     baseapp::errors::QueryError,
     context::query::QueryContext,
-    ext::{IteratorPaginate, Pagination},
+    extensions::pagination::{IteratorPaginate, Pagination},
     types::pagination::response::PaginationResponse,
     x::types::delegation::StakingDelegation,
 };

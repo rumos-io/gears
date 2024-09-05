@@ -11,7 +11,7 @@ use gears::{
     baseapp::Query,
     cli::pagination::CliPaginationRequest,
     core::Protobuf,
-    ext::FallibleMapExt,
+    extensions::try_map::FallibleMapExt,
     types::{
         address::{AccAddress, ValAddress},
         pagination::request::PaginationRequest,
