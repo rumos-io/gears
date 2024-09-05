@@ -438,7 +438,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         let key = addr_pubkey_relation_key(addr);
 
         // TODO: add Protobuf for PublicKey
-        let value = serde_json::to_vec(pub_key).unwrap();
+        let value = serde_json::to_vec(pub_key).expect("serde encoding can't fail");
         store.set(key, value)
     }
 
@@ -508,7 +508,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         let mut store = ctx.infallible_store_mut(&self.store_key);
         let key = validator_missed_block_bit_array_key(addr.clone(), index);
         // TODO: something like that in sdk
-        let value = serde_json::to_vec(&missed).unwrap();
+        let value = serde_json::to_vec(&missed).expect("serde encoding can't fail");
         store.set(key, value)
     }
 
