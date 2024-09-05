@@ -6,6 +6,7 @@ use std::{
 use gears::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
     core::Protobuf,
+    extensions::corruption::UnwrapCorrupt,
     params::{
         gas, infallible_subspace, infallible_subspace_mut, ParamKind, ParamsDeserialize,
         ParamsSerialize, ParamsSubspaceKey,
@@ -122,37 +123,37 @@ impl ParamsDeserialize for DistributionParams {
             community_tax: Decimal256::from_str(
                 &String::from_utf8(
                     ParamKind::Bytes
-                        .parse_param(fields.remove(KEY_COMMUNITY_TAX).unwrap())
+                        .parse_param(fields.remove(KEY_COMMUNITY_TAX).unwrap_or_corrupt())
                         .bytes()
-                        .unwrap(),
+                        .unwrap_or_corrupt(),
                 )
-                .unwrap(),
+                .unwrap_or_corrupt(),
             )
-            .unwrap(),
+            .unwrap_or_corrupt(),
             base_proposer_reward: Decimal256::from_str(
                 &String::from_utf8(
                     ParamKind::Bytes
-                        .parse_param(fields.remove(KEY_BASE_PROPOSER_REWARD).unwrap())
+                        .parse_param(fields.remove(KEY_BASE_PROPOSER_REWARD).unwrap_or_corrupt())
                         .bytes()
-                        .unwrap(),
+                        .unwrap_or_corrupt(),
                 )
-                .unwrap(),
+                .unwrap_or_corrupt(),
             )
-            .unwrap(),
+            .unwrap_or_corrupt(),
             bonus_proposer_reward: Decimal256::from_str(
                 &String::from_utf8(
                     ParamKind::Bytes
-                        .parse_param(fields.remove(KEY_BONUS_PROPOSER_REWARD).unwrap())
+                        .parse_param(fields.remove(KEY_BONUS_PROPOSER_REWARD).unwrap_or_corrupt())
                         .bytes()
-                        .unwrap(),
+                        .unwrap_or_corrupt(),
                 )
-                .unwrap(),
+                .unwrap_or_corrupt(),
             )
-            .unwrap(),
+            .unwrap_or_corrupt(),
             withdraw_addr_enabled: ParamKind::Bool
-                .parse_param(fields.remove(KEY_WITHDRAW_ADDR_ENABLED).unwrap())
+                .parse_param(fields.remove(KEY_WITHDRAW_ADDR_ENABLED).unwrap_or_corrupt())
                 .boolean()
-                .unwrap(),
+                .unwrap_or_corrupt(),
         }
     }
 }

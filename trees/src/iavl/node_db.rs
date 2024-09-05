@@ -130,6 +130,7 @@ where
 mod tests {
     use super::*;
     use database::MemDB;
+    use extensions::testing::UnwrapTesting;
 
     #[test]
     fn get_root_key_works() {
@@ -158,7 +159,7 @@ mod tests {
         db.put(NodeDB::<MemDB>::get_root_key(1u32), vec![]);
         let node_db = NodeDB {
             db,
-            cache: Arc::new(Mutex::new(LRUCache::new(2).unwrap())),
+            cache: Arc::new(Mutex::new(LRUCache::new(2).unwrap_test())),
         };
 
         let mut expected_versions = BTreeSet::new();
@@ -178,10 +179,10 @@ mod tests {
         db.put(NodeDB::<MemDB>::get_root_key(1u32), root_hash.into());
         let node_db = NodeDB {
             db,
-            cache: Arc::new(Mutex::new(LRUCache::new(2).unwrap())),
+            cache: Arc::new(Mutex::new(LRUCache::new(2).unwrap_test())),
         };
 
-        let got_root_hash = node_db.get_root_hash(1).unwrap();
+        let got_root_hash = node_db.get_root_hash(1).unwrap_test();
 
         assert_eq!(root_hash, got_root_hash);
     }

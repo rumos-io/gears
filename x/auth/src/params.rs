@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use gears::application::keepers::params::ParamsKeeper;
 
 use gears::core::serializers::serialize_number_to_string;
+use gears::extensions::corruption::UnwrapCorrupt;
 use gears::params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey};
 
 use gears::x::keepers::auth::AuthParams;
@@ -111,28 +112,36 @@ impl ParamsSerialize for AuthsParams {
 
 impl ParamsDeserialize for AuthsParams {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
-        // TODO:NOW THIS IS AWFUL
+        // THIS IS AWFUL
         Self {
             max_memo_characters: ParamKind::U64
-                .parse_param(fields.remove(KEY_MAX_MEMO_CHARACTERS).unwrap())
+                .parse_param(fields.remove(KEY_MAX_MEMO_CHARACTERS).unwrap_or_corrupt())
                 .unsigned_64()
-                .unwrap(),
+                .unwrap_or_corrupt(),
             tx_sig_limit: ParamKind::U64
-                .parse_param(fields.remove(KEY_TX_SIG_LIMIT).unwrap())
+                .parse_param(fields.remove(KEY_TX_SIG_LIMIT).unwrap_or_corrupt())
                 .unsigned_64()
-                .unwrap(),
+                .unwrap_or_corrupt(),
             tx_size_cost_per_byte: ParamKind::U64
-                .parse_param(fields.remove(KEY_TX_SIZE_COST_PER_BYTE).unwrap())
+                .parse_param(fields.remove(KEY_TX_SIZE_COST_PER_BYTE).unwrap_or_corrupt())
                 .unsigned_64()
-                .unwrap(),
+                .unwrap_or_corrupt(),
             sig_verify_cost_ed25519: ParamKind::U64
-                .parse_param(fields.remove(KEY_SIG_VERIFY_COST_ED25519).unwrap())
+                .parse_param(
+                    fields
+                        .remove(KEY_SIG_VERIFY_COST_ED25519)
+                        .unwrap_or_corrupt(),
+                )
                 .unsigned_64()
-                .unwrap(),
+                .unwrap_or_corrupt(),
             sig_verify_cost_secp256k1: ParamKind::U64
-                .parse_param(fields.remove(KEY_SIG_VERIFY_COST_SECP256K1).unwrap())
+                .parse_param(
+                    fields
+                        .remove(KEY_SIG_VERIFY_COST_SECP256K1)
+                        .unwrap_or_corrupt(),
+                )
                 .unsigned_64()
-                .unwrap(),
+                .unwrap_or_corrupt(),
         }
     }
 }

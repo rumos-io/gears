@@ -73,7 +73,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
     ) -> ClientParams {
         let store = infallible_subspace(ctx, &self.params_subspace_key);
 
-        store.params().unwrap() // TODO: Add default
+        store.params().unwrap_or_default()
     }
 
     pub fn set<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(
@@ -92,7 +92,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
     ) -> Result<ClientParams, GasStoreErrors> {
         let store = gas::subspace(ctx, &self.params_subspace_key);
 
-        Ok(store.params()?.unwrap()) // TODO: Add default
+        Ok(store.params()?.unwrap_or_default())
     }
 
     pub fn try_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(

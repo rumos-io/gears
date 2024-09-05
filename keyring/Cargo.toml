@@ -5,7 +5,6 @@ version = "0.1.0"
 
 [dependencies]
 #local
-extensions = { path = "../extensions" }
 
 #newtypes
 
@@ -33,3 +32,4 @@ eth-keystore = { git = "https://github.com/rumos-io/eth-keystore-rs" }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+extensions = { path = "../extensions" }

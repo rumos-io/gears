@@ -1,5 +1,4 @@
 use bip32::{DerivationPath, Mnemonic, XPrv};
-use extensions::testing::UnwrapTesting;
 use hex::{FromHex, ToHex};
 use k256::ecdsa::signature::Signer;
 use k256::ecdsa::SigningKey;
@@ -67,20 +66,19 @@ impl Secp256k1KeyPair {
         // TODO: remove unwraps
 
         // 14 = log_2(16384), 32 bytes = 256 bits
-        let scrypt_params = scrypt::Params::new(14, 8, 1, 32).unwrap_test();
-        let pbes2_params =
-            pbes2::Parameters::scrypt_aes256cbc(scrypt_params, &salt, &iv).unwrap_test();
+        let scrypt_params = scrypt::Params::new(14, 8, 1, 32).unwrap();
+        let pbes2_params = pbes2::Parameters::scrypt_aes256cbc(scrypt_params, &salt, &iv).unwrap();
 
-        let plain_text_der = self.0.to_pkcs8_der().unwrap_test();
-        let private_key_info = PrivateKeyInfo::try_from(plain_text_der.as_bytes()).unwrap_test();
+        let plain_text_der = self.0.to_pkcs8_der().unwrap();
+        let private_key_info = PrivateKeyInfo::try_from(plain_text_der.as_bytes()).unwrap();
 
         let secret_doc = private_key_info
             .encrypt_with_params(pbes2_params, password.as_ref())
-            .unwrap_test();
+            .unwrap();
 
         secret_doc
             .to_pem(EncryptedPrivateKeyInfo::PEM_LABEL, LineEnding::LF)
-            .unwrap_test()
+            .unwrap()
     }
 
     /// Returns a key pair from a PKCS8 PEM encoded private key.
@@ -137,6 +135,7 @@ impl FromHex for Secp256k1KeyPair {
 
 #[cfg(test)]
 mod tests {
+    use extensions::testing::UnwrapTesting;
     use pkcs8::der::zeroize::Zeroizing;
 
     use super::*;

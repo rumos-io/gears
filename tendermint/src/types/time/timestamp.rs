@@ -363,11 +363,13 @@ pub mod inner {
 #[cfg(test)]
 mod tests {
 
+    use extensions::testing::UnwrapTesting;
+
     use super::*;
 
     #[test]
     fn test_try_new() {
-        let ts = Timestamp::try_new(0, 0).unwrap();
+        let ts = Timestamp::try_new(0, 0).unwrap_test();
         assert_eq!(ts, Timestamp::UNIX_EPOCH);
 
         let err = Timestamp::try_new(1, 1_000_000_000).unwrap_err();
@@ -385,89 +387,89 @@ mod tests {
 
     #[test]
     fn test_checked_add() {
-        let ts = Timestamp::try_new(0, 0).unwrap();
-        let dur = Duration::try_new(1, 0).unwrap();
-        let ts = ts.checked_add(dur).unwrap();
-        assert_eq!(ts, Timestamp::try_new(1, 0).unwrap());
+        let ts = Timestamp::try_new(0, 0).unwrap_test();
+        let dur = Duration::try_new(1, 0).unwrap_test();
+        let ts = ts.checked_add(dur).unwrap_test();
+        assert_eq!(ts, Timestamp::try_new(1, 0).unwrap_test());
 
-        let ts = Timestamp::try_new(0, 0).unwrap();
-        let dur = Duration::try_new(0, -1).unwrap();
-        let ts = ts.checked_add(dur).unwrap();
-        assert_eq!(ts, Timestamp::try_new(-1, 999_999_999).unwrap());
+        let ts = Timestamp::try_new(0, 0).unwrap_test();
+        let dur = Duration::try_new(0, -1).unwrap_test();
+        let ts = ts.checked_add(dur).unwrap_test();
+        assert_eq!(ts, Timestamp::try_new(-1, 999_999_999).unwrap_test());
 
-        let ts = Timestamp::try_new(0, 999_999_999).unwrap();
-        let dur = Duration::try_new(0, 999_999_999).unwrap();
-        let ts = ts.checked_add(dur).unwrap();
-        assert_eq!(ts, Timestamp::try_new(1, 999_999_998).unwrap());
+        let ts = Timestamp::try_new(0, 999_999_999).unwrap_test();
+        let dur = Duration::try_new(0, 999_999_999).unwrap_test();
+        let ts = ts.checked_add(dur).unwrap_test();
+        assert_eq!(ts, Timestamp::try_new(1, 999_999_998).unwrap_test());
 
-        let ts = Timestamp::try_new(253402300799, 999_999_999).unwrap();
-        let dur = Duration::try_new(0, 1).unwrap();
+        let ts = Timestamp::try_new(253402300799, 999_999_999).unwrap_test();
+        let dur = Duration::try_new(0, 1).unwrap_test();
         let ts = ts.checked_add(dur);
         assert!(ts.is_none());
     }
 
     #[test]
     fn test_timestamp_nanoseconds() {
-        let ts = Timestamp::try_new(1, 234).unwrap();
+        let ts = Timestamp::try_new(1, 234).unwrap_test();
         let ts: i128 = ts.timestamp_nanoseconds().into();
         assert_eq!(ts, 1_000_000_234);
 
-        let ts = Timestamp::try_new(-1, 234).unwrap();
+        let ts = Timestamp::try_new(-1, 234).unwrap_test();
         let ts: i128 = ts.timestamp_nanoseconds().into();
         assert_eq!(ts, -999_999_766);
     }
 
     #[test]
     fn test_timestamp_seconds() {
-        let ts = Timestamp::try_new(1, 234).unwrap();
+        let ts = Timestamp::try_new(1, 234).unwrap_test();
         let ts: i64 = ts.timestamp_seconds().into();
         assert_eq!(ts, 1);
 
-        let ts = Timestamp::try_new(-1, 234).unwrap();
+        let ts = Timestamp::try_new(-1, 234).unwrap_test();
         let ts: i64 = ts.timestamp_seconds().into();
         assert_eq!(ts, 0);
 
-        let ts = Timestamp::try_new(-1, 0).unwrap();
+        let ts = Timestamp::try_new(-1, 0).unwrap_test();
         let ts: i64 = ts.timestamp_seconds().into();
         assert_eq!(ts, -1);
     }
 
     #[test]
     fn test_checked_sub() {
-        let ts1 = Timestamp::try_new(1, 0).unwrap();
-        let ts2 = Timestamp::try_new(0, 0).unwrap();
-        let dur = ts1.checked_sub(&ts2).unwrap();
-        assert_eq!(dur, Duration::try_new(1, 0).unwrap());
+        let ts1 = Timestamp::try_new(1, 0).unwrap_test();
+        let ts2 = Timestamp::try_new(0, 0).unwrap_test();
+        let dur = ts1.checked_sub(&ts2).unwrap_test();
+        assert_eq!(dur, Duration::try_new(1, 0).unwrap_test());
 
-        let dur = ts2.checked_sub(&ts1).unwrap();
-        assert_eq!(dur, Duration::try_new(-1, 0).unwrap());
+        let dur = ts2.checked_sub(&ts1).unwrap_test();
+        assert_eq!(dur, Duration::try_new(-1, 0).unwrap_test());
 
-        let ts1 = Timestamp::try_new(1, 0).unwrap();
-        let ts2 = Timestamp::try_new(0, 1).unwrap();
-        let dur = ts1.checked_sub(&ts2).unwrap();
-        assert_eq!(dur, Duration::try_new(0, 999_999_999).unwrap());
+        let ts1 = Timestamp::try_new(1, 0).unwrap_test();
+        let ts2 = Timestamp::try_new(0, 1).unwrap_test();
+        let dur = ts1.checked_sub(&ts2).unwrap_test();
+        assert_eq!(dur, Duration::try_new(0, 999_999_999).unwrap_test());
 
-        let dur = ts2.checked_sub(&ts1).unwrap();
-        assert_eq!(dur, Duration::try_new(0, -999_999_999).unwrap());
+        let dur = ts2.checked_sub(&ts1).unwrap_test();
+        assert_eq!(dur, Duration::try_new(0, -999_999_999).unwrap_test());
     }
 
     #[test]
     fn test_format_string_rounded() {
-        let ts = Timestamp::try_new(1, 234_000_000).unwrap();
+        let ts = Timestamp::try_new(1, 234_000_000).unwrap_test();
         assert_eq!(ts.format_string_rounded(), "1970-01-01T00:00:01.000000000");
 
-        let ts = Timestamp::try_new(-1, 234_000_000).unwrap();
+        let ts = Timestamp::try_new(-1, 234_000_000).unwrap_test();
         assert_eq!(ts.format_string_rounded(), "1969-12-31T23:59:59.000000000");
 
-        let ts = Timestamp::try_new(-1, 734_000_000).unwrap();
+        let ts = Timestamp::try_new(-1, 734_000_000).unwrap_test();
         assert_eq!(ts.format_string_rounded(), "1970-01-01T00:00:00.000000000");
     }
 
     #[test]
     fn test_try_from_formatted_bytes() {
         let bytes = b"1969-12-31T23:59:59.000000000";
-        let ts2 = Timestamp::try_from_formatted_bytes(bytes.as_slice()).unwrap();
-        let ts3 = Timestamp::try_new(-1, 0).unwrap();
+        let ts2 = Timestamp::try_from_formatted_bytes(bytes.as_slice()).unwrap_test();
+        let ts3 = Timestamp::try_new(-1, 0).unwrap_test();
         assert_eq!(ts3, ts2);
 
         // nanoseconds should be zero
@@ -493,11 +495,11 @@ mod tests {
 
     #[test]
     fn test_serialization() {
-        let ts = Timestamp::try_new(1484443815, 10_000_000).unwrap();
-        let serialized = serde_json::to_string(&ts).unwrap();
+        let ts = Timestamp::try_new(1484443815, 10_000_000).unwrap_test();
+        let serialized = serde_json::to_string(&ts).unwrap_test();
         assert_eq!(serialized, r#""2017-01-15T01:30:15.01Z""#);
 
-        let deserialized: Timestamp = serde_json::from_str(&serialized).unwrap();
+        let deserialized: Timestamp = serde_json::from_str(&serialized).unwrap_test();
         assert_eq!(deserialized, ts);
     }
 }

@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 #local
-extensions = { path = "../extensions" }
 trees = { path = "../trees" }
 database = { path = "../database" }
 
@@ -24,3 +23,4 @@ strum = { workspace = true }
 
 [dev-dependencies]
 hex = { workspace = true }
+extensions = { path = "../extensions" }

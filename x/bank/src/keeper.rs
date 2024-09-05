@@ -110,7 +110,7 @@ impl<
         let account = self
             .auth_keeper
             .get_account(ctx, &module_acc_addr)?
-            .unwrap(); // TODO:
+            .ok_or(AccountNotFound::new(module_acc_addr.to_string()))?;
 
         match account.has_permissions("burner") {
             true => Ok(()),

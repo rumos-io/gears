@@ -9,7 +9,6 @@ edition = "2021"
 [dependencies]
 # local
 address = { path = "../address" }
-extensions = { path = "../extensions" }
 
 # crypto
 subtle-encoding = "0.5.1"
@@ -47,5 +46,6 @@ tendermint-config = { git = "https://github.com/rumos-io/tendermint-rs", branch 
 
 
 [dev-dependencies]
+extensions = { path = "../extensions" }
 
 [features]
