@@ -2,7 +2,7 @@ use crate::{
     application::ApplicationInfo,
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
     rest::handlers::{
-        block_latest, node_info, send_tx, tx, txs, validatorsets, validatorsets_latest,
+        block, block_latest, node_info, send_tx, tx, txs, validatorsets, validatorsets_latest,
     },
     runtime::runtime,
     types::tx::TxMessage,
@@ -98,6 +98,7 @@ async fn launch<
             "/cosmos/base/tendermint/v1beta1/blocks/latest",
             get(block_latest),
         )
+        .route("/cosmos/base/tendermint/v1beta1/blocks/:height", get(block))
         .merge(router)
         .layer(cors)
         .layer(TraceLayer::new_for_http())

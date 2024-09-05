@@ -293,6 +293,27 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
     })
 }
 
+pub async fn block(
+    Path(height): Path<u32>,
+    State(tendermint_rpc_address): State<HttpClientUrl>,
+) -> Result<Json<GetBlockByHeightResponse>, HTTPError> {
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+
+    let res = client
+        .block(height)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error connecting to Tendermint: {e}");
+            HTTPError::gateway_timeout()
+        })
+        .map(|res| GetBlockByHeightResponse {
+            block_id: Some(res.block_id.into()),
+            block: Some(res.block.clone()),
+            sdk_block: Some(res.block),
+        })?;
+    Ok(Json(res))
+}
+
 pub async fn block_latest(
     State(tendermint_rpc_address): State<HttpClientUrl>,
 ) -> Result<Json<GetBlockByHeightResponse>, HTTPError> {
