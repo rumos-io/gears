@@ -16,8 +16,6 @@ use crate::{
     types::{
         account::{Account, BaseAccount},
         address::AccAddress,
-        auth::fee::Fee,
-        base::coins::UnsignedCoins,
         denom::Denom,
         tx::{body::TxBody, Messages, Tx, TxMessage},
     },
@@ -32,7 +30,7 @@ use tendermint::{
         client::{Client, HttpClient},
         response::tx::broadcast::Response,
     },
-    types::{chain_id::ChainId, proto::block::Height},
+    types::proto::block::Height,
 };
 
 use super::types::{
@@ -108,25 +106,13 @@ pub trait TxHandler {
         &self,
         msgs: Messages<Self::Message>,
         key: &K,
-        node: &url::Url,
-        chain_id: ChainId,
-        fees: Option<UnsignedCoins>,
         mode: SignMode,
-        client_tx_context: &mut ClientTxContext,
+        ctx: &mut ClientTxContext,
     ) -> anyhow::Result<Tx<Self::Message>> {
-        let fee = Fee {
-            amount: fees,
-            gas_limit: 200_000_u64
-                .try_into()
-                .expect("hard coded gas limit is valid"), //TODO: remove hard coded gas limit
-            payer: None,        //TODO: remove hard coded payer
-            granter: "".into(), //TODO: remove hard coded granter
-        };
-
         let address = key.get_address();
 
         let account = self
-            .account(address.to_owned(), client_tx_context)?
+            .account(address.to_owned(), ctx)?
             .ok_or_else(|| anyhow!("account not found: {}", address))?;
 
         let signing_infos = vec![SigningInfo {
@@ -137,25 +123,32 @@ pub trait TxHandler {
 
         let tx_body = TxBody {
             messages: msgs.into_msgs(),
-            memo: client_tx_context.memo.clone().unwrap_or_default(),
-            timeout_height: 0,                      // TODO: remove hard coded
-            extension_options: vec![],              // TODO: remove hard coded
+            memo: ctx.memo.clone().unwrap_or_default(),
+            timeout_height: match ctx.timeout_height {
+                Some(height) => height,
+                None => 0,
+            },
+            extension_options: vec![], // TODO: remove hard coded
             non_critical_extension_options: vec![], // TODO: remove hard coded
         };
 
         let tip = None; //TODO: remove hard coded
 
         match mode {
-            SignMode::Direct => {
-                create_signed_transaction_direct(signing_infos, chain_id, fee, tip, tx_body)
-                    .map_err(|e| anyhow!(e.to_string()))
-            }
+            SignMode::Direct => create_signed_transaction_direct(
+                signing_infos,
+                ctx.chain_id.clone(),
+                ctx.fee.clone(),
+                tip,
+                tx_body,
+            )
+            .map_err(|e| anyhow!(e.to_string())),
             SignMode::Textual => create_signed_transaction_textual(
                 signing_infos,
-                chain_id,
-                fee,
+                ctx.chain_id.clone(),
+                ctx.fee.clone(),
                 tip,
-                node.clone(),
+                ctx.node.clone(),
                 tx_body,
             )
             .map_err(|e| anyhow!(e.to_string())),
