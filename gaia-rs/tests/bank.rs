@@ -1,4 +1,4 @@
-// #![cfg(feature = "it")]
+#![cfg(feature = "it")]
 
 use std::str::FromStr;
 
@@ -14,7 +14,7 @@ use bank::{
 use gaia_rs::{
     client::{GaiaQueryCommands, GaiaTxCommands, WrappedGaiaQueryCommands, WrappedGaiaTxCommands},
     query::GaiaQueryResponse,
-    GaiaCoreClient,
+    GaiaCoreClient, QueryNodeFetcher,
 };
 use gears::{
     commands::client::{
@@ -119,6 +119,7 @@ fn send_tx() -> anyhow::Result<()> {
             inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
         },
         &GaiaCoreClient,
+        &QueryNodeFetcher,
     )?
     .broadcast()
     .expect("broadcast tx inside");

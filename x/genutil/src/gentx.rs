@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, path::PathBuf};
 
 use gears::{
-    application::handlers::client::TxHandler,
+    application::handlers::client::{NodeFetcher, TxHandler},
     commands::client::tx::{AccountProvider, ClientTxContext, TxCommand},
     crypto::{ed25519::Ed25519PubKey, public::PublicKey},
     types::{
@@ -37,14 +37,15 @@ pub struct GentxCmd {
     pub node_id: Option<String>,
 }
 
-pub fn gentx_cmd(
+pub fn gentx_cmd<F: NodeFetcher + Clone>(
     cmd: TxCommand<GentxCmd>,
     balance_sk: &'static str,
     staking_sk: &'static str,
+    fetcher: &F,
 ) -> anyhow::Result<()> {
     let gentx_handler = GentxTxHandler::new(cmd.inner.output.clone(), balance_sk, staking_sk)?;
 
-    gears::commands::client::tx::run_tx(cmd, &gentx_handler)?;
+    gears::commands::client::tx::run_tx(cmd, &gentx_handler, fetcher)?;
 
     Ok(())
 }
@@ -92,10 +93,11 @@ impl TxHandler for GentxTxHandler {
 
     type TxCommands = GentxCmd;
 
-    fn account(
+    fn account<F: NodeFetcher>(
         &self,
         address: gears::types::address::AccAddress,
         client_tx_context: &mut ClientTxContext,
+        _fetcher: &F,
     ) -> anyhow::Result<Option<gears::types::account::Account>> {
         match client_tx_context.account {
                 AccountProvider::Offline {
