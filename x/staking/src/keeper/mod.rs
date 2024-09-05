@@ -293,6 +293,7 @@ impl<
             Err(e) => panic!("{}", e),
         };
 
+        // TODO: fix
         // unbond all mature validators from the unbonding queue
         self.unbond_all_mature_validators(ctx).unwrap_gas();
 
@@ -334,6 +335,8 @@ impl<
                 ],
             });
         }
+
+        // TODO fix
         // Remove all mature redelegations from the red queue.
         let mature_redelegations = self.dequeue_all_mature_redelegation_queue(ctx, &time);
         for dvv_triplet in mature_redelegations {
@@ -406,7 +409,7 @@ impl<
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;
         let mut amt_from_bonded_to_not_bonded = Uint256::zero();
-        let amt_from_not_bonded_to_bonded = Uint256::zero();
+        let mut amt_from_not_bonded_to_bonded = Uint256::zero();
 
         let mut last = self.last_validators_by_addr(ctx);
         let validators_map = self.validators_power_store_vals_map(ctx)?;
@@ -435,13 +438,11 @@ impl<
             match validator.status {
                 BondStatus::Unbonded => {
                     self.unbonded_to_bonded(ctx, &mut validator)?;
-                    amt_from_bonded_to_not_bonded =
-                        amt_from_not_bonded_to_bonded + validator.tokens;
+                    amt_from_not_bonded_to_bonded += validator.tokens;
                 }
                 BondStatus::Unbonding => {
                     self.unbonding_to_bonded(ctx, &mut validator)?;
-                    amt_from_bonded_to_not_bonded =
-                        amt_from_not_bonded_to_bonded + validator.tokens;
+                    amt_from_not_bonded_to_bonded += validator.tokens;
                 }
                 BondStatus::Bonded => {}
                 BondStatus::Unspecified => return Err(anyhow!("unexpected validator status")),
@@ -497,11 +498,11 @@ impl<
         // need to be transferred to the NotBonded pool.
         // Compare and subtract the respective amounts to only perform one transfer.
         // This is done in order to avoid doing multiple updates inside each iterator/loop.
-        match amt_from_bonded_to_not_bonded.cmp(&amt_from_not_bonded_to_bonded) {
+        match amt_from_not_bonded_to_bonded.cmp(&amt_from_bonded_to_not_bonded) {
             Ordering::Greater => {
                 self.not_bonded_tokens_to_bonded(
                     ctx,
-                    amt_from_bonded_to_not_bonded - amt_from_not_bonded_to_bonded,
+                    amt_from_not_bonded_to_bonded - amt_from_bonded_to_not_bonded,
                 )?;
             }
             Ordering::Less => {
