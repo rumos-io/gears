@@ -10,8 +10,8 @@ use gears::{
     baseapp::errors::QueryError,
     context::query::QueryContext,
     core::Protobuf,
-    types::pagination::response::PaginationResponse,
     extensions::pagination::{IteratorPaginate, Pagination, PaginationResult},
+    types::pagination::response::PaginationResponse,
 };
 
 impl<
@@ -48,7 +48,9 @@ impl<
             }
         });
 
-        let pagination = query.pagination.map(gears::ext::Pagination::from);
+        let pagination = query
+            .pagination
+            .map(gears::extensions::pagination::Pagination::from);
         let (validators, p_result) = if query.status == BondStatus::Unspecified {
             let (p_result, iterator) = iterator.maybe_paginate(pagination);
             (iterator.map(|(_k, v)| v).collect(), p_result)
@@ -115,9 +117,11 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(DELEGATION_KEY);
         let key = query.delegator_addr.prefix_len_bytes();
-        let (p_result, iterator) = store
-            .into_range(..)
-            .maybe_paginate(query.pagination.map(gears::ext::Pagination::from));
+        let (p_result, iterator) = store.into_range(..).maybe_paginate(
+            query
+                .pagination
+                .map(gears::extensions::pagination::Pagination::from),
+        );
 
         let delegation_responses = iterator
             .filter_map(|(k, bytes)| {
@@ -156,9 +160,11 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(UNBONDING_DELEGATION_KEY);
         let key = query.delegator_addr.prefix_len_bytes();
-        let (p_result, iterator) = store
-            .into_range(..)
-            .maybe_paginate(query.pagination.map(gears::ext::Pagination::from));
+        let (p_result, iterator) = store.into_range(..).maybe_paginate(
+            query
+                .pagination
+                .map(gears::extensions::pagination::Pagination::from),
+        );
 
         let mut unbonding_responses = vec![];
         for (k, bytes) in iterator {

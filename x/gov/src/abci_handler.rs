@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use bytes::Bytes;
 use gears::baseapp::QueryResponse;
 use gears::extensions::gas::GasResultExt;
 use gears::{

@@ -9,7 +9,6 @@ use gears::{
         Protobuf,
     },
     derive::{Protobuf, Query, Raw},
-    extensions::corruption::UnwrapCorrupt,
     types::{
         address::{AccAddress, ValAddress},
         base::coin::UnsignedCoin,
@@ -92,7 +91,9 @@ pub struct QueryDelegatorDelegationsRequest {
     pub pagination: Option<PaginationRequest>,
 }
 
-#[derive(Clone, Debug, PartialEq, Query, Raw, Protobuf)]
+/// QueryUnbondingDelegationRequest is request type for the
+/// Query/UnbondingDelegation RPC method.
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
 #[query(url = "/cosmos.staking.v1beta1.Query/UnbondingDelegation")]
 #[proto(raw = "inner::QueryUnbondingDelegationRequest")]
 pub struct QueryUnbondingDelegationRequest {
