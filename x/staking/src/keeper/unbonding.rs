@@ -29,12 +29,10 @@ impl<
         val_addr: &ValAddress,
     ) -> Result<Option<UnbondingDelegation>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
-        let delegations_store = store.prefix_store(UNBONDING_DELEGATION_KEY);
-        let mut key = Vec::from(del_addr.clone());
-        key.extend_from_slice(&Vec::from(val_addr.clone()));
-        let unbonding_delegation = delegations_store
+        let key = get_ubd_key(&del_addr, &val_addr);
+        let unbonding_delegation = store
             .get(&key)?
-            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt());
+            .map(|bytes| UnbondingDelegation::decode_vec(&bytes).unwrap_or_corrupt());
         Ok(unbonding_delegation)
     }
 
@@ -80,11 +78,9 @@ impl<
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
     ) -> Option<Vec<u8>> {
-        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
-        let mut delegations_store = store.prefix_store_mut(UNBONDING_DELEGATION_KEY);
-        let mut key = Vec::from(delegation.delegator_address.clone());
-        key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
-        delegations_store.delete(&key)
+        let mut store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
+        let key = get_ubd_key(&delegation.delegator_address, &delegation.validator_address);
+        store.delete(&key)
     }
 
     pub fn has_max_unbonding_delegation_entries<DB: Database, CTX: QueryableContext<DB, SK>>(

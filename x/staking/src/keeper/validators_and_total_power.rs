@@ -105,8 +105,10 @@ impl<
         let store = ctx.infallible_store(&self.store_key);
         let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
         for (k, v) in store.into_range(..) {
-            let k: ValAddress = serde_json::from_slice(&k).unwrap_or_corrupt();
-            last.insert(k.to_string(), v.to_vec());
+            match serde_json::from_slice::<ValAddress>(&k) {
+                Ok(k) => last.insert(k.to_string(), v.to_vec()),
+                Err(_) => continue,
+            };
         }
         last
     }

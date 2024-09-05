@@ -1,6 +1,6 @@
 use deposit::Deposit;
 use gears::{
-    derive::RoutingMessage,
+    derive::AppMessage,
     signing::{
         handler::MetadataGetter,
         renderer::value_renderer::{RenderError, ValueRenderer},
@@ -17,15 +17,15 @@ pub mod proposal;
 pub mod vote;
 pub mod weighted_vote;
 
-#[derive(Debug, Clone, Serialize, RoutingMessage)]
+#[derive(Debug, Clone, Serialize, AppMessage)]
 pub enum GovMsg {
-    #[gears(url = "/cosmos.gov.v1beta1/MsgDeposit")]
+    #[msg(url(path = Deposit::TYPE_URL))]
     Deposit(Deposit),
-    #[gears(url = "/cosmos.gov.v1beta1/MsgVote")]
+    #[msg(url(path = Vote::TYPE_URL))]
     Vote(Vote),
-    #[gears(url = "/cosmos.gov.v1beta1/MsgVoteWeighted")]
+    #[msg(url(path = MsgVoteWeighted::TYPE_URL))]
     Weighted(MsgVoteWeighted),
-    #[gears(url = "/cosmos.gov.v1beta1/MsgSubmitProposal")]
+    #[msg(url(path = MsgSubmitProposal::TYPE_URL))]
     Proposal(MsgSubmitProposal),
 }
 

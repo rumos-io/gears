@@ -4,6 +4,8 @@ use crate::{
 };
 use gears::{
     context::tx::TxContext, extensions::corruption::UnwrapCorrupt, types::address::ConsAddress,
+    baseapp::ValidatorParams, context::tx::TxContext,
+
 };
 
 impl<
@@ -16,9 +18,10 @@ impl<
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
     /// create_validator defines a method for creating a new validator
-    pub fn create_validator<DB: Database>(
+    pub fn create_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
+        consensus_validators: ValidatorParams,
         msg: &CreateValidator,
     ) -> Result<(), anyhow::Error> {
         let params = self.staking_params_keeper.try_get(ctx)?;
@@ -45,7 +48,6 @@ impl<
 
         msg.description.ensure_length()?;
 
-        let consensus_validators = &ctx.consensus_params().validator;
         let pub_key_type = msg.pubkey.str_type();
         if !consensus_validators
             .pub_key_types

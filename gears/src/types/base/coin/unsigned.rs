@@ -8,7 +8,7 @@ use crate::types::{base::errors::CoinError, denom::Denom, errors::DenomError};
 
 use super::Coin;
 
-mod inner {
+pub mod inner {
     pub use core_types::base::coin::Coin;
     pub use core_types::base::coin::IntProto;
 }

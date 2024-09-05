@@ -1,10 +1,16 @@
+use anyhow::anyhow;
 use gears::{
     application::keepers::params::ParamsKeeper,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
+    tendermint::types::time::duration::Duration,
     types::denom::Denom,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+
+mod inner {
+    pub use ibc_proto::cosmos::staking::v1beta1::Params;
+}
 
 const KEY_UNBONDING_TIME: &str = "UnbondingTime";
 const KEY_MAX_VALIDATORS: &str = "MaxValidators";
@@ -21,11 +27,11 @@ const KEY_BOND_DENOM: &str = "BondDenom";
 pub struct StakingParams {
     // sdk counts duration as simple i64 type that represents difference
     // between two instants
-    unbonding_time: i64, //TODO: doesn't the SDK use a Duration type? https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/types/staking.pb.go#L837
-    max_validators: u32,
-    max_entries: u32,
-    historical_entries: u32,
-    bond_denom: Denom,
+    pub unbonding_time: i64, //TODO: doesn't the SDK use a Duration type? https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/types/staking.pb.go#L837
+    pub max_validators: u32,
+    pub max_entries: u32,
+    pub historical_entries: u32,
+    pub bond_denom: Denom,
 }
 
 /// [`RawParams`] exists to allow us to validate params when deserializing them
@@ -49,6 +55,58 @@ impl TryFrom<RawStakingParams> for StakingParams {
             params.historical_entries,
             params.bond_denom,
         )
+    }
+}
+
+impl TryFrom<inner::Params> for StakingParams {
+    type Error = anyhow::Error;
+
+    fn try_from(
+        inner::Params {
+            unbonding_time,
+            max_validators,
+            max_entries,
+            historical_entries,
+            bond_denom,
+            min_commission_rate: _,
+        }: inner::Params,
+    ) -> Result<Self, Self::Error> {
+        StakingParams::new(
+            i128::from(
+                Duration::try_from(
+                    unbonding_time.ok_or(anyhow!("missing field 'unbonding_time'"))?,
+                )
+                .map_err(|_| anyhow!("cannot conver google duration"))?
+                .duration_nanoseconds(),
+            )
+            .try_into()
+            .map_err(|_| anyhow!("cannot conver google duration"))?,
+            max_validators,
+            max_entries,
+            historical_entries,
+            bond_denom.try_into()?,
+        )
+    }
+}
+
+impl From<StakingParams> for inner::Params {
+    fn from(
+        StakingParams {
+            unbonding_time,
+            max_validators,
+            max_entries,
+            historical_entries,
+            bond_denom,
+        }: StakingParams,
+    ) -> Self {
+        inner::Params {
+            unbonding_time: Some(Duration::new_from_nanos(unbonding_time).into()),
+            max_validators,
+            max_entries,
+            historical_entries,
+            bond_denom: bond_denom.to_string(),
+            min_commission_rate: "0.0".to_string(),
+        }
     }
 }
 

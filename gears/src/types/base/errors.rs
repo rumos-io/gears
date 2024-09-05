@@ -8,6 +8,8 @@ pub enum CoinsError {
     Duplicates,
     #[error("coins are not sorted")]
     Unsorted,
+    #[error("coin error: {0}")]
+    Coin(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

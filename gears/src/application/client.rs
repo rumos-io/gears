@@ -1,5 +1,5 @@
 use super::handlers::{
-    client::{QueryHandler, TxHandler},
+    client::{NodeFetcher, QueryHandler, TxHandler},
     AuxHandler,
 };
 use crate::{
@@ -10,13 +10,14 @@ use crate::{
 /// A Gears client application.
 pub trait Client: TxHandler + QueryHandler + AuxHandler {}
 
-pub struct ClientApplication<Core: Client> {
+pub struct ClientApplication<Core: Client, F: NodeFetcher + Clone> {
     core: Core,
+    fetcher: F,
 }
 
-impl<Core: Client> ClientApplication<Core> {
-    pub fn new(core: Core) -> Self {
-        Self { core }
+impl<Core: Client, F: NodeFetcher + Clone> ClientApplication<Core, F> {
+    pub fn new(core: Core, fetcher: F) -> Self {
+        Self { core, fetcher }
     }
 
     /// Runs the command passed
@@ -30,7 +31,7 @@ impl<Core: Client> ClientApplication<Core> {
                 self.core.handle_aux(cmd)?;
             }
             ClientCommands::Tx(cmd) => {
-                let tx = run_tx(cmd, &self.core)?;
+                let tx = run_tx(cmd, &self.core, &self.fetcher)?;
 
                 match tx {
                     crate::commands::client::tx::RuntxResult::Broadcast(tx) => {

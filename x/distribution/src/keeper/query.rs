@@ -1,7 +1,8 @@
 use super::*;
 use crate::{
-    QueryCommunityPoolRequest, QueryCommunityPoolResponse, QueryDelegationRewardsRequest,
-    QueryDelegationRewardsResponse, QueryParamsRequest, QueryParamsResponse,
+    DelegationDelegatorReward, QueryCommunityPoolRequest, QueryCommunityPoolResponse,
+    QueryDelegationRewardsRequest, QueryDelegationRewardsResponse, QueryDelegatorParams,
+    QueryDelegatorTotalRewardsResponse, QueryParamsRequest, QueryParamsResponse,
     QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
     QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
     QueryValidatorSlashesRequest, QueryValidatorSlashesResponse, QueryWithdrawAllRewardsRequest,
@@ -137,6 +138,74 @@ impl<
             Ok(QueryDelegationRewardsResponse { rewards })
         } else {
             Ok(QueryDelegationRewardsResponse { rewards: None })
+        }
+    }
+
+    pub fn query_delegator_total_rewards<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryDelegatorParams { delegator_address }: QueryDelegatorParams,
+    ) -> QueryDelegatorTotalRewardsResponse {
+        let mut del_rewards = vec![];
+        for delegation in self
+            .staking_keeper
+            .delegations_iter(ctx, &delegator_address)
+        {
+            let delegation = delegation.unwrap_gas();
+            let validator_address = delegation.validator();
+            if let Some(validator) = self
+                .staking_keeper
+                .validator(ctx, validator_address)
+                .unwrap_gas()
+            {
+                if let Ok(shares) = validator.tokens_from_shares(*delegation.shares()) {
+                    if let Some(rew) = self
+                        .validator_current_rewards(ctx, validator_address)
+                        .unwrap_gas()
+                    {
+                        // TODO: original logic, can't implement and it's wrong idea to modify state via query
+                        // let ending_period =
+                        //     self.increment_validator_period(ctx, validator_address, validator.tokens());
+                        let ending_period = rew.period;
+                        del_rewards.push(
+                            self.calculate_delegation_rewards(
+                                ctx,
+                                validator_address,
+                                &delegator_address,
+                                shares,
+                                ending_period,
+                            )
+                            .ok()
+                            .flatten()
+                            .map(|coins| (coins, validator_address.clone())),
+                        );
+                    }
+                }
+            }
+        }
+
+        let rewards: Vec<DelegationDelegatorReward> = del_rewards
+            .into_iter()
+            .flatten()
+            .map(|(coins, validator_address)| DelegationDelegatorReward {
+                validator_address,
+                reward: coins,
+            })
+            .collect();
+
+        if !rewards.is_empty() {
+            let total = rewards[0].reward.clone();
+            let total = rewards
+                .iter()
+                .skip(1)
+                .try_fold(total, |acc, v| acc.checked_add(&v.reward))
+                .ok();
+            QueryDelegatorTotalRewardsResponse { rewards, total }
+        } else {
+            QueryDelegatorTotalRewardsResponse {
+                rewards,
+                total: None,
+            }
         }
     }
 

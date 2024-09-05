@@ -1,4 +1,5 @@
 use super::*;
+use anyhow::anyhow;
 use gears::{
     core::Protobuf,
     extensions::corruption::UnwrapCorrupt,
@@ -59,6 +60,7 @@ impl<
             let send_module = match validator.status {
                 BondStatus::Bonded => &self.bonded_module,
                 BondStatus::Unbonded | BondStatus::Unbonding => &self.not_bonded_module,
+                BondStatus::Unspecified => return Err(anyhow!("invalid validator status")),
             };
 
             let denom = self
@@ -94,6 +96,7 @@ impl<
                 }
                 (BondStatus::Bonded, true)
                 | (BondStatus::Unbonded | BondStatus::Unbonding, false) => {}
+                _ => return Err(anyhow!("unknown token source bond status")),
             }
         }
 

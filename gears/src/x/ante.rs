@@ -1,4 +1,6 @@
 use crate::application::handlers::node::TxError;
+use crate::baseapp::options::NodeOptions;
+use crate::context::TransactionalContext;
 use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
 use crate::signing::renderer::amino_renderer::{AminoRenderer, RenderError as AminoRendererError};
@@ -17,7 +19,7 @@ use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
 use crate::{
-    context::{tx::TxContext, QueryableContext},
+    context::QueryableContext,
     types::tx::{raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
 };
 use core_types::tx::signature::SignatureData;
@@ -29,7 +31,9 @@ use cosmwasm_std::Decimal256;
 use database::Database;
 use kv_store::StoreKey;
 use prost::Message as ProstMessage;
+use std::cell::RefCell;
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use super::errors::AccountNotFound;
 use super::module::Module;
@@ -110,22 +114,29 @@ impl<
             sk: PhantomData,
         }
     }
-    pub fn run<DB: Database, M: TxMessage + ValueRenderer + AminoRenderer>(
+    pub fn run<
+        DB: Database,
+        M: TxMessage + ValueRenderer + AminoRenderer,
+        CTX: TransactionalContext<DB, SK>,
+    >(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         tx: &TxWithRaw<M>,
+        is_check: bool,
+        node_opt: NodeOptions,
+        gas_meter: Arc<RefCell<GasMeter<TxKind>>>,
     ) -> Result<(), TxError> {
         // Note: we currently don't have simulate mode at all, so some methods receive hardcoded values for this mode
         // ante.NewSetUpContextDecorator(), // WE not going to implement this in ante. Some logic should be in application
-        self.mempool_fee(ctx, tx)?;
+        self.mempool_fee(tx, is_check, node_opt)?;
         self.validate_basic_ante_handler(&tx.tx)?;
         self.tx_timeout_height_ante_handler(ctx, &tx.tx)?;
         self.validate_memo_ante_handler(ctx, &tx.tx)?;
-        self.consume_gas_for_tx_size(ctx, tx)?;
+        self.consume_gas_for_tx_size(ctx, tx, gas_meter.clone())?;
         self.deduct_fee_ante_handler(ctx, &tx.tx)?;
         self.set_pub_key_ante_handler(ctx, &tx.tx)?;
         //  ** ante.NewValidateSigCountDecorator(opts.AccountKeeper),
-        self.sign_gas_consume(ctx, &tx.tx)?;
+        self.sign_gas_consume(ctx, &tx.tx, gas_meter.clone())?;
         self.sig_verification_handler(ctx, tx)?;
         self.increment_sequence_ante_handler(ctx, &tx.tx)?;
         //  ** ibcante.NewAnteDecorator(opts.IBCkeeper),
@@ -148,23 +159,24 @@ impl<
         Ok(())
     }
 
-    fn mempool_fee<M: TxMessage, DB: Database>(
+    fn mempool_fee<M: TxMessage>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
         TxWithRaw {
             tx,
             raw: _,
             tx_len: _,
         }: &TxWithRaw<M>,
+        is_check: bool,
+        node_opt: NodeOptions,
     ) -> Result<(), AnteError> {
-        if !ctx.is_check() {
+        if !is_check {
             return Ok(());
         }
 
         let fee = tx.auth_info.fee.amount.as_ref();
         let gas = tx.auth_info.fee.gas_limit;
 
-        let min_gas_prices = ctx.options.min_gas_prices();
+        let min_gas_prices = node_opt.min_gas_prices();
 
         if min_gas_prices.is_empty() || min_gas_prices.is_zero() {
             return Ok(());
@@ -217,14 +229,15 @@ impl<
         Ok(())
     }
 
-    fn consume_gas_for_tx_size<M: TxMessage, DB: Database>(
+    fn consume_gas_for_tx_size<M: TxMessage, DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         TxWithRaw {
             tx: _,
             raw: _,
             tx_len,
         }: &TxWithRaw<M>,
+        gas_meter: Arc<RefCell<GasMeter<TxKind>>>,
     ) -> Result<(), AnteError> {
         let params = self.auth_keeper.get_auth_params(ctx)?;
         let tx_len: Gas = (*tx_len as u64).try_into().map_err(|_| AnteError::TxLen)?;
@@ -237,7 +250,7 @@ impl<
                 "overflow calculating gas required for tx size".to_string(),
             ))?;
 
-        ctx.gas_meter
+        gas_meter
             .borrow_mut()
             .consume_gas(gas_required, TX_SIZE_DESCRIPTOR)
             .map_err(Into::<AnteGasError>::into)?;
@@ -245,10 +258,11 @@ impl<
         Ok(())
     }
 
-    fn sign_gas_consume<M: TxMessage, DB: Database>(
+    fn sign_gas_consume<M: TxMessage, DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         tx: &Tx<M>,
+        gas_meter: Arc<RefCell<GasMeter<TxKind>>>,
     ) -> Result<(), AnteError> {
         let auth_params = self.auth_keeper.get_auth_params(ctx)?;
 
@@ -269,7 +283,7 @@ impl<
             let sig = signatures.get(i).expect("TODO"); //TODO: expect message
 
             self.sign_gas_consumer
-                .consume(&mut ctx.gas_meter.borrow_mut(), pub_key, sig, &auth_params)
+                .consume(&mut *gas_meter.borrow_mut(), pub_key, sig, &auth_params)
                 .map_err(Into::<AnteGasError>::into)?;
         }
 
@@ -295,9 +309,9 @@ impl<
         Ok(())
     }
 
-    fn tx_timeout_height_ante_handler<DB: Database, M: TxMessage>(
+    fn tx_timeout_height_ante_handler<DB: Database, M: TxMessage, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &TxContext<'_, DB, SK>,
+        ctx: &CTX,
         tx: &Tx<M>,
     ) -> Result<(), AnteError> {
         let timeout_height = tx.get_timeout_height();
@@ -319,9 +333,9 @@ impl<
         Ok(())
     }
 
-    fn validate_memo_ante_handler<DB: Database, M: TxMessage>(
+    fn validate_memo_ante_handler<DB: Database, M: TxMessage, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &TxContext<'_, DB, SK>,
+        ctx: &CTX,
         tx: &Tx<M>,
     ) -> Result<(), AnteError> {
         let max_memo_chars = self.auth_keeper.get_auth_params(ctx)?.max_memo_characters();
@@ -337,9 +351,9 @@ impl<
         Ok(())
     }
 
-    fn deduct_fee_ante_handler<DB: Database, M: TxMessage>(
+    fn deduct_fee_ante_handler<DB: Database, M: TxMessage, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         tx: &Tx<M>,
     ) -> Result<(), AnteError> {
         let fee = tx.get_fee();
@@ -361,9 +375,9 @@ impl<
         Ok(())
     }
 
-    fn set_pub_key_ante_handler<DB: Database, M: TxMessage>(
+    fn set_pub_key_ante_handler<DB: Database, M: TxMessage, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         tx: &Tx<M>,
     ) -> Result<(), AnteError> {
         let public_keys = tx.get_public_keys();
@@ -406,9 +420,13 @@ impl<
         Ok(())
     }
 
-    fn sig_verification_handler<DB: Database, M: TxMessage + ValueRenderer + AminoRenderer>(
+    fn sig_verification_handler<
+        DB: Database,
+        M: TxMessage + ValueRenderer + AminoRenderer,
+        CTX: TransactionalContext<DB, SK>,
+    >(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AnteError> {
         let signers = tx.tx.get_signers();
@@ -431,6 +449,7 @@ impl<
                 .auth_keeper
                 .get_account(ctx, signer)?
                 .ok_or(AccountNotFound::from(signer.to_owned()))?;
+
             let account_seq = acct.get_sequence();
             if account_seq != signature_data.sequence {
                 return Err(AnteError::Validation(format!(
@@ -455,8 +474,6 @@ impl<
                     SignMode::LegacyAminoJson => {
                         let mut msgs = vec![];
                         for msg in tx.tx.get_msgs() {
-                            dbg!(msg.get_signers());
-                            dbg!(msg.amino_url());
                             msgs.push(std_sign_doc::Msg {
                                 kind: msg.amino_url().to_string(),
                                 value: msg.render()?,
@@ -517,9 +534,13 @@ impl<
         Ok(())
     }
 
-    fn increment_sequence_ante_handler<DB: Database, M: TxMessage>(
+    fn increment_sequence_ante_handler<
+        DB: Database,
+        M: TxMessage,
+        CTX: TransactionalContext<DB, SK>,
+    >(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         tx: &Tx<M>,
     ) -> Result<(), AnteError> {
         for signer in tx.get_signers() {

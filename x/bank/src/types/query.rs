@@ -1,5 +1,5 @@
 use gears::{
-    derive::{Protobuf, Query, Raw},
+    derive::{Protobuf, Query},
     types::{
         address::AccAddress,
         base::coin::UnsignedCoin,
@@ -13,8 +13,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::BankParams;
 
-mod inner {
-    pub use gears::core::bank::Metadata;
+pub mod inner {
+
+    // TODO: Remove re-export of this
     pub use gears::core::query::request::bank::QueryAllBalancesRequest;
     pub use gears::core::query::request::bank::QueryBalanceRequest;
     pub use gears::core::query::request::bank::QueryDenomMetadataRequest;
@@ -23,8 +24,7 @@ mod inner {
     pub use gears::core::query::response::bank::QueryBalanceResponse;
     pub use gears::core::query::response::bank::QueryTotalSupplyRequest;
     pub use gears::core::query::response::bank::QueryTotalSupplyResponse;
-    pub use gears::core::query::response::PageResponse;
-    pub use ibc_proto::cosmos::bank::v1beta1::Params;
+    pub use ibc_proto::cosmos::bank::v1beta1::QueryDenomMetadataResponse;
 }
 
 #[derive(Clone, PartialEq, Debug, Query, Protobuf)]
@@ -74,8 +74,9 @@ pub struct QueryDenomMetadataRequest {
     pub denom: Denom,
 }
 
-#[derive(Clone, PartialEq, Message, Raw, Query, Protobuf)]
+#[derive(Clone, PartialEq, Message, Query, Protobuf)]
 #[query(url = "/cosmos.bank.v1beta1.Query/Params")]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QueryParamsRequest")]
 pub struct QueryParamsRequest {}
 
 /// QueryAllBalancesResponse is the response type for the Query/AllBalances RPC
@@ -117,30 +118,61 @@ pub struct QueryTotalSupplyResponse {
 
 /// QueryDenomsMetadataResponse is the response type for the
 /// Query/DenomsMetadata RPC method.
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Raw, Protobuf)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QueryDenomsMetadataResponse")]
 pub struct QueryDenomsMetadataResponse {
     // metadata provides the client information for all the registered tokens.
     #[proto(repeated)]
-    #[raw(kind(message), raw = inner::Metadata, repeated)]
     pub metadatas: Vec<Metadata>,
     // pagination defines the pagination in the response.
     #[proto(optional)]
-    #[raw(kind(message), raw = inner::PageResponse, optional)]
     pub pagination: Option<PaginationResponse>,
 }
 
-#[derive(Clone, Debug, Serialize, Query, Raw, Protobuf)]
+#[derive(Clone, Debug, Serialize, Query, Protobuf)]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QueryDenomMetadataResponse")]
 pub struct QueryDenomMetadataResponse {
     /// metadata describes and provides all the client information for the requested token.
     #[proto(optional)]
-    #[raw(kind(message), raw = inner::Metadata, optional)]
     pub metadata: Option<Metadata>,
 }
 
 /// QueryParamsResponse is the response type for the Query/Params RPC method
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query, Raw, Protobuf)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QueryParamsResponse")]
 pub struct QueryParamsResponse {
     #[proto(optional)]
-    #[raw(kind(message), raw = "inner::Params", optional)]
     pub params: BankParams,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QuerySupplyOfRequest")]
+#[query(url = "/cosmos.bank.v1beta1.Query/TotalSupply")]
+pub struct QuerySupplyOfRequest {
+    pub denom: Denom,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QuerySupplyOfResponse")]
+pub struct QuerySupplyOfResponse {
+    #[proto(optional)]
+    pub amount: Option<UnsignedCoin>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QuerySpendableBalancesRequest")]
+#[query(url = "/cosmos.bank.v1beta1.Query/SpendableBalances")]
+pub struct QuerySpendableBalancesRequest {
+    pub address: AccAddress,
+    #[proto(optional)]
+    pub pagination: Option<PaginationRequest>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "ibc_proto::cosmos::bank::v1beta1::QuerySpendableBalancesResponse")]
+pub struct QuerySpendableBalancesResponse {
+    #[proto(repeated)]
+    pub balances: Vec<UnsignedCoin>,
+    #[proto(optional)]
+    pub pagination: Option<PaginationResponse>,
 }

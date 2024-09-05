@@ -15,7 +15,6 @@ pub struct ContextOptions {
     header: Header,
     consensus_params: ConsensusParams,
     gas_meter: GasMeter<TxKind>,
-    is_check: bool,
     options: NodeOptions,
 }
 
@@ -29,7 +28,6 @@ pub fn build_tx_ctx<'a, DB, SK>(
         header,
         consensus_params,
         gas_meter,
-        is_check,
         options,
     } = opt.into();
     TxContext::new(
@@ -39,18 +37,19 @@ pub fn build_tx_ctx<'a, DB, SK>(
         consensus_params,
         gas_meter,
         block_gas_meter,
-        is_check,
         options,
     )
 }
 
 pub fn build_init_ctx<DB, SK>(
     multi_store: &mut ApplicationMultiBank<DB, SK>,
+    consensus_params: ConsensusParams,
 ) -> InitContext<'_, DB, SK> {
     InitContext::new(
         multi_store,
         0,
         tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
         tendermint::types::chain_id::ChainId::default(),
+        consensus_params,
     )
 }

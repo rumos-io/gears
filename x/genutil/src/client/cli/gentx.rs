@@ -19,7 +19,8 @@ pub struct GentxCli<AI: ApplicationInfo> {
     /// Amount of coins to bond
     pub amount: UnsignedCoin,
     /// The validator's name
-    pub moniker: String,
+    #[arg(long, required = false)]
+    pub moniker: Option<String>,
     /// The optional identity signature (ex. UPort or Keybase)
     #[arg(long)]
     pub identity: Option<String>,

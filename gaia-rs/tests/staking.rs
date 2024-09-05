@@ -3,13 +3,12 @@ use bank::cli::tx::{BankCommands, BankTxCli};
 use gaia_rs::{
     client::{GaiaQueryCommands, GaiaTxCommands, WrappedGaiaQueryCommands, WrappedGaiaTxCommands},
     query::GaiaQueryResponse,
-    GaiaCoreClient,
+    GaiaCoreClient, QueryNodeFetcher,
 };
 use gears::{
     commands::client::{
-        keys::KeyringBackend,
         query::{run_query, QueryCommand},
-        tx::{run_tx, Keyring, LocalInfo, TxCommand},
+        tx::{run_tx, ClientTxContext, TxCommand},
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
     tendermint::{rpc::response::tx::broadcast::Response, types::chain_id::ChainId},
@@ -45,17 +44,17 @@ fn run_tx_local(
     // a comment
     let mut responses = run_tx(
         TxCommand {
-            home,
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: from_key.to_owned(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fees: None,
             inner: WrappedGaiaTxCommands(command),
+            ctx: ClientTxContext::new_online(
+                home,
+                200_000_u32.try_into().expect("default gas is valid"),
+                DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
+                ChainId::from_str("test-chain")?,
+                from_key,
+            ),
         },
         &GaiaCoreClient,
+        &QueryNodeFetcher,
     )?
     .broadcast()
     .expect("broadcast tx inside");
@@ -448,15 +447,15 @@ fn query_delegation() -> anyhow::Result<()> {
     let expected = GaiaQueryResponse::Staking(
         staking::cli::query::StakingQueryResponse::Delegation(staking::QueryDelegationResponse {
             delegation_response: Some(DelegationResponse {
-                delegation: staking::Delegation {
+                delegation: Some(staking::Delegation {
                     delegator_address,
                     validator_address,
                     shares: Decimal256::from_atomics(110u64, 0).expect("hardcoded is valid"),
-                },
-                balance: UnsignedCoin {
+                }),
+                balance: Some(UnsignedCoin {
                     denom: "uatom".try_into().expect("hardcoded is valid"),
                     amount: Uint256::from(110u64),
-                },
+                }),
             }),
         }),
     );

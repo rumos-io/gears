@@ -136,7 +136,7 @@ impl From<inner::BlockParams> for BlockParams {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ValidatorParams {
     pub pub_key_types: Vec<String>,
 }
@@ -330,6 +330,7 @@ mod tests {
             0,
             tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
             tendermint::types::chain_id::ChainId::default(),
+            ConsensusParams::default(),
         );
 
         keeper.set_consensus_params(&mut ctx, ConsensusParams::default());
@@ -361,6 +362,7 @@ mod tests {
             0,
             tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
             tendermint::types::chain_id::ChainId::default(),
+            ConsensusParams::default(),
         );
 
         keeper.set_consensus_params(&mut ctx, ConsensusParams::default());

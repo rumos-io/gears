@@ -37,6 +37,7 @@ impl ReadAccAddress for LedgerProxyKey {
     }
 }
 
+// TODO: find better name without gears part
 impl GearsPublicKey for LedgerProxyKey {
     fn get_gears_public_key(&self) -> PublicKey {
         PublicKey::Secp256k1(self.public_key.clone())

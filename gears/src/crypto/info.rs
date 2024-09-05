@@ -12,7 +12,7 @@ use std::{
 };
 
 use crate::{
-    application::handlers::client::MetadataViaRPC,
+    application::handlers::client::{MetadataViaRPC, NodeFetcher},
     signing::{
         errors::SigningErrors, handler::SignModeHandler, renderer::value_renderer::ValueRenderer,
     },
@@ -87,6 +87,7 @@ impl<K: SigningKey> Display for TextualSigningError<K> {
 pub fn create_signed_transaction_textual<
     M: TxMessage + ValueRenderer,
     K: SigningKey + ReadAccAddress + GearsPublicKey,
+    F: NodeFetcher + Clone,
 >(
     signing_infos: Vec<SigningInfo<K>>,
     chain_id: ChainId,
@@ -94,6 +95,7 @@ pub fn create_signed_transaction_textual<
     tip: Option<Tip>,
     node: url::Url,
     body: TxBody<M>,
+    fetcher: &F,
 ) -> Result<Tx<M>, TextualSigningError<K>> {
     let auth_info = auth_info(&signing_infos, fee, tip, Mode::Textual);
 
@@ -112,7 +114,10 @@ pub fn create_signed_transaction_textual<
 
             let sign_bytes = sign_mode_handler
                 .sign_bytes_get(
-                    &MetadataViaRPC { node: node.clone() },
+                    &MetadataViaRPC {
+                        node: node.clone(),
+                        fetcher: fetcher.clone(),
+                    },
                     signer_data,
                     &body,
                     &auth_info,
