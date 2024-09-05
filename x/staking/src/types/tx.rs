@@ -604,7 +604,10 @@ impl From<DelegateMsg> for DelegateMsgRaw {
 
 /// Creates a new DelegateMsg transaction message instance.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, AppMessage)]
-#[msg(url = "/cosmos.staking.v1beta1.MsgDelegate")]
+#[msg(
+    url = "/cosmos.staking.v1beta1.MsgDelegate",
+    amino_url = "cosmos-sdk/MsgDelegate"
+)]
 pub struct DelegateMsg {
     #[msg(signer)]
     pub delegator_address: AccAddress,
