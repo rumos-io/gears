@@ -9,7 +9,7 @@ use gears::{
         Protobuf,
     },
     derive::{Protobuf, Query, Raw},
-    store::database::ext::UnwrapCorrupt,
+    extensions::corruption::UnwrapCorrupt,
     types::{
         address::{AccAddress, ValAddress},
         base::coin::UnsignedCoin,

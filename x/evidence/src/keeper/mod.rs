@@ -2,10 +2,8 @@ use crate::{errors::EvidenceAlreadyExistsError, types::Evidence, GenesisState};
 use gears::{
     context::{init::InitContext, QueryableContext, TransactionalContext},
     core::any::google::Any,
-    store::{
-        database::{ext::UnwrapCorrupt, Database},
-        StoreKey,
-    },
+    extensions::corruption::UnwrapCorrupt,
+    store::{database::Database, StoreKey},
     tendermint::informal::Hash,
     types::store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     x::{

@@ -1,6 +1,6 @@
 use super::*;
 use gears::{
-    context::InfallibleContext, core::Protobuf, store::database::ext::UnwrapCorrupt,
+    context::InfallibleContext, core::Protobuf, extensions::corruption::UnwrapCorrupt,
     types::base::coin::Uint256Proto,
 };
 use prost::Message;

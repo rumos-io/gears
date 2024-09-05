@@ -1,10 +1,9 @@
 use super::Database;
 use gears::{
-    store::database::{ext::UnwrapCorrupt, prefix::PrefixDB},
-    types::{
+    extensions::corruption::UnwrapCorrupt, store::database::prefix::PrefixDB, types::{
         address::ValAddress,
         store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
-    },
+    }
 };
 use std::{borrow::Cow, ops::Bound};
 

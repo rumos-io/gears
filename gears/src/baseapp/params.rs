@@ -1,4 +1,5 @@
-use database::{ext::UnwrapCorrupt, Database};
+use database::Database;
+use extensions::corruption::UnwrapCorrupt;
 use kv_store::StoreKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;

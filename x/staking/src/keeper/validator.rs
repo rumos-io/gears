@@ -1,6 +1,6 @@
 use super::*;
 use crate::{Commission, CommissionRates, Validator};
-use gears::{core::Protobuf, store::database::ext::UnwrapCorrupt, types::address::ConsAddress};
+use gears::{core::Protobuf, extensions::corruption::UnwrapCorrupt, types::address::ConsAddress};
 
 impl<
         SK: StoreKey,

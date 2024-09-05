@@ -14,11 +14,9 @@ use gears::{
     },
     core::Protobuf,
     ext::{IteratorPaginate, Pagination, PaginationResult},
+    extensions::corruption::UnwrapCorrupt,
     params::ParamsSubspaceKey,
-    store::{
-        database::{ext::UnwrapCorrupt, Database},
-        StoreKey,
-    },
+    store::{database::Database, StoreKey},
     tendermint::types::{
         proto::{
             crypto::PublicKey,

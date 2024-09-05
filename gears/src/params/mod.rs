@@ -5,7 +5,8 @@ use std::{
     str::FromStr,
 };
 
-use database::{ext::UnwrapCorrupt, prefix::PrefixDB, Database};
+use database::{prefix::PrefixDB, Database};
+use extensions::corruption::UnwrapCorrupt;
 use kv_store::StoreKey;
 
 use crate::context::{InfallibleContext, InfallibleContextMut};

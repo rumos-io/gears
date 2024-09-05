@@ -4,7 +4,8 @@ use std::{
 };
 
 use caches::{Cache, DefaultHashBuilder, LRUCache};
-use database::{ext::UnwrapCorrupt, Database};
+use database::Database;
+use extensions::corruption::UnwrapCorrupt;
 use integer_encoding::VarInt;
 
 use crate::{merkle::EMPTY_HASH, Error};

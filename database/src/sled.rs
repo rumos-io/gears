@@ -1,4 +1,6 @@
-use crate::{error::DatabaseError, ext::UnwrapCorrupt, DBBuilder, Database, DatabaseBuilder};
+use extensions::corruption::UnwrapCorrupt;
+
+use crate::{error::DatabaseError, DBBuilder, Database, DatabaseBuilder};
 
 impl DatabaseBuilder<SledDb> for DBBuilder {
     type Err = DatabaseError;

@@ -8,6 +8,7 @@ workspace = true
 
 [dependencies]
 #local
+extensions = { path = "../extensions" }
 address = { path = "../address" }
 tendermint = { path = "../tendermint" }
 core-types = { path = "../core-types" }

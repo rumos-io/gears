@@ -5,7 +5,8 @@ use std::{
     ops::{Bound, RangeBounds},
 };
 
-use database::{ext::UnwrapCorrupt, Database};
+use database::Database;
+use extensions::corruption::UnwrapCorrupt;
 use integer_encoding::VarInt;
 use nutype::nutype;
 use sha2::{Digest, Sha256};
