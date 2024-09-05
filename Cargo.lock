@@ -1935,7 +1935,6 @@ dependencies = [
  "axum 0.7.5",
  "bank",
  "bip32",
- "bytes",
  "clap",
  "data-encoding",
  "gears",
@@ -1984,7 +1983,6 @@ dependencies = [
  "http 0.2.12",
  "human-panic",
  "ibc-proto 0.33.0",
- "itertools 0.13.0",
  "k256",
  "key-derive",
  "keyring",
@@ -2047,7 +2045,6 @@ dependencies = [
  "serde_json",
  "staking",
  "toml_edit",
- "url",
 ]
 
 [[package]]

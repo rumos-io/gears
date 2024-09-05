@@ -22,7 +22,7 @@ staking = { path = "../x/staking" }
 genutil = { path = "../x/genutil" }
 
 #newtypes
-bytes = { workspace = true }
+# bytes = { workspace = true }
 # thiserror = { workspace = true }
 
 #utils
