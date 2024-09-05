@@ -188,7 +188,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>, F: NodeFetcher + Clone>(
         // TODO: can be reduced by changing variable `step`. Do we need it?
         handler
             .handle_tx(
-                handler.sign_msg(messages, &key, SignMode::Direct, &mut ctx, fetcher,)?,
+                handler.sign_msg(messages, &key, SignMode::Direct, &mut ctx, fetcher)?,
                 &mut ctx,
             )
             .map(Into::into)
