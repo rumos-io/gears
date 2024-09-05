@@ -1486,6 +1486,7 @@ name = "distribution"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum 0.7.5",
  "bytes",
  "clap",
  "gears",
@@ -5056,6 +5057,7 @@ name = "staking"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum 0.7.5",
  "clap",
  "data-encoding",
  "gears",
@@ -5247,6 +5249,7 @@ name = "tendermint"
 version = "0.1.0"
 dependencies = [
  "address",
+ "async-trait",
  "bytes",
  "chrono",
  "ed25519-consensus",

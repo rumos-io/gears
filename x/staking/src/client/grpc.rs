@@ -1,28 +1,27 @@
 use gears::baseapp::{NodeQueryHandler, QueryRequest, QueryResponse};
-use ibc_proto::{
-    cosmos::staking::v1beta1::{
-        query_server::{Query, QueryServer},
-        Params, QueryDelegationRequest, QueryDelegationResponse, QueryDelegatorDelegationsRequest,
-        QueryDelegatorDelegationsResponse, QueryDelegatorUnbondingDelegationsRequest,
-        QueryDelegatorUnbondingDelegationsResponse, QueryDelegatorValidatorRequest,
-        QueryDelegatorValidatorResponse, QueryDelegatorValidatorsRequest,
-        QueryDelegatorValidatorsResponse, QueryHistoricalInfoRequest, QueryHistoricalInfoResponse,
-        QueryParamsRequest, QueryParamsResponse, QueryPoolRequest, QueryPoolResponse,
-        QueryRedelegationsRequest, QueryRedelegationsResponse, QueryUnbondingDelegationRequest,
-        QueryUnbondingDelegationResponse, QueryValidatorDelegationsRequest,
-        QueryValidatorDelegationsResponse, QueryValidatorRequest, QueryValidatorResponse,
-        QueryValidatorUnbondingDelegationsRequest, QueryValidatorUnbondingDelegationsResponse,
-        QueryValidatorsRequest, QueryValidatorsResponse,
-    },
-    google::protobuf::Duration,
+use ibc_proto::cosmos::staking::v1beta1::{
+    query_server::{Query, QueryServer},
+    QueryDelegationRequest, QueryDelegationResponse, QueryDelegatorDelegationsRequest,
+    QueryDelegatorDelegationsResponse, QueryDelegatorUnbondingDelegationsRequest,
+    QueryDelegatorUnbondingDelegationsResponse, QueryDelegatorValidatorRequest,
+    QueryDelegatorValidatorResponse, QueryDelegatorValidatorsRequest,
+    QueryDelegatorValidatorsResponse, QueryHistoricalInfoRequest, QueryHistoricalInfoResponse,
+    QueryParamsRequest, QueryParamsResponse, QueryPoolRequest, QueryPoolResponse,
+    QueryRedelegationsRequest, QueryRedelegationsResponse, QueryUnbondingDelegationRequest,
+    QueryUnbondingDelegationResponse, QueryValidatorDelegationsRequest,
+    QueryValidatorDelegationsResponse, QueryValidatorRequest, QueryValidatorResponse,
+    QueryValidatorUnbondingDelegationsRequest, QueryValidatorUnbondingDelegationsResponse,
+    QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use std::marker::PhantomData;
 use tonic::{Request, Response, Status};
 use tracing::info;
 
+use crate::{StakingNodeQueryRequest, StakingNodeQueryResponse};
+
 #[derive(Debug, Default)]
 pub struct StakingService<QH, QReq, QRes> {
-    _app: QH,
+    app: QH,
     _phantom: PhantomData<(QReq, QRes)>,
 }
 
@@ -33,14 +32,25 @@ impl<
         QH: NodeQueryHandler<QReq, QRes>,
     > Query for StakingService<QH, QReq, QRes>
 where
-// QReq: QueryRequest + From<StakingNodeQueryRequest>,
-// QRes: QueryResponse + TryInto<StakingNodeQueryResponse, Error = Status>,
+    QReq: QueryRequest + From<StakingNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<StakingNodeQueryResponse, Error = Status>,
 {
     async fn validators(
         &self,
-        _request: Request<QueryValidatorsRequest>,
+        request: Request<QueryValidatorsRequest>,
     ) -> Result<Response<QueryValidatorsResponse>, Status> {
-        unimplemented!()
+        info!("Received a gRPC request staking::validators");
+        let req = StakingNodeQueryRequest::Validators(request.into_inner().try_into()?);
+        let response = self.app.typed_query(req)?;
+        let response: StakingNodeQueryResponse = response.try_into()?;
+
+        if let StakingNodeQueryResponse::Validators(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ))
+        }
     }
 
     async fn validator(
@@ -129,36 +139,46 @@ where
 
     async fn params(
         &self,
-        _request: Request<QueryParamsRequest>,
+        request: Request<QueryParamsRequest>,
     ) -> Result<Response<QueryParamsResponse>, Status> {
         info!("Received a gRPC request staking::params");
-        // TODO: replace hard coded values with actual values from the app
-        let response = QueryParamsResponse {
-            params: Some(Params {
-                unbonding_time: Some(Duration {
-                    seconds: 1814400,
-                    nanos: 0,
-                }),
-                max_validators: 12,
-                max_entries: 100,
-                historical_entries: 10,
-                bond_denom: "uatom".to_string(),
-                min_commission_rate: "0.1".to_string(),
-            }),
-        };
-        Ok(Response::new(response))
+        // let response = QueryParamsResponse {
+        //     params: Some(Params {
+        //         unbonding_time: Some(Duration {
+        //             seconds: 1814400,
+        //             nanos: 0,
+        //         }),
+        //         max_validators: 12,
+        //         max_entries: 100,
+        //         historical_entries: 10,
+        //         bond_denom: "uatom".to_string(),
+        //         min_commission_rate: "0.1".to_string(),
+        //     }),
+        // };
+
+        let req = StakingNodeQueryRequest::Params(request.into_inner().try_into()?);
+        let response = self.app.typed_query(req)?;
+        let response: StakingNodeQueryResponse = response.try_into()?;
+
+        if let StakingNodeQueryResponse::Params(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ))
+        }
     }
 }
 
-pub fn new<QH, QReq, QRes>(_app: QH) -> QueryServer<StakingService<QH, QReq, QRes>>
+pub fn new<QH, QReq, QRes>(app: QH) -> QueryServer<StakingService<QH, QReq, QRes>>
 where
-    QReq: QueryRequest + Send + Sync + 'static, // + From<StakingNodeQueryRequest>,
-    QRes: QueryResponse + Send + Sync + 'static, // + TryInto<StakingNodeQueryResponse, Error = Status>,
+    QReq: QueryRequest + Send + Sync + 'static + From<StakingNodeQueryRequest>,
+    QRes: QueryResponse + Send + Sync + 'static + TryInto<StakingNodeQueryResponse, Error = Status>,
     QH: NodeQueryHandler<QReq, QRes>,
 {
-    let bank_service = StakingService {
-        _app,
+    let grpc_service = StakingService {
+        app,
         _phantom: Default::default(),
     };
-    QueryServer::new(bank_service)
+    QueryServer::new(grpc_service)
 }
