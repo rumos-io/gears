@@ -1,5 +1,6 @@
 use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
+    error::StakingGenesisError,
     Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Pool, Redelegation,
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
@@ -111,7 +112,7 @@ impl<
         &self,
         ctx: &mut InitContext<'_, DB, SK>,
         genesis: GenesisState,
-    ) -> Vec<ValidatorUpdate> {
+    ) -> Result<Vec<ValidatorUpdate>, StakingGenesisError> {
         let mut bonded_tokens = Uint256::zero();
         let mut not_bonded_tokens = Uint256::zero();
 
@@ -147,7 +148,9 @@ impl<
                     not_bonded_tokens += validator.tokens;
                 }
                 // TODO: maybe move panics to abci handler
-                BondStatus::Unspecified => panic!("invalid validator status"),
+                BondStatus::Unspecified => {
+                    return Err(StakingGenesisError::InvalidStatus(validator.status))
+                }
             }
         }
 
@@ -222,11 +225,12 @@ impl<
             .unwrap_gas();
 
         // if balance is different from bonded coins panic because genesis is most likely malformed
-        assert_eq!(
-            bonded_balance, bonded_coins,
-            "bonded pool balance is different from bonded coins: {:?} <-> {:?}",
-            bonded_balance, bonded_coins
-        );
+        if bonded_balance != bonded_coins {
+            return Err(StakingGenesisError::WrongBondedPoolBalance(
+                bonded_balance,
+                bonded_coins,
+            ));
+        }
 
         let not_bonded_balance = self
             .bank_keeper
@@ -242,11 +246,12 @@ impl<
             .unwrap_gas();
 
         // if balance is different from non bonded coins panic because genesis is most likely malformed
-        assert_eq!(
-            not_bonded_balance, not_bonded_coins,
-            "not bonded pool balance is different from not bonded coins: {:?} <-> {:?}",
-            not_bonded_balance, not_bonded_coins,
-        );
+        if not_bonded_balance != not_bonded_coins {
+            return Err(StakingGenesisError::WrongBondedPoolBalance(
+                not_bonded_balance,
+                not_bonded_coins,
+            ));
+        }
 
         let mut res = vec![];
         // don't need to run Tendermint updates if we exported
@@ -257,20 +262,22 @@ impl<
                 let validator = self.validator(ctx, &last_validator.address).unwrap_gas();
 
                 let Some(validator) = validator else {
-                    panic!("invalid genesis file: validator in `last_validator_powers` list not found in `validators` list");
+                    return Err(StakingGenesisError::ValidatorNotFound(
+                        last_validator.address,
+                    ));
                 };
 
                 let update = ValidatorUpdate {
                     pub_key: validator.consensus_pubkey,
-                    power: (last_validator.power as u64).try_into().unwrap(), //TODO: unwrap
+                    power: (last_validator.power as u64).try_into()?,
                 };
                 res.push(update);
             }
         } else {
             // TODO: exit in sdk
-            res = self.apply_and_return_validator_set_updates(ctx).unwrap();
+            res = self.apply_and_return_validator_set_updates(ctx)?;
         }
-        res
+        Ok(res)
     }
 
     /// BlockValidatorUpdates calculates the ValidatorUpdates for the current block

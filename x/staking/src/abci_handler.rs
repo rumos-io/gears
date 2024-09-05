@@ -127,7 +127,12 @@ impl<
             }
             StakingNodeQueryRequest::UnbondingDelegations(req) => {
                 StakingNodeQueryResponse::UnbondingDelegations(
-                    self.keeper.query_unbonding_delegations(ctx, req),
+                    self.keeper.query_unbonding_delegations(ctx, req).unwrap_or(
+                        QueryDelegatorUnbondingDelegationsResponse {
+                            unbonding_responses: vec![],
+                            pagination: None,
+                        },
+                    ),
                 )
             }
             StakingNodeQueryRequest::Redelegation(req) => {
@@ -218,7 +223,7 @@ impl<
 
                 Ok(self
                     .keeper
-                    .query_unbonding_delegations(ctx, req)
+                    .query_unbonding_delegations(ctx, req)?
                     .into_bytes()
                     .into())
             }
@@ -273,7 +278,10 @@ impl<
         ctx: &mut InitContext<'_, DB, SK>,
         genesis: GenesisState,
     ) -> Vec<ValidatorUpdate> {
-        self.keeper.init_genesis(ctx, genesis)
+        match self.keeper.init_genesis(ctx, genesis) {
+            Ok(updates) => updates,
+            Err(err) => panic!("{err}"),
+        }
     }
 
     fn query_redelegations<DB: Database>(

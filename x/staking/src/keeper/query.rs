@@ -7,6 +7,7 @@ use crate::{
     QueryValidatorRequest, QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use gears::{
+    baseapp::errors::QueryError,
     context::query::QueryContext,
     core::Protobuf,
     ext::{IteratorPaginate, Pagination, PaginationResult},
@@ -151,7 +152,7 @@ impl<
         &self,
         ctx: &QueryContext<DB, SK>,
         query: QueryDelegatorUnbondingDelegationsRequest,
-    ) -> QueryDelegatorUnbondingDelegationsResponse {
+    ) -> Result<QueryDelegatorUnbondingDelegationsResponse, QueryError> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(UNBONDING_DELEGATION_KEY);
         let key = query.delegator_addr.prefix_len_bytes();
@@ -159,20 +160,20 @@ impl<
             .into_range(..)
             .maybe_paginate(query.pagination.map(gears::ext::Pagination::from));
 
-        let unbonding_responses = iterator
-            .filter_map(|(k, bytes)| {
-                if k.starts_with(&key) {
-                    UnbondingDelegation::decode_vec(&bytes).ok()
-                } else {
-                    None
-                }
-            })
-            .collect();
+        let mut unbonding_responses = vec![];
+        for (k, bytes) in iterator {
+            if k.starts_with(&key) {
+                unbonding_responses.push(
+                    UnbondingDelegation::decode_vec(&bytes)
+                        .map_err(|e| QueryError::Proto(e.to_string()))?,
+                );
+            }
+        }
 
-        QueryDelegatorUnbondingDelegationsResponse {
+        Ok(QueryDelegatorUnbondingDelegationsResponse {
             unbonding_responses,
             pagination: p_result.map(PaginationResponse::from),
-        }
+        })
     }
 
     pub fn redelegations<DB: Database>(
