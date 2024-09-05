@@ -270,7 +270,7 @@ impl<
 
         let result = self.keeper.query(ctx, query).unwrap_gas();
 
-        Ok(result.into_bytes().into())
+        Ok(result.into_bytes())
     }
 
     fn end_block<'a, DB: Database>(

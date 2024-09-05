@@ -126,8 +126,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
                     ProstMessage::decode(query.data)
                         .map_err(|e| QueryError::Proto(e.to_string()))?,
                 )
-                .encode_vec()
-                .into()),
+                .encode_vec()),
             // "/ibc.core.client.v1.Query/ClientStatus" => Ok(self
             //     .query_keeper
             //     .client_status(ctx, ProstMessage::decode(query.data)?)?

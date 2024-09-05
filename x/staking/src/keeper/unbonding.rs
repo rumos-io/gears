@@ -29,7 +29,7 @@ impl<
         val_addr: &ValAddress,
     ) -> Result<Option<UnbondingDelegation>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
-        let key = get_ubd_key(&del_addr, &val_addr);
+        let key = get_ubd_key(del_addr, val_addr);
         let unbonding_delegation = store
             .get(&key)?
             .map(|bytes| UnbondingDelegation::decode_vec(&bytes).unwrap_or_corrupt());

@@ -188,35 +188,35 @@ impl<
 
                 let result = self.query_balances(ctx, req);
 
-                Ok(result.encode_vec().into())
+                Ok(result.encode_vec())
             }
             QueryTotalSupplyRequest::QUERY_URL => {
                 let req = QueryTotalSupplyRequest::decode(query.data)?;
 
-                Ok(self.query_total_supply(ctx, req).encode_vec().into())
+                Ok(self.query_total_supply(ctx, req).encode_vec())
             }
             "/cosmos.bank.v1beta1.Query/Balance" => {
                 let req = QueryBalanceRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_balance(ctx, req).encode_vec().into())
+                Ok(self.keeper.query_balance(ctx, req).encode_vec())
             }
             QueryDenomsMetadataRequest::QUERY_URL => {
                 let req = QueryDenomsMetadataRequest::decode(query.data)?;
 
                 let result = self.query_denoms(ctx, req).encode_vec();
 
-                Ok(result.into())
+                Ok(result)
             }
             "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
                 let req = QueryDenomMetadataRequest::decode(query.data)?;
                 let metadata = self.keeper.get_denom_metadata(ctx, &req.denom).unwrap_gas();
-                Ok(QueryDenomMetadataResponse { metadata }.encode_vec().into())
+                Ok(QueryDenomMetadataResponse { metadata }.encode_vec())
             }
             "/cosmos.bank.v1beta1.Query/Params" => {
                 // a kind of type check
                 let _req = QueryParamsRequest::decode(query.data)?;
                 let params = self.keeper.params(ctx);
-                Ok(QueryParamsResponse { params }.encode_vec().into())
+                Ok(QueryParamsResponse { params }.encode_vec())
             }
             _ => Err(QueryError::PathNotFound),
         }

@@ -283,7 +283,7 @@ impl<
             let sig = signatures.get(i).expect("TODO"); //TODO: expect message
 
             self.sign_gas_consumer
-                .consume(&mut *gas_meter.borrow_mut(), pub_key, sig, &auth_params)
+                .consume(&mut gas_meter.borrow_mut(), pub_key, sig, &auth_params)
                 .map_err(Into::<AnteGasError>::into)?;
         }
 
