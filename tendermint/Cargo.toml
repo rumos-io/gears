@@ -9,6 +9,7 @@ edition = "2021"
 [dependencies]
 # local
 address = { path = "../address" }
+extensions = { path = "../extensions" }
 
 # crypto
 subtle-encoding = "0.5.1"

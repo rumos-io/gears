@@ -276,11 +276,13 @@ pub mod inner {
 mod tests {
     use std::i32;
 
+    use extensions::testing::UnwrapTesting;
+
     use super::*;
 
     #[test]
     fn test_try_new() {
-        let duration = Duration::try_new(1, 0).unwrap();
+        let duration = Duration::try_new(1, 0).unwrap_test();
         assert_eq!(
             duration,
             Duration {
@@ -290,11 +292,11 @@ mod tests {
         );
 
         let duration =
-            Duration::try_new(DurationSeconds::MIN.into(), Nanoseconds::MIN.into()).unwrap();
+            Duration::try_new(DurationSeconds::MIN.into(), Nanoseconds::MIN.into()).unwrap_test();
         assert_eq!(duration, Duration::MIN);
 
         let duration =
-            Duration::try_new(DurationSeconds::MAX.into(), Nanoseconds::MAX.into()).unwrap();
+            Duration::try_new(DurationSeconds::MAX.into(), Nanoseconds::MAX.into()).unwrap_test();
         assert_eq!(duration, Duration::MAX);
 
         let dur_error = Duration::try_new(i64::from(DurationSeconds::MIN) - 1, 0).unwrap_err();
@@ -396,7 +398,7 @@ mod tests {
 
     #[test]
     fn test_try_new_from_nanos() {
-        let duration = Duration::try_new_from_nanos(1_000_000_001).unwrap();
+        let duration = Duration::try_new_from_nanos(1_000_000_001).unwrap_test();
         assert_eq!(
             duration,
             Duration {
@@ -405,7 +407,7 @@ mod tests {
             }
         );
 
-        let duration = Duration::try_new_from_nanos(-1_000_000_001).unwrap();
+        let duration = Duration::try_new_from_nanos(-1_000_000_001).unwrap_test();
         assert_eq!(
             duration,
             Duration {
@@ -414,7 +416,7 @@ mod tests {
             }
         );
 
-        let duration = Duration::try_new_from_nanos(1_000_000_000).unwrap();
+        let duration = Duration::try_new_from_nanos(1_000_000_000).unwrap_test();
         assert_eq!(
             duration,
             Duration {
@@ -423,7 +425,7 @@ mod tests {
             }
         );
 
-        let duration = Duration::try_new_from_nanos(-1_000_000_000).unwrap();
+        let duration = Duration::try_new_from_nanos(-1_000_000_000).unwrap_test();
         assert_eq!(
             duration,
             Duration {
@@ -432,7 +434,7 @@ mod tests {
             }
         );
 
-        let duration = Duration::try_new_from_nanos(0).unwrap();
+        let duration = Duration::try_new_from_nanos(0).unwrap_test();
         assert_eq!(
             duration,
             Duration {
@@ -441,10 +443,10 @@ mod tests {
             }
         );
 
-        let duration = Duration::try_new_from_nanos(DurationNanoseconds::MAX.into()).unwrap();
+        let duration = Duration::try_new_from_nanos(DurationNanoseconds::MAX.into()).unwrap_test();
         assert_eq!(duration, Duration::MAX);
 
-        let duration = Duration::try_new_from_nanos(DurationNanoseconds::MIN.into()).unwrap();
+        let duration = Duration::try_new_from_nanos(DurationNanoseconds::MIN.into()).unwrap_test();
         assert_eq!(duration, Duration::MIN);
 
         let dur_error =
@@ -458,19 +460,19 @@ mod tests {
 
     #[test]
     fn test_duration_hours() {
-        let duration = Duration::try_new(3 * SECONDS_PER_HOUR + 1, 0).unwrap();
+        let duration = Duration::try_new(3 * SECONDS_PER_HOUR + 1, 0).unwrap_test();
         assert_eq!(duration.duration_hours(), DurationHours(3));
 
-        let duration = Duration::try_new(3 * SECONDS_PER_HOUR - 1, 0).unwrap();
+        let duration = Duration::try_new(3 * SECONDS_PER_HOUR - 1, 0).unwrap_test();
         assert_eq!(duration.duration_hours(), DurationHours(2));
 
-        let duration = Duration::try_new(-3 * SECONDS_PER_HOUR - 1, 0).unwrap();
+        let duration = Duration::try_new(-3 * SECONDS_PER_HOUR - 1, 0).unwrap_test();
         assert_eq!(duration.duration_hours(), DurationHours(-3));
 
-        let duration = Duration::try_new(-3 * SECONDS_PER_HOUR + 1, 0).unwrap();
+        let duration = Duration::try_new(-3 * SECONDS_PER_HOUR + 1, 0).unwrap_test();
         assert_eq!(duration.duration_hours(), DurationHours(-2));
 
-        let duration = Duration::try_new(0, 0).unwrap();
+        let duration = Duration::try_new(0, 0).unwrap_test();
         assert_eq!(duration.duration_hours(), DurationHours(0));
 
         let duration = Duration::MAX;
@@ -482,13 +484,13 @@ mod tests {
 
     #[test]
     fn test_duration_seconds() {
-        let duration = Duration::try_new(3, 1).unwrap();
+        let duration = Duration::try_new(3, 1).unwrap_test();
         assert_eq!(duration.duration_seconds(), DurationSeconds(3));
 
-        let duration = Duration::try_new(-3, -1).unwrap();
+        let duration = Duration::try_new(-3, -1).unwrap_test();
         assert_eq!(duration.duration_seconds(), DurationSeconds(-3));
 
-        let duration = Duration::try_new(0, 0).unwrap();
+        let duration = Duration::try_new(0, 0).unwrap_test();
         assert_eq!(duration.duration_seconds(), DurationSeconds(0));
 
         let duration = Duration::MAX;
@@ -500,46 +502,46 @@ mod tests {
 
     #[test]
     fn test_nanoseconds() {
-        let duration = Duration::try_new(3, 1).unwrap();
+        let duration = Duration::try_new(3, 1).unwrap_test();
         assert_eq!(duration.nanoseconds(), Nanoseconds(1));
 
-        let duration = Duration::try_new(-3, -1).unwrap();
+        let duration = Duration::try_new(-3, -1).unwrap_test();
         assert_eq!(duration.nanoseconds(), Nanoseconds(-1));
 
-        let duration = Duration::try_new(0, 0).unwrap();
+        let duration = Duration::try_new(0, 0).unwrap_test();
         assert_eq!(duration.nanoseconds(), Nanoseconds(0));
 
-        let duration = Duration::try_new(0, 999_999_999).unwrap();
+        let duration = Duration::try_new(0, 999_999_999).unwrap_test();
         assert_eq!(duration.nanoseconds(), Nanoseconds::MAX);
 
-        let duration = Duration::try_new(0, -999_999_999).unwrap();
+        let duration = Duration::try_new(0, -999_999_999).unwrap_test();
         assert_eq!(duration.nanoseconds(), Nanoseconds::MIN);
     }
 
     #[test]
     fn test_duration_nanoseconds() {
-        let duration = Duration::try_new(3, 1).unwrap();
+        let duration = Duration::try_new(3, 1).unwrap_test();
         assert_eq!(
             duration.duration_nanoseconds(),
             DurationNanoseconds(3_000_000_001)
         );
 
-        let duration = Duration::try_new(-3, -1).unwrap();
+        let duration = Duration::try_new(-3, -1).unwrap_test();
         assert_eq!(
             duration.duration_nanoseconds(),
             DurationNanoseconds(-3_000_000_001)
         );
 
-        let duration = Duration::try_new(0, 0).unwrap();
+        let duration = Duration::try_new(0, 0).unwrap_test();
         assert_eq!(duration.duration_nanoseconds(), DurationNanoseconds(0));
 
-        let duration = Duration::try_new(0, 999_999_999).unwrap();
+        let duration = Duration::try_new(0, 999_999_999).unwrap_test();
         assert_eq!(
             duration.duration_nanoseconds(),
             DurationNanoseconds(999_999_999)
         );
 
-        let duration = Duration::try_new(0, -999_999_999).unwrap();
+        let duration = Duration::try_new(0, -999_999_999).unwrap_test();
         assert_eq!(
             duration.duration_nanoseconds(),
             DurationNanoseconds(-999_999_999)
@@ -554,38 +556,38 @@ mod tests {
 
     #[test]
     fn test_serialization() {
-        let duration = Duration::try_new(3, 1).unwrap();
-        let serialized = serde_json::to_string(&duration).unwrap();
+        let duration = Duration::try_new(3, 1).unwrap_test();
+        let serialized = serde_json::to_string(&duration).unwrap_test();
         assert_eq!(serialized, r#""3.000000001s""#);
 
-        let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
+        let deserialized: Duration = serde_json::from_str(&serialized).unwrap_test();
         assert_eq!(deserialized, duration);
 
         //--------------------------------------------
 
-        let duration = Duration::try_new(3, 0).unwrap();
-        let serialized = serde_json::to_string(&duration).unwrap();
+        let duration = Duration::try_new(3, 0).unwrap_test();
+        let serialized = serde_json::to_string(&duration).unwrap_test();
         assert_eq!(serialized, r#""3s""#);
 
-        let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
+        let deserialized: Duration = serde_json::from_str(&serialized).unwrap_test();
         assert_eq!(deserialized, duration);
 
         //--------------------------------------------
 
-        let duration = Duration::try_new(-3, -1).unwrap();
-        let serialized = serde_json::to_string(&duration).unwrap();
+        let duration = Duration::try_new(-3, -1).unwrap_test();
+        let serialized = serde_json::to_string(&duration).unwrap_test();
         assert_eq!(serialized, r#""-3.000000001s""#);
 
-        let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
+        let deserialized: Duration = serde_json::from_str(&serialized).unwrap_test();
         assert_eq!(deserialized, duration);
 
         //--------------------------------------------
 
-        let duration = Duration::try_new(3, 1000).unwrap();
-        let serialized = serde_json::to_string(&duration).unwrap();
+        let duration = Duration::try_new(3, 1000).unwrap_test();
+        let serialized = serde_json::to_string(&duration).unwrap_test();
         assert_eq!(serialized, r#""3.000001s""#);
 
-        let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
+        let deserialized: Duration = serde_json::from_str(&serialized).unwrap_test();
         assert_eq!(deserialized, duration);
 
         //--------------------------------------------
