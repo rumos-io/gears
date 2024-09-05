@@ -28,7 +28,8 @@ const USER_1: &str = "unfair live spike near cushion blanket club salad poet cig
 
 // This is a helper function to create a user with a specific account number
 pub fn user(account_number: u64, mnemonic: &str) -> User {
-    let mnemonic = bip32::Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+    let mnemonic =
+        bip32::Mnemonic::new(mnemonic, bip32::Language::English).expect("mnemonic is invalid");
     let key_pair = KeyPair::from_mnemonic(&mnemonic);
 
     User {
@@ -55,14 +56,16 @@ fn setup_mock_node(
     let chain_id = ChainId::default();
 
     let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-    let mnemonic = bip32::Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+    let mnemonic =
+        bip32::Mnemonic::new(mnemonic, bip32::Language::English).expect("mnemonic is invalid");
     let key_pair = KeyPair::from_mnemonic(&mnemonic);
     let address = key_pair.get_address();
     let consensus_key = gears::tendermint::crypto::new_private_key();
 
     let genesis = if let Some(path) = genesis_path {
-        let genesis_state = fs::read_to_string(path.as_ref()).unwrap();
-        serde_json::from_str(&genesis_state).unwrap()
+        let genesis_state =
+            fs::read_to_string(path.as_ref()).expect("failed to read genesis state");
+        serde_json::from_str(&genesis_state).expect("invalid genesis")
     } else {
         let mut genesis = GenesisState::default();
         genesis

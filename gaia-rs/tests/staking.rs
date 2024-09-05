@@ -90,9 +90,9 @@ fn new_validator(
         website: "".to_string(),
         security_contact: "".to_string(),
         details: "".to_string(),
-        commission_rate: Decimal256::from_atomics(1u64, 1).unwrap(),
-        commission_max_rate: Decimal256::from_atomics(2u64, 1).unwrap(),
-        commission_max_change_rate: Decimal256::from_atomics(1u64, 2).unwrap(),
+        commission_rate: Decimal256::from_atomics(1u64, 1)?,
+        commission_max_rate: Decimal256::from_atomics(2u64, 1)?,
+        commission_max_change_rate: Decimal256::from_atomics(1u64, 2)?,
         min_self_delegation: Uint256::one(),
     });
     let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
@@ -274,7 +274,7 @@ fn redelegate() -> anyhow::Result<()> {
             .events
             .iter()
             .find(|e| e.kind == "redelegate")
-            .unwrap()
+            .expect("should exists")
             .attributes
             .len(),
         4
@@ -392,11 +392,12 @@ fn query_validator() -> anyhow::Result<()> {
 
     assert_eq!(
         operator_address,
-        ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4").unwrap()
+        ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")
+            .expect("hardcoded is valid")
     );
     assert_eq!(
         delegator_shares,
-        Decimal256::from_atomics(100u64, 0).unwrap()
+        Decimal256::from_atomics(100u64, 0).expect("hardcoded is valid")
     );
     assert_eq!(
         description,
@@ -405,7 +406,7 @@ fn query_validator() -> anyhow::Result<()> {
             ..Default::default()
         }
     );
-    assert_eq!(consensus_pubkey, serde_json::from_str("{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}").unwrap());
+    assert_eq!(consensus_pubkey, serde_json::from_str("{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}").expect("hardcoded is valid"));
     assert!(!jailed);
     assert_eq!(tokens, Uint256::from(100u64));
     assert_eq!(
@@ -450,10 +451,10 @@ fn query_delegation() -> anyhow::Result<()> {
                 delegation: staking::Delegation {
                     delegator_address,
                     validator_address,
-                    shares: Decimal256::from_atomics(110u64, 0).unwrap(),
+                    shares: Decimal256::from_atomics(110u64, 0).expect("hardcoded is valid"),
                 },
                 balance: UnsignedCoin {
-                    denom: "uatom".try_into().unwrap(),
+                    denom: "uatom".try_into().expect("hardcoded is valid"),
                     amount: Uint256::from(110u64),
                 },
             }),

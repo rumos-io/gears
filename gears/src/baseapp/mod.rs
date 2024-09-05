@@ -46,7 +46,7 @@ pub use query::*;
 pub struct BaseApp<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
     state: Arc<RwLock<ApplicationState<DB, H>>>,
     abci_handler: H,
-    block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
+    block_header: Arc<RwLock<Header>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<PSK>,
     options: NodeOptions,
     _info_marker: PhantomData<AI>,
@@ -72,7 +72,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         Self {
             abci_handler,
-            block_header: Arc::new(RwLock::new(None)),
+            block_header: Arc::new(RwLock::new(Default::default())),
             baseapp_params_keeper,
             state: Arc::new(RwLock::new(ApplicationState::new(
                 Gas::from(max_gas),
@@ -83,13 +83,13 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         }
     }
 
-    fn get_block_header(&self) -> Option<Header> {
+    fn get_block_header(&self) -> Header {
         self.block_header.read().expect(POISONED_LOCK).clone()
     }
 
     fn set_block_header(&self, header: Header) {
         let mut current_header = self.block_header.write().expect(POISONED_LOCK);
-        *current_header = Some(header);
+        *current_header = header;
     }
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, QueryError> {
@@ -115,9 +115,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
                 RunTxError::InvalidTransaction(e.to_string())
             })?;
 
-        let header = self
-            .get_block_header()
-            .expect("block header is set in begin block"); //TODO: return error
+        let header = self.get_block_header();
         let height = header.height;
 
         let consensus_params = {

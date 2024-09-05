@@ -1,4 +1,4 @@
-use database::Database;
+use database::{ext::UnwrapCorrupt, Database};
 use kv_store::StoreKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -96,9 +96,12 @@ impl ParamsSerialize for ConsensusParams {
 impl ParamsDeserialize for ConsensusParams {
     fn from_raw(fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
-            block: serde_json::from_slice(fields.get(KEY_BLOCK_PARAMS).unwrap()).unwrap(),
-            evidence: serde_json::from_slice(fields.get(KEY_EVIDENCE_PARAMS).unwrap()).unwrap(),
-            validator: serde_json::from_slice(fields.get(KEY_VALIDATOR_PARAMS).unwrap()).unwrap(),
+            block: serde_json::from_slice(fields.get(KEY_BLOCK_PARAMS).unwrap_or_corrupt())
+                .unwrap_or_corrupt(),
+            evidence: serde_json::from_slice(fields.get(KEY_EVIDENCE_PARAMS).unwrap_or_corrupt())
+                .unwrap_or_corrupt(),
+            validator: serde_json::from_slice(fields.get(KEY_VALIDATOR_PARAMS).unwrap_or_corrupt())
+                .unwrap_or_corrupt(),
         }
     }
 }
@@ -294,7 +297,7 @@ mod tests {
         .into();
 
         assert_eq!(
-            serde_json::to_string(&params).unwrap(),
+            serde_json::to_string(&params).expect("hardcoded is valid"),
             "{\"max_age_num_blocks\":\"0\",\"max_age_duration\":\"10000000030\",\"max_bytes\":\"0\"}"
                 .to_string()
         );

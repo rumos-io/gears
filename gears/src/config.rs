@@ -72,7 +72,7 @@ impl<AC: ApplicationConfig> Config<AC> {
             .render("config", &cfg)
             .expect("Config will always work with the CONFIG_TEMPLATE");
 
-        let app_cfg = toml::to_string(&cfg.app_config).unwrap();
+        let app_cfg = toml::to_string(&cfg.app_config)?;
 
         file.write_all(config.as_bytes())?;
         writeln!(file)?;

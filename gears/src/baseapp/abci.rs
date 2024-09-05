@@ -215,7 +215,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn commit(&self) -> ResponseCommit {
-        let height = self.get_block_header().unwrap().height;
+        let height = self.get_block_header().height;
 
         let hash = self.state.write().expect(POISONED_LOCK).commit();
 
@@ -272,9 +272,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
         let mut state = self.state.write().expect(POISONED_LOCK);
 
-        let header = self
-            .get_block_header()
-            .expect("block header is set in begin block");
+        let header = self.get_block_header();
 
         let consensus_params = {
             self.baseapp_params_keeper
