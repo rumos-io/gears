@@ -1,4 +1,6 @@
-use cosmwasm_std::Uint256;
+use std::cmp::Ordering;
+
+use cosmwasm_std::{OverflowError, Uint256};
 
 use crate::types::base::{
     coin::{inner::Coin as IbcCoin, UnsignedCoin},
@@ -29,6 +31,68 @@ impl UnsignedCoins {
         }
 
         true
+    }
+
+    // TODO: Move this to generic declaration
+    /// Substracts matching coins. If the other coins have bigger values or the coins that don't
+    /// exists in original set, method returns error. If all coins are identical method returns
+    /// error.
+    pub fn checked_sub(&self, other: &UnsignedCoins) -> Result<Self, CoinsError> {
+        if self.is_all_gte(other.inner()) {
+            let coins: Vec<UnsignedCoin> = self
+                .checked_calculate_iterate(other.inner(), Uint256::checked_sub)?
+                .into_iter()
+                // filter zeros after sub
+                .filter(|c| !c.amount.is_zero())
+                .collect();
+            Self::new(coins)
+        } else {
+            Err(CoinsError::InvalidAmount)
+        }
+    }
+
+    fn checked_calculate_iterate(
+        &self,
+        other_coins: &[UnsignedCoin],
+        operation: impl Fn(Uint256, Uint256) -> Result<Uint256, OverflowError>,
+    ) -> Result<Vec<UnsignedCoin>, CoinsError> {
+        let mut i = 0;
+        let mut j = 0;
+        let self_coins = self.inner();
+
+        let mut result = vec![];
+        let self_coins_len = self_coins.len();
+        let other_coins_len = other_coins.len();
+        while i < self_coins_len || j < other_coins_len {
+            if i == self_coins_len {
+                result.extend_from_slice(&other_coins[j..]);
+                return Ok(result);
+            } else if j == other_coins_len {
+                result.extend_from_slice(&self_coins[i..]);
+                return Ok(result);
+            }
+            match self_coins[i].denom.cmp(&other_coins[j].denom) {
+                Ordering::Less => {
+                    result.push(self_coins[i].clone());
+                    i += 1;
+                }
+                Ordering::Equal => {
+                    result.push(UnsignedCoin {
+                        denom: self_coins[i].denom.clone(),
+                        amount: operation(self_coins[i].amount, other_coins[j].amount)
+                            .map_err(|_| CoinsError::InvalidAmount)?,
+                    });
+                    i += 1;
+                    j += 1;
+                }
+                Ordering::Greater => {
+                    result.push(other_coins[j].clone());
+                    j += 1;
+                }
+            }
+        }
+
+        Ok(result)
     }
 }
 
