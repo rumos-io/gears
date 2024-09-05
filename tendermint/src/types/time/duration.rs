@@ -217,17 +217,27 @@ impl Duration {
     }
 }
 
-impl TryFrom<tendermint_proto::google::protobuf::Duration> for Duration {
+impl TryFrom<inner::Duration> for Duration {
     type Error = DurationError;
 
-    fn try_from(
-        duration: tendermint_proto::google::protobuf::Duration,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(duration: inner::Duration) -> Result<Self, Self::Error> {
         Self::try_new(duration.seconds, duration.nanos)
     }
 }
-
 impl From<Duration> for inner::Duration {
+    fn from(Duration { seconds, nanos }: Duration) -> Self {
+        Self { seconds, nanos }
+    }
+}
+
+impl TryFrom<inner::IbcDuration> for Duration {
+    type Error = DurationError;
+
+    fn try_from(duration: inner::IbcDuration) -> Result<Self, Self::Error> {
+        Self::try_new(duration.seconds, duration.nanos)
+    }
+}
+impl From<Duration> for inner::IbcDuration {
     fn from(Duration { seconds, nanos }: Duration) -> Self {
         Self { seconds, nanos }
     }
@@ -269,6 +279,7 @@ pub mod serde_with {
 }
 
 pub mod inner {
+    pub use ibc_proto::google::protobuf::Duration as IbcDuration;
     pub use tendermint_proto::google::protobuf::Duration;
 }
 

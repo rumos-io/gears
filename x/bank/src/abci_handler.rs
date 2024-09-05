@@ -121,8 +121,7 @@ impl<
                 })
             }
             BankNodeQueryRequest::SupplyOf(req) => {
-                let amount = self.keeper.supply(ctx, &req.denom).unwrap_gas();
-                BankNodeQueryResponse::SupplyOf(QuerySupplyOfResponse { amount })
+                BankNodeQueryResponse::SupplyOf(self.query_supply_of(ctx, req))
             }
             BankNodeQueryRequest::Spendable(QuerySpendableBalancesRequest {
                 address,
@@ -149,6 +148,7 @@ impl<
         &self,
         _: &mut TxContext<'_, DB, Self::StoreKey>,
         _: &gears::types::tx::raw::TxWithRaw<Self::Message>,
+        _: bool,
     ) -> Result<(), TxError> {
         Ok(())
     }
@@ -181,7 +181,7 @@ impl<
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, QueryError> {
+    ) -> Result<Vec<u8>, QueryError> {
         match query.path.as_str() {
             QueryAllBalancesRequest::QUERY_URL => {
                 let req = QueryAllBalancesRequest::decode(query.data)?;
@@ -284,5 +284,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
             supply,
             pagination: p_result.map(PaginationResponse::from),
         }
+    }
+
+    fn query_supply_of<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QuerySupplyOfRequest { denom }: QuerySupplyOfRequest,
+    ) -> QuerySupplyOfResponse {
+        let supply = self.keeper.supply(ctx, &denom).unwrap_gas();
+        QuerySupplyOfResponse { amount: supply }
     }
 }

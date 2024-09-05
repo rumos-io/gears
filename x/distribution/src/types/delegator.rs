@@ -1,15 +1,16 @@
-use std::str::FromStr;
-
 use gears::{
     core::Protobuf,
+    derive::{Protobuf, Raw},
     types::{
         address::{AccAddress, ValAddress},
+        base::coins::{DecimalCoins, DecimalCoinsRaw},
         decimal256::Decimal256,
         errors::StdError,
     },
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 /// DelegatorWithdrawInfo is the address for where distributions rewards are
 /// withdrawn to by default this struct is only used at genesis to feed in
@@ -91,3 +92,14 @@ impl TryFrom<DelegatorStartingInfoRaw> for DelegatorStartingInfo {
 }
 
 impl Protobuf<DelegatorStartingInfoRaw> for DelegatorStartingInfo {}
+
+/// DelegationDelegatorReward represents the properties
+/// of a delegator's delegation reward.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Raw, Protobuf)]
+pub struct DelegationDelegatorReward {
+    #[raw(kind(string), raw = String)]
+    pub validator_address: ValAddress,
+    #[proto(optional)]
+    #[raw(kind(message), optional, raw = DecimalCoinsRaw)]
+    pub reward: DecimalCoins,
+}

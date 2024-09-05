@@ -53,7 +53,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for DeliverTxMode<DB, 
         tx_with_raw: &TxWithRaw<AH::Message>,
     ) -> Result<(), RunTxError> {
         handler
-            .run_ante_checks(ctx, tx_with_raw)
+            .run_ante_checks(ctx, tx_with_raw, false)
             .inspect_err(|_| ctx.multi_store_mut().clear_cache())
             .map_err(RunTxError::from)
     }

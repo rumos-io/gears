@@ -1,3 +1,4 @@
+pub mod any_key;
 pub mod ed25519;
 pub mod errors;
 pub mod info;

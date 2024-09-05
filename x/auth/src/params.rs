@@ -202,6 +202,7 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for AuthParamsKeeper<PSK> {
 mod tests {
 
     use gears::{
+        baseapp::ConsensusParams,
         derive::{ParamsKeys, StoreKeys},
         store::{bank::multi::ApplicationMultiBank, database::MemDB},
         utils::node::build_init_ctx,
@@ -219,7 +220,7 @@ mod tests {
 
         let before_hash = multi_store.head_commit_hash();
 
-        let mut ctx = build_init_ctx(&mut multi_store);
+        let mut ctx = build_init_ctx(&mut multi_store, ConsensusParams::default());
 
         keeper.set(&mut ctx, DEFAULT_PARAMS.clone());
 

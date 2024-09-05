@@ -3,12 +3,13 @@ use std::cmp::Ordering;
 use cosmwasm_std::{Decimal256, OverflowError};
 
 use crate::types::base::{
-    coin::{DecimalCoin, UnsignedCoin},
+    coin::{DecimalCoin, DecimalCoinRaw, UnsignedCoin},
     errors::CoinsError,
 };
 
-use super::{unsigned::UnsignedCoins, Coins};
+use super::{unsigned::UnsignedCoins, Coins, ProtoCoinsRaw};
 
+pub type DecimalCoinsRaw = ProtoCoinsRaw<DecimalCoinRaw>;
 pub type DecimalCoins = Coins<Decimal256, DecimalCoin>;
 
 impl DecimalCoins {
