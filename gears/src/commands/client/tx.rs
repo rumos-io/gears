@@ -6,7 +6,7 @@ use tendermint::rpc::client::{Client, HttpClient};
 use tendermint::rpc::response::tx::broadcast::Response;
 use tendermint::types::chain_id::ChainId;
 
-use crate::application::handlers::client::{TxExecutionResult, TxHandler};
+use crate::application::handlers::client::{NodeFetcher, TxExecutionResult, TxHandler};
 use crate::commands::client::query::execute_query;
 use crate::crypto::any_key::AnyKey;
 use crate::crypto::keys::GearsPublicKey;
@@ -147,9 +147,10 @@ fn handle_key(client_tx_context: &ClientTxContext) -> anyhow::Result<AnyKey> {
     }
 }
 
-pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
+pub fn run_tx<C, H: TxHandler<TxCommands = C>, F: NodeFetcher + Clone>(
     TxCommand { mut ctx, inner }: TxCommand<C>,
     handler: &H,
+    fetcher: &F,
 ) -> anyhow::Result<RuntxResult> {
     let key = handle_key(&mut ctx)?;
 
@@ -173,6 +174,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                     &key,
                     SignMode::Direct,
                     &mut ctx,
+                    fetcher,
                 )?,
                 &mut ctx,
             )?;
@@ -186,7 +188,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
         // TODO: can be reduced by changing variable `step`. Do we need it?
         handler
             .handle_tx(
-                handler.sign_msg(messages, &key, SignMode::Direct, &mut ctx)?,
+                handler.sign_msg(messages, &key, SignMode::Direct, &mut ctx, fetcher,)?,
                 &mut ctx,
             )
             .map(Into::into)

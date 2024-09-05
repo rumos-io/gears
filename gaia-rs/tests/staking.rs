@@ -3,7 +3,7 @@ use bank::cli::tx::{BankCommands, BankTxCli};
 use gaia_rs::{
     client::{GaiaQueryCommands, GaiaTxCommands, WrappedGaiaQueryCommands, WrappedGaiaTxCommands},
     query::GaiaQueryResponse,
-    GaiaCoreClient,
+    GaiaCoreClient, QueryNodeFetcher,
 };
 use gears::{
     commands::client::{
@@ -54,6 +54,7 @@ fn run_tx_local(
             ),
         },
         &GaiaCoreClient,
+        &QueryNodeFetcher,
     )?
     .broadcast()
     .expect("broadcast tx inside");
@@ -445,15 +446,15 @@ fn query_delegation() -> anyhow::Result<()> {
     let expected = GaiaQueryResponse::Staking(
         staking::cli::query::StakingQueryResponse::Delegation(staking::QueryDelegationResponse {
             delegation_response: Some(DelegationResponse {
-                delegation: staking::Delegation {
+                delegation: Some(staking::Delegation {
                     delegator_address,
                     validator_address,
                     shares: Decimal256::from_atomics(110u64, 0).unwrap(),
-                },
-                balance: UnsignedCoin {
+                }),
+                balance: Some(UnsignedCoin {
                     denom: "uatom".try_into().unwrap(),
                     amount: Uint256::from(110u64),
-                },
+                }),
             }),
         }),
     );

@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::BankParams;
 
-mod inner {
+pub mod inner {
 
     // TODO: Remove re-export of this
     pub use gears::core::query::request::bank::QueryAllBalancesRequest;
@@ -24,6 +24,7 @@ mod inner {
     pub use gears::core::query::response::bank::QueryBalanceResponse;
     pub use gears::core::query::response::bank::QueryTotalSupplyRequest;
     pub use gears::core::query::response::bank::QueryTotalSupplyResponse;
+    pub use ibc_proto::cosmos::bank::v1beta1::QueryDenomMetadataResponse;
 }
 
 #[derive(Clone, PartialEq, Debug, Query, Protobuf)]

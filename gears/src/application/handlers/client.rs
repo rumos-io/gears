@@ -2,10 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     baseapp::Query,
-    commands::client::{
-        query::execute_query,
-        tx::{broadcast_tx_commit, AccountProvider, ClientTxContext},
-    },
+    commands::client::tx::{broadcast_tx_commit, AccountProvider, ClientTxContext},
     crypto::{
         info::{create_signed_transaction_direct, create_signed_transaction_textual, SigningInfo},
         keys::{GearsPublicKey, ReadAccAddress, SigningKey},
@@ -17,12 +14,12 @@ use crate::{
         account::{Account, BaseAccount},
         address::AccAddress,
         denom::Denom,
-        tx::{body::TxBody, Messages, Tx, TxMessage},
+        tx::{body::TxBody, metadata::Metadata, Messages, Tx, TxMessage},
     },
 };
 
 use anyhow::anyhow;
-use core_types::{tx::mode_info::SignMode, Protobuf};
+use core_types::tx::mode_info::SignMode;
 use serde::Serialize;
 
 use tendermint::{
@@ -31,11 +28,6 @@ use tendermint::{
         response::tx::broadcast::Response,
     },
     types::proto::block::Height,
-};
-
-use super::types::{
-    QueryAccountRequest, QueryAccountResponse, QueryDenomMetadataRequest,
-    QueryDenomMetadataResponse, RawQueryDenomMetadataResponse,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -81,10 +73,11 @@ pub trait TxHandler {
         pubkey: PublicKey,
     ) -> anyhow::Result<Messages<Self::Message>>;
 
-    fn account(
+    fn account<F: NodeFetcher>(
         &self,
         address: AccAddress,
         client_tx_context: &mut ClientTxContext,
+        fetcher: &F,
     ) -> anyhow::Result<Option<Account>> {
         match client_tx_context.account {
             AccountProvider::Offline {
@@ -97,22 +90,23 @@ pub trait TxHandler {
                 sequence,
             }))),
             AccountProvider::Online => {
-                Ok(get_account_latest(address, client_tx_context.node.as_str())?.account)
+                fetcher.latest_account(address, client_tx_context.node.as_str())
             }
         }
     }
 
-    fn sign_msg<K: SigningKey + ReadAccAddress + GearsPublicKey>(
+    fn sign_msg<K: SigningKey + ReadAccAddress + GearsPublicKey, F: NodeFetcher + Clone>(
         &self,
         msgs: Messages<Self::Message>,
         key: &K,
         mode: SignMode,
         ctx: &mut ClientTxContext,
+        fetcher: &F,
     ) -> anyhow::Result<Tx<Self::Message>> {
         let address = key.get_address();
 
         let account = self
-            .account(address.to_owned(), ctx)?
+            .account(address.to_owned(), ctx, fetcher)?
             .ok_or_else(|| anyhow!("account not found: {}", address))?;
 
         let signing_infos = vec![SigningInfo {
@@ -150,6 +144,7 @@ pub trait TxHandler {
                 tip,
                 ctx.node.clone(),
                 tx_body,
+                fetcher,
             )
             .map_err(|e| anyhow!(e.to_string())),
             _ => Err(anyhow!("unsupported sign mode")),
@@ -232,52 +227,37 @@ pub trait QueryHandler {
     ) -> anyhow::Result<Self::QueryResponse>;
 }
 
-mod inner {
-    pub use core_types::query::response::auth::QueryAccountResponse;
+pub trait NodeFetcher {
+    /// Query node to get latest account state
+    fn latest_account(
+        &self,
+        address: AccAddress,
+        node: impl AsRef<str>,
+    ) -> anyhow::Result<Option<Account>>;
+
+    /// Query node to get denom metadata
+    fn denom_metadata(
+        &self,
+        base: Denom,
+        node: impl AsRef<str>,
+    ) -> anyhow::Result<Option<Metadata>>;
 }
 
-// TODO: we're assuming here that the app has an auth module which handles this query
-pub(crate) fn get_account_latest(
-    address: AccAddress,
-    node: &str,
-) -> anyhow::Result<QueryAccountResponse> {
-    let query = QueryAccountRequest { address };
-
-    execute_query::<QueryAccountResponse, inner::QueryAccountResponse>(
-        "/cosmos.auth.v1beta1.Query/Account".into(),
-        query.encode_vec(),
-        node,
-        None,
-    )
-}
-
-// TODO: we're assuming here that the app has a bank module which handles this query
-pub(crate) fn get_denom_metadata(
-    base: Denom,
-    node: &str,
-) -> anyhow::Result<QueryDenomMetadataResponse> {
-    let query = QueryDenomMetadataRequest { denom: base };
-
-    execute_query::<QueryDenomMetadataResponse, RawQueryDenomMetadataResponse>(
-        "/cosmos.bank.v1beta1.Query/DenomMetadata".into(),
-        query.encode_vec(),
-        node,
-        None,
-    )
-}
-
-pub struct MetadataViaRPC {
+pub struct MetadataViaRPC<F: NodeFetcher> {
     pub node: url::Url,
+    pub fetcher: F,
 }
 
-impl MetadataGetter for MetadataViaRPC {
+impl<F: NodeFetcher> MetadataGetter for MetadataViaRPC<F> {
     type Error = anyhow::Error;
 
     fn metadata(
         &self,
         denom: &Denom,
     ) -> Result<Option<crate::types::tx::metadata::Metadata>, Self::Error> {
-        let res = get_denom_metadata(denom.to_owned(), self.node.as_str())?;
-        Ok(res.metadata)
+        let res = self
+            .fetcher
+            .denom_metadata(denom.to_owned(), self.node.as_str())?;
+        Ok(res)
     }
 }
