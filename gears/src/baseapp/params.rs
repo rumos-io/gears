@@ -282,6 +282,7 @@ mod tests {
 
     use super::*;
     use database::MemDB;
+    use extensions::testing::UnwrapTesting;
     use key_derive::{ParamsKeys, StoreKeys};
     use kv_store::bank::multi::ApplicationMultiBank;
     use tendermint::types::{
@@ -319,7 +320,8 @@ mod tests {
             params_subspace_key: SubspaceKey::Params,
         };
 
-        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new());
+        let mut multi_store =
+            ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new()).unwrap_test();
 
         let before_hash = multi_store.head_commit_hash();
 
@@ -351,7 +353,8 @@ mod tests {
             params_subspace_key: SubspaceKey::Params,
         };
 
-        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new());
+        let mut multi_store =
+            ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new()).unwrap_test();
 
         let mut ctx = InitContext::new(
             &mut multi_store,

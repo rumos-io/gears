@@ -203,6 +203,7 @@ mod tests {
 
     use gears::{
         derive::{ParamsKeys, StoreKeys},
+        extensions::testing::UnwrapTesting,
         store::{bank::multi::ApplicationMultiBank, database::MemDB},
         utils::node::build_init_ctx,
     };
@@ -215,7 +216,8 @@ mod tests {
             params_subspace_key: SubspaceKey::Auth,
         };
 
-        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new());
+        let mut multi_store =
+            ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new()).unwrap_test();
 
         let before_hash = multi_store.head_commit_hash();
 

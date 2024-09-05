@@ -62,6 +62,7 @@ impl KeyPair {
 mod tests {
     use super::*;
     use bip32::Mnemonic;
+    use extensions::testing::UnwrapTesting;
 
     #[test]
     fn test_key_pair_serialization() {

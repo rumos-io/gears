@@ -1,8 +1,4 @@
-use database::MemDB;
-use kv_store::{
-    bank::multi::{ApplicationMultiBank, TransactionMultiBank},
-    StoreKey,
-};
+use kv_store::bank::multi::{ApplicationMultiBank, TransactionMultiBank};
 use tendermint::types::proto::header::Header;
 
 use crate::{
@@ -13,10 +9,6 @@ use crate::{
         GasMeter,
     },
 };
-
-pub fn build_store<SK: StoreKey>() -> ApplicationMultiBank<MemDB, SK> {
-    ApplicationMultiBank::new(MemDB::new())
-}
 
 pub struct ContextOptions {
     height: u32,
