@@ -1,4 +1,4 @@
-// #![cfg(feature = "it")]
+#![cfg(feature = "it")]
 
 use std::str::FromStr;
 
