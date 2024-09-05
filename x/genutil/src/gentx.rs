@@ -2,7 +2,7 @@ use std::{net::SocketAddr, path::PathBuf};
 
 use gears::{
     application::handlers::client::{NodeFetcher, TxHandler},
-    commands::client::tx::{ClientTxContext, TxCommand},
+    commands::client::tx::{AccountProvider, ClientTxContext, TxCommand},
     crypto::{ed25519::Ed25519PubKey, public::PublicKey},
     types::{
         account::{Account, BaseAccount},
@@ -93,10 +93,11 @@ impl TxHandler for GentxTxHandler {
 
     type TxCommands = GentxCmd;
 
-    fn account(
+    fn account<F: NodeFetcher>(
         &self,
         address: gears::types::address::AccAddress,
         client_tx_context: &mut ClientTxContext,
+        _fetcher: &F,
     ) -> anyhow::Result<Option<gears::types::account::Account>> {
         match client_tx_context.account {
                 AccountProvider::Offline {

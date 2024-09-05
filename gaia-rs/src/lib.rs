@@ -12,7 +12,6 @@ use axum::Router;
 use bank::cli::query::BankQueryHandler;
 use bank::types::query::QueryDenomMetadataRequest;
 use bank::types::query::QueryDenomMetadataResponse;
-use bank::types::query::RawQueryDenomMetadataResponse;
 use bank::BankNodeQueryRequest;
 use bank::BankNodeQueryResponse;
 use clap::Subcommand;
@@ -37,6 +36,7 @@ use gears::crypto::public::PublicKey;
 use gears::grpc::health::health_server;
 use gears::grpc::tx::tx_server;
 use gears::rest::RestState;
+use gears::types::address::AccAddress;
 use gears::types::tx::Messages;
 use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
@@ -303,18 +303,30 @@ impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
     }
 }
 
-impl AuxHandler for GaiaCore {
-    type AuxCommands = NilAuxCommand;
-    type Aux = NilAux;
-
-    fn prepare_aux(&self, _: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
-        println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
-        Ok(NilAux)
-    }
+mod inner {
+    pub use bank::types::query::inner::QueryDenomMetadataResponse;
+    pub use gears::core::query::response::auth::QueryAccountResponse;
 }
 
-mod inner {
-    pub use gears::core::query::response::auth::QueryAccountResponse;
+#[derive(Debug, Clone)]
+pub struct EmptyNodeFetcher;
+
+impl NodeFetcher for EmptyNodeFetcher {
+    fn latest_account(
+        &self,
+        _address: gears::types::address::AccAddress,
+        _node: impl AsRef<str>,
+    ) -> anyhow::Result<Option<gears::types::account::Account>> {
+        Ok(None)
+    }
+
+    fn denom_metadata(
+        &self,
+        _base: gears::types::denom::Denom,
+        _node: impl AsRef<str>,
+    ) -> anyhow::Result<Option<gears::types::tx::metadata::Metadata>> {
+        Ok(None)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -347,7 +359,7 @@ impl NodeFetcher for QueryNodeFetcher {
         let query = QueryDenomMetadataRequest { denom: base };
 
         Ok(
-            execute_query::<QueryDenomMetadataResponse, RawQueryDenomMetadataResponse>(
+            execute_query::<QueryDenomMetadataResponse, inner::QueryDenomMetadataResponse>(
                 "/cosmos.bank.v1beta1.Query/DenomMetadata".into(),
                 query.encode_vec(),
                 node.as_ref(),

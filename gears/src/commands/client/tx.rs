@@ -181,6 +181,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>, F: NodeFetcher + Clone>(
                             command.fees.clone(),
                             SignMode::Direct,
                             ctx,
+                            fetcher,
                         )?,
                         ctx,
                     )?
@@ -201,6 +202,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>, F: NodeFetcher + Clone>(
                     command.fees,
                     SignMode::Direct,
                     ctx,
+                    fetcher,
                 )?,
                 ctx,
             )

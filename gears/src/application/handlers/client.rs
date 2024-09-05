@@ -2,10 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     baseapp::Query,
-    commands::client::{
-        query::execute_query,
-        tx::{broadcast_tx_commit, AccountProvider, ClientTxContext},
-    },
+    commands::client::tx::{broadcast_tx_commit, AccountProvider, ClientTxContext},
     crypto::{
         info::{create_signed_transaction_direct, create_signed_transaction_textual, SigningInfo},
         keys::{GearsPublicKey, ReadAccAddress, SigningKey},
