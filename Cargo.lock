@@ -3018,6 +3018,7 @@ dependencies = [
  "derive_more 0.99.18",
  "gears",
  "ibc",
+ "nz",
  "prost 0.12.6",
  "schemars",
  "serde",

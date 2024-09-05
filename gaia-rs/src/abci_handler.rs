@@ -24,6 +24,13 @@ impl ModuleInfo for BankModuleInfo {
 }
 
 #[derive(Debug, Clone)]
+struct IbcModuleInfo;
+
+impl ModuleInfo for IbcModuleInfo {
+    const NAME: &'static str = "ibc";
+}
+
+#[derive(Debug, Clone)]
 struct StakingModuleInfo;
 
 impl ModuleInfo for StakingModuleInfo {
@@ -58,7 +65,7 @@ pub struct GaiaABCIHandler {
         GaiaModules,
         StakingModuleInfo,
     >,
-    ibc_abci_handler: ibc_rs::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
+    ibc_abci_handler: ibc_rs::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey, IbcModuleInfo>,
     ante_handler: BaseAnteHandler<
         bank::Keeper<
             GaiaStoreKey,
