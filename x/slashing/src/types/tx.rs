@@ -1,5 +1,6 @@
 use gears::{
     core::Protobuf,
+    derive::AppMessage,
     types::address::{AccAddress, AddressError, ValAddress},
 };
 use prost::Message;
@@ -23,9 +24,11 @@ impl From<MsgUnjail> for MsgUnjailRaw {
 }
 
 /// MsgUnjail creates a new MsgUnjail instance
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, AppMessage)]
+#[msg(url = "/cosmos.slashing.v1beta1.Unjail")]
 pub struct MsgUnjail {
     pub validator_address: ValAddress,
+    #[msg(signer)]
     pub from_address: AccAddress,
 }
 

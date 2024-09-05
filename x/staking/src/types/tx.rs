@@ -1,6 +1,7 @@
 use crate::consts::proto::*;
 use gears::{
     core::{errors::CoreError, Protobuf},
+    derive::AppMessage,
     signing::renderer::value_renderer::ValueRenderer,
     tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
     types::{
@@ -9,12 +10,10 @@ use gears::{
         base::coin::UnsignedCoin,
         decimal256::{CosmosDecimalProtoString, Decimal256, ONE_DEC},
         errors::StdError,
-        tx::TxMessage,
         uint::Uint256,
     },
 };
-use ibc_proto::google::protobuf::Any;
-use prost::{bytes::Bytes, Message};
+use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -452,13 +451,15 @@ impl TryFrom<inner::MsgCreateValidator> for CreateValidator {
 }
 
 /// CreateValidator defines a SDK message for creating a new validator.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, AppMessage)]
 #[serde(tag = "@type")]
 #[serde(rename = "/cosmos.staking.v1beta1.MsgCreateValidator")]
+#[msg(url = "/cosmos.staking.v1beta1.MsgCreateValidator")]
 pub struct CreateValidator {
     pub description: Description,
     pub commission: CommissionRates,
     pub min_self_delegation: Uint256,
+    #[msg(signer)]
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
     pub pubkey: PublicKey,
@@ -479,54 +480,16 @@ impl ValueRenderer for CreateValidator {
     }
 }
 
-impl CreateValidator {
-    pub const TYPE_URL: &'static str = "/cosmos.staking.v1beta1.MsgCreateValidator";
-}
-
-impl TxMessage for CreateValidator {
-    fn get_signers(&self) -> Vec<&AccAddress> {
-        vec![&self.delegator_address]
-    }
-
-    fn type_url(&self) -> &'static str {
-        Self::TYPE_URL
-    }
-}
-
-impl TryFrom<Any> for CreateValidator {
-    type Error = CoreError;
-
-    fn try_from(value: Any) -> Result<Self, Self::Error> {
-        match value.type_url.as_str() {
-            CreateValidator::TYPE_URL => {
-                let msg = CreateValidator::decode::<Bytes>(value.value.clone().into())
-                    .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
-                Ok(msg)
-            }
-            _ => Err(gears::core::errors::CoreError::DecodeGeneral(
-                "message type not recognized".into(),
-            )),
-        }
-    }
-}
-
-impl From<CreateValidator> for Any {
-    fn from(msg: CreateValidator) -> Self {
-        Any {
-            type_url: CreateValidator::TYPE_URL.to_string(),
-            value: msg.encode_vec(),
-        }
-    }
-}
-
 /// CreateValidator defines a SDK message for creating a new validator.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, AppMessage)]
+#[msg(url = "/cosmos.staking.v1beta1.MsgEditValidator")]
 pub struct EditValidator {
     pub description: EditDescription,
     pub commission_rate: Option<Decimal256>, // TODO: add a CommissionRate type to capture the =< 1 constraint currently this is checked here https://github.com/rumos-io/gears/blob/672d6cf7e4376076c218b46121e197ac1f1029a7/x/staking/src/keeper/validator.rs#L67
     pub min_self_delegation: Option<Uint256>,
     pub validator_address: ValAddress,
     // for method `get_signers`. The sdk converts validator_address
+    #[msg(signer)]
     from_address: AccAddress,
 }
 
@@ -640,8 +603,13 @@ impl From<DelegateMsg> for DelegateMsgRaw {
 }
 
 /// Creates a new DelegateMsg transaction message instance.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, AppMessage)]
+#[msg(
+    url = "/cosmos.staking.v1beta1.MsgDelegate",
+    amino_url = "cosmos-sdk/MsgDelegate"
+)]
 pub struct DelegateMsg {
+    #[msg(signer)]
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
     pub amount: UnsignedCoin,
@@ -691,8 +659,10 @@ impl From<RedelegateMsg> for RedelegateMsgRaw {
 }
 
 /// Creates a new RedelegateMsg transaction message instance.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, AppMessage)]
+#[msg(url = "/cosmos.staking.v1beta1.MsgBeginRedelegate")]
 pub struct RedelegateMsg {
+    #[msg(signer)]
     pub delegator_address: AccAddress,
     pub src_validator_address: ValAddress,
     pub dst_validator_address: ValAddress,
@@ -742,8 +712,10 @@ impl From<UndelegateMsg> for UndelegateMsgRaw {
 }
 
 /// Creates a new UndelegateMsg transaction message instance.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, AppMessage)]
+#[msg(url = "/cosmos.staking.v1beta1.MsgUndelegate")]
 pub struct UndelegateMsg {
+    #[msg(signer)]
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
     pub amount: UnsignedCoin,

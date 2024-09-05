@@ -1,8 +1,10 @@
+fn main() {}
+
 use core_types::Protobuf;
 use serde::{Deserialize, Serialize};
 use tx_derive::AppMessage;
 
-use crate::types::{
+use gears::types::{
     address::AccAddress,
     base::{coin::UnsignedCoin, coins::UnsignedCoins, errors::CoinError},
 };
@@ -18,11 +20,7 @@ pub struct MsgSendParseError(pub String);
 
 /// MsgSend represents a message to send coins from one account to another.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, AppMessage)]
-#[msg(
-    url = "/cosmos.bank.v1beta1.MsgSend",
-    amino_url = "cosmos-sdk/MsgSend",
-    gears
-)]
+#[msg(url = "/cosmos.bank.v1beta1.MsgSend", amino_url = "cosmos-sdk/MsgSend")]
 pub struct MsgSend {
     #[msg(signer)]
     pub from_address: AccAddress,

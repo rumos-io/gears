@@ -1,10 +1,10 @@
-use gears::derive::RoutingMessage;
+use gears::derive::AppMessage;
 
 use crate::ics02_client::message::MsgCreateClient;
 
-#[derive(Debug, Clone, serde::Serialize, RoutingMessage)]
+#[derive(Debug, Clone, serde::Serialize, AppMessage)]
 pub enum Message {
-    #[gears(url = "/ibc.core.client.v1")]
+    #[msg(url(string = "/ibc.core.client.v1"))]
     ClientCreate(MsgCreateClient),
     // ClientUpdate(MsgUpdateClient),
     // ClientUpgrade(MsgUpgradeClient),

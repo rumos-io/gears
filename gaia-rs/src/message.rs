@@ -1,4 +1,4 @@
-use gears::derive::RoutingMessage;
+use gears::derive::AppMessage;
 use gears::{
     signing::{
         handler::MetadataGetter,
@@ -8,14 +8,14 @@ use gears::{
 };
 use serde::Serialize;
 
-#[derive(Debug, Clone, RoutingMessage, Serialize)]
+#[derive(Debug, Clone, AppMessage, Serialize)]
 #[serde(untagged)]
 pub enum Message {
-    #[gears(url = "/cosmos.bank.v1beta1")]
+    #[msg(url(string = "/cosmos.bank.v1beta1"))]
     Bank(bank::Message),
-    #[gears(url = "/cosmos.staking.v1beta1")]
+    #[msg(url(string = "/cosmos.staking.v1beta1"))]
     Staking(staking::Message),
-    #[gears(url = "/ibc.core.client.v1")]
+    #[msg(url(string = "/ibc.core.client.v1"))]
     IBC(ibc_rs::message::Message),
 }
 
