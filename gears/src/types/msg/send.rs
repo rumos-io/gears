@@ -24,7 +24,7 @@ pub struct MsgSendParseError(pub String);
     gears
 )]
 pub struct MsgSend {
-    // TODO: WHAT FIELD IS SIGNERS?
+    #[msg(signer)]
     pub from_address: AccAddress,
     pub to_address: AccAddress,
     pub amount: UnsignedCoins,
