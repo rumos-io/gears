@@ -1,4 +1,5 @@
 {
+    "genutil": {"gen_txs": []},
     "bank": {
         "balances": [
             {

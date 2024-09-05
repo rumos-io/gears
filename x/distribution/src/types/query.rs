@@ -1,13 +1,15 @@
 use crate::{
-    DistributionParams, DistributionParamsRaw, ValidatorAccumulatedCommission,
+    DelegationDelegatorReward, DistributionParams, DistributionParamsRaw,
+    RawDelegationDelegatorReward, ValidatorAccumulatedCommission,
     ValidatorAccumulatedCommissionRaw, ValidatorOutstandingRewards, ValidatorOutstandingRewardsRaw,
     ValidatorSlashEvent, ValidatorSlashEventRaw,
 };
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
+    derive::{Protobuf, Raw},
     types::{
         address::{AccAddress, AddressError, ValAddress},
-        base::coins::DecimalCoins,
+        base::coins::{DecimalCoins, DecimalCoinsRaw},
         errors::StdError,
         pagination::{request::PaginationRequest, response::PaginationResponse},
     },
@@ -162,55 +164,17 @@ impl TryFrom<QueryValidatorSlashesRequestRaw> for QueryValidatorSlashesRequest {
     }
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
-pub struct QueryDelegationRewardsRequestRaw {
-    #[prost(bytes, tag = "1")]
-    pub delegator_address: Vec<u8>,
-    #[prost(bytes, tag = "2")]
-    pub validator_address: Vec<u8>,
-}
-
-impl From<QueryDelegationRewardsRequest> for QueryDelegationRewardsRequestRaw {
-    fn from(
-        QueryDelegationRewardsRequest {
-            delegator_address,
-            validator_address,
-        }: QueryDelegationRewardsRequest,
-    ) -> Self {
-        Self {
-            delegator_address: delegator_address.into(),
-            validator_address: validator_address.into(),
-        }
-    }
-}
-
 /// QueryDelegationRewardsRequest is the request type for the
 /// Query/DelegationRewards RPC method.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Raw, Protobuf)]
 pub struct QueryDelegationRewardsRequest {
     /// delegator_address defines the delegator address to query for.
+    #[raw(kind(string), raw = String)]
     pub delegator_address: AccAddress,
     /// validator_address defines the validator address to query for.
+    #[raw(kind(string), raw = String)]
     pub validator_address: ValAddress,
 }
-
-impl TryFrom<QueryDelegationRewardsRequestRaw> for QueryDelegationRewardsRequest {
-    type Error = AddressError;
-
-    fn try_from(
-        QueryDelegationRewardsRequestRaw {
-            delegator_address,
-            validator_address,
-        }: QueryDelegationRewardsRequestRaw,
-    ) -> Result<Self, Self::Error> {
-        Ok(QueryDelegationRewardsRequest {
-            delegator_address: AccAddress::try_from(delegator_address)?,
-            validator_address: ValAddress::try_from(validator_address)?,
-        })
-    }
-}
-
-impl Protobuf<QueryDelegationRewardsRequestRaw> for QueryDelegationRewardsRequest {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
 pub struct QueryWithdrawAllRewardsRequestRaw {
@@ -250,15 +214,19 @@ impl TryFrom<QueryWithdrawAllRewardsRequestRaw> for QueryWithdrawAllRewardsReque
 
 impl Protobuf<QueryWithdrawAllRewardsRequestRaw> for QueryWithdrawAllRewardsRequest {}
 
-#[derive(Clone, PartialEq, Message)]
+/// QueryDelegatorParams is params for query 'custom/distr/delegator_total_rewards'
+/// and 'custom/distr/delegator_validators'
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Raw, Protobuf)]
+pub struct QueryDelegatorParams {
+    #[raw(kind(string), raw = String)]
+    pub delegator_address: AccAddress,
+}
+
+#[derive(Clone, PartialEq, Message, Raw, Protobuf)]
 pub struct QueryCommunityPoolRequest {}
 
-impl Protobuf<QueryCommunityPoolRequest> for QueryCommunityPoolRequest {}
-
-#[derive(Clone, PartialEq, Message)]
+#[derive(Clone, PartialEq, Message, Raw, Protobuf)]
 pub struct QueryParamsRequest {}
-
-impl Protobuf<QueryParamsRequest> for QueryParamsRequest {}
 
 // ====
 // responses
@@ -484,79 +452,37 @@ impl TryFrom<QueryWithdrawAllRewardsResponseRaw> for QueryWithdrawAllRewardsResp
 
 impl Protobuf<QueryWithdrawAllRewardsResponseRaw> for QueryWithdrawAllRewardsResponse {}
 
+/// QueryDelegatorTotalRewardsResponse defines the properties of
+/// QueryDelegatorTotalRewards query's response.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Raw, Protobuf)]
+pub struct QueryDelegatorTotalRewardsResponse {
+    #[proto(repeated)]
+    #[raw(kind(message), repeated, raw = RawDelegationDelegatorReward)]
+    pub rewards: Vec<DelegationDelegatorReward>,
+    #[proto(optional)]
+    #[raw(kind(message), optional, raw = DecimalCoinsRaw)]
+    pub total: Option<DecimalCoins>,
+}
+
 #[derive(Clone, Serialize, Message)]
 pub struct QueryCommunityPoolResponseRaw {
     #[prost(bytes, optional, tag = "1")]
     pub pool: Option<Vec<u8>>,
 }
 
-impl From<QueryCommunityPoolResponse> for QueryCommunityPoolResponseRaw {
-    fn from(QueryCommunityPoolResponse { pool }: QueryCommunityPoolResponse) -> Self {
-        Self {
-            pool: pool.map(|pool| {
-                serde_json::to_vec(&pool).expect("serialization of domain type can't fail")
-            }),
-        }
-    }
-}
-
 /// QueryCommunityPoolResponse is the response type for the Query/CommunityPool RPC method.
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Raw, Protobuf)]
 pub struct QueryCommunityPoolResponse {
     /// pool defines community pool's coins.
+    #[proto(optional)]
+    #[raw(kind(message), optional, raw = DecimalCoinsRaw)]
     pub pool: Option<DecimalCoins>,
 }
 
-impl TryFrom<QueryCommunityPoolResponseRaw> for QueryCommunityPoolResponse {
-    type Error = CoreError;
-
-    fn try_from(
-        QueryCommunityPoolResponseRaw { pool }: QueryCommunityPoolResponseRaw,
-    ) -> Result<Self, Self::Error> {
-        let pool = if let Some(rew) = pool {
-            serde_json::from_slice(&rew).map_err(|e| CoreError::DecodeGeneral(e.to_string()))?
-        } else {
-            None
-        };
-        Ok(Self { pool })
-    }
-}
-
-impl Protobuf<QueryCommunityPoolResponseRaw> for QueryCommunityPoolResponse {}
-
-#[derive(Clone, Serialize, Message)]
-pub struct QueryParamsResponseRaw {
-    #[prost(message, optional, tag = "1")]
-    pub params: Option<DistributionParamsRaw>,
-}
-
-impl From<QueryParamsResponse> for QueryParamsResponseRaw {
-    fn from(QueryParamsResponse { params }: QueryParamsResponse) -> Self {
-        Self {
-            params: Some(params.into()),
-        }
-    }
-}
-
 /// QueryParamsResponse is the response type for the Query/Params RPC method
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Raw, Protobuf)]
 pub struct QueryParamsResponse {
+    #[proto(optional)]
+    #[raw(kind(message), optional, raw = "DistributionParamsRaw")]
     pub params: DistributionParams,
 }
-
-impl TryFrom<QueryParamsResponseRaw> for QueryParamsResponse {
-    type Error = CoreError;
-
-    fn try_from(
-        QueryParamsResponseRaw { params }: QueryParamsResponseRaw,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            params: params
-                .ok_or(CoreError::MissingField("Missing field 'params'.".into()))?
-                .try_into()
-                .map_err(|e| CoreError::DecodeGeneral(format!("{e}")))?,
-        })
-    }
-}
-
-impl Protobuf<QueryParamsResponseRaw> for QueryParamsResponse {}

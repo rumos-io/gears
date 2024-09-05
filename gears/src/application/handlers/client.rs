@@ -4,19 +4,18 @@ use crate::{
     baseapp::Query,
     commands::client::{
         query::execute_query,
-        tx::{broadcast_tx_commit, ClientTxContext},
+        tx::{broadcast_tx_commit, AccountProvider, ClientTxContext},
     },
     crypto::{
         info::{create_signed_transaction_direct, create_signed_transaction_textual, SigningInfo},
         keys::{GearsPublicKey, ReadAccAddress, SigningKey},
+        public::PublicKey,
     },
     runtime::runtime,
     signing::{handler::MetadataGetter, renderer::value_renderer::ValueRenderer},
     types::{
-        account::Account,
+        account::{Account, BaseAccount},
         address::AccAddress,
-        auth::fee::Fee,
-        base::coins::UnsignedCoins,
         denom::Denom,
         tx::{body::TxBody, Messages, Tx, TxMessage},
     },
@@ -31,7 +30,7 @@ use tendermint::{
         client::{Client, HttpClient},
         response::tx::broadcast::Response,
     },
-    types::{chain_id::ChainId, proto::block::Height},
+    types::proto::block::Height,
 };
 
 use super::types::{
@@ -79,7 +78,7 @@ pub trait TxHandler {
         &self,
         client_tx_context: &mut ClientTxContext,
         command: Self::TxCommands,
-        from_address: AccAddress,
+        pubkey: PublicKey,
     ) -> anyhow::Result<Messages<Self::Message>>;
 
     fn account(
@@ -87,32 +86,33 @@ pub trait TxHandler {
         address: AccAddress,
         client_tx_context: &mut ClientTxContext,
     ) -> anyhow::Result<Option<Account>> {
-        Ok(get_account_latest(address, client_tx_context.node.as_str())?.account)
+        match client_tx_context.account {
+            AccountProvider::Offline {
+                sequence,
+                account_number,
+            } => Ok(Some(Account::Base(BaseAccount {
+                address,
+                pub_key: None,
+                account_number,
+                sequence,
+            }))),
+            AccountProvider::Online => {
+                Ok(get_account_latest(address, client_tx_context.node.as_str())?.account)
+            }
+        }
     }
 
     fn sign_msg<K: SigningKey + ReadAccAddress + GearsPublicKey>(
         &self,
         msgs: Messages<Self::Message>,
         key: &K,
-        node: &url::Url,
-        chain_id: ChainId,
-        fees: Option<UnsignedCoins>,
         mode: SignMode,
-        client_tx_context: &mut ClientTxContext,
+        ctx: &mut ClientTxContext,
     ) -> anyhow::Result<Tx<Self::Message>> {
-        let fee = Fee {
-            amount: fees,
-            gas_limit: 200_000_u64
-                .try_into()
-                .expect("hard coded gas limit is valid"), //TODO: remove hard coded gas limit
-            payer: None,        //TODO: remove hard coded payer
-            granter: "".into(), //TODO: remove hard coded granter
-        };
-
         let address = key.get_address();
 
         let account = self
-            .account(address.to_owned(), client_tx_context)?
+            .account(address.to_owned(), ctx)?
             .ok_or_else(|| anyhow!("account not found: {}", address))?;
 
         let signing_infos = vec![SigningInfo {
@@ -123,25 +123,32 @@ pub trait TxHandler {
 
         let tx_body = TxBody {
             messages: msgs.into_msgs(),
-            memo: String::new(),                    // TODO: remove hard coded
-            timeout_height: 0,                      // TODO: remove hard coded
-            extension_options: vec![],              // TODO: remove hard coded
+            memo: ctx.memo.clone().unwrap_or_default(),
+            timeout_height: match ctx.timeout_height {
+                Some(height) => height,
+                None => 0,
+            },
+            extension_options: vec![], // TODO: remove hard coded
             non_critical_extension_options: vec![], // TODO: remove hard coded
         };
 
         let tip = None; //TODO: remove hard coded
 
         match mode {
-            SignMode::Direct => {
-                create_signed_transaction_direct(signing_infos, chain_id, fee, tip, tx_body)
-                    .map_err(|e| anyhow!(e.to_string()))
-            }
+            SignMode::Direct => create_signed_transaction_direct(
+                signing_infos,
+                ctx.chain_id.clone(),
+                ctx.fee.clone(),
+                tip,
+                tx_body,
+            )
+            .map_err(|e| anyhow!(e.to_string())),
             SignMode::Textual => create_signed_transaction_textual(
                 signing_infos,
-                chain_id,
-                fee,
+                ctx.chain_id.clone(),
+                ctx.fee.clone(),
                 tip,
-                node.clone(),
+                ctx.node.clone(),
                 tx_body,
             )
             .map_err(|e| anyhow!(e.to_string())),
@@ -154,10 +161,22 @@ pub trait TxHandler {
         raw_tx: Tx<Self::Message>,
         client_tx_context: &mut ClientTxContext,
     ) -> anyhow::Result<TxExecutionResult> {
-        let client = HttpClient::new(tendermint::rpc::url::Url::try_from(
-            client_tx_context.node.clone(),
-        )?)?;
-        broadcast_tx_commit(client, Into::into(&raw_tx)).map(Into::into)
+        match client_tx_context.account {
+            AccountProvider::Offline {
+                sequence: _,
+                account_number: _,
+            } => {
+                println!("{}", serde_json::to_string_pretty(&raw_tx)?);
+
+                Ok(TxExecutionResult::None)
+            }
+            AccountProvider::Online => {
+                let client = HttpClient::new(tendermint::rpc::url::Url::try_from(
+                    client_tx_context.node.clone(),
+                )?)?;
+                broadcast_tx_commit(client, Into::into(&raw_tx)).map(Into::into)
+            }
+        }
     }
 }
 

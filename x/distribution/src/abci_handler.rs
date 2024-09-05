@@ -1,7 +1,8 @@
 use crate::{
     errors::DistributionTxError, GenesisState, Keeper, Message, QueryCommunityPoolRequest,
-    QueryCommunityPoolResponse, QueryDelegationRewardsRequest, QueryParamsRequest,
-    QueryParamsResponse, QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
+    QueryCommunityPoolResponse, QueryDelegationRewardsRequest, QueryDelegatorParams,
+    QueryDelegatorTotalRewardsResponse, QueryParamsRequest, QueryParamsResponse,
+    QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
     QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
     QueryValidatorSlashesRequest, QueryValidatorSlashesResponse, QueryWithdrawAllRewardsRequest,
 };
@@ -30,6 +31,7 @@ pub enum DistributionNodeQueryRequest {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsRequest),
     ValidatorCommission(QueryValidatorCommissionRequest),
     ValidatorSlashes(QueryValidatorSlashesRequest),
+    DelegatorTotalRewards(QueryDelegatorParams),
     CommunityPool(QueryCommunityPoolRequest),
     Params(QueryParamsRequest),
 }
@@ -38,6 +40,7 @@ pub enum DistributionNodeQueryResponse {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsResponse),
     ValidatorCommission(QueryValidatorCommissionResponse),
     ValidatorSlashes(QueryValidatorSlashesResponse),
+    DelegatorTotalRewards(QueryDelegatorTotalRewardsResponse),
     CommunityPool(QueryCommunityPoolResponse),
     Params(QueryParamsResponse),
 }
@@ -120,6 +123,15 @@ impl<
                     .encode_vec()
                     .into())
             }
+            "/cosmos.distribution.v1beta1.Query/QueryDelegatorTotalRewards" => {
+                let req = QueryDelegatorParams::decode(query.data)?;
+
+                Ok(self
+                    .keeper
+                    .query_delegator_total_rewards(ctx, req)
+                    .encode_vec()
+                    .into())
+            }
             "/cosmos.distribution.v1beta1.Query/DelegationRewards" => {
                 let req = QueryDelegationRewardsRequest::decode(query.data)?;
 
@@ -175,6 +187,11 @@ impl<
             DistributionNodeQueryRequest::ValidatorSlashes(req) => {
                 DistributionNodeQueryResponse::ValidatorSlashes(
                     self.keeper.query_validator_slashes(ctx, req),
+                )
+            }
+            DistributionNodeQueryRequest::DelegatorTotalRewards(req) => {
+                DistributionNodeQueryResponse::DelegatorTotalRewards(
+                    self.keeper.query_delegator_total_rewards(ctx, req),
                 )
             }
             DistributionNodeQueryRequest::CommunityPool(req) => {

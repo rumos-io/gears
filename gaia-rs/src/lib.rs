@@ -25,10 +25,10 @@ use gears::commands::client::tx::ClientTxContext;
 use gears::commands::node::run::RouterBuilder;
 use gears::commands::NilAux;
 use gears::commands::NilAuxCommand;
+use gears::crypto::public::PublicKey;
 use gears::grpc::health::health_server;
 use gears::grpc::tx::tx_server;
 use gears::rest::RestState;
-use gears::types::address::AccAddress;
 use gears::types::tx::Messages;
 use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
@@ -71,9 +71,9 @@ impl TxHandler for GaiaCoreClient {
         &self,
         ctx: &mut ClientTxContext,
         command: Self::TxCommands,
-        from_address: AccAddress,
+        pubkey: PublicKey,
     ) -> Result<Messages<Self::Message>> {
-        tx_command_handler(ctx, command.0, from_address)
+        tx_command_handler(ctx, command.0, pubkey.get_address())
     }
 }
 
@@ -130,7 +130,7 @@ impl QueryHandler for GaiaCoreClient {
     }
 }
 
-impl AuxHandler for GaiaCoreClient {
+impl AuxHandler for GaiaCore {
     type AuxCommands = GaiaAuxCmd;
     type Aux = NilAux;
 
@@ -141,7 +141,7 @@ impl AuxHandler for GaiaCoreClient {
                     genutil::collect_txs::gen_app_state_from_config(cmd, "bank", "genutil")?;
                 }
                 genutil::cmd::GenesisCmd::Gentx(cmd) => {
-                    genutil::gentx::gentx_cmd(cmd, "bank", "staking", "auth")?;
+                    genutil::gentx::gentx_cmd(cmd, "bank", "staking")?;
                 }
             },
         }
@@ -170,6 +170,11 @@ impl<AI: ApplicationInfo> TryFrom<GaiaAuxCli<AI>> for GaiaAuxCmd {
 
 pub enum GaiaAuxCmd {
     Genutil(genutil::cmd::GenesisCmd),
+}
+
+impl AuxHandler for GaiaCoreClient {
+    type AuxCommands = NilAuxCommand;
+    type Aux = NilAux;
 }
 
 impl Client for GaiaCoreClient {}
@@ -287,15 +292,5 @@ impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
             .add_service(bank::grpc::new(app))
             .add_service(health_server())
             .add_service(tx_server())
-    }
-}
-
-impl AuxHandler for GaiaCore {
-    type AuxCommands = NilAuxCommand;
-    type Aux = NilAux;
-
-    fn prepare_aux(&self, _: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
-        println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
-        Ok(NilAux)
     }
 }

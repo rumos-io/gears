@@ -1,9 +1,8 @@
 use std::{fs::File, io::Read};
 
 use gears::{
-    application::handlers::client::TxHandler,
-    commands::client::tx::ClientTxContext,
-    types::{address::AccAddress, tx::Messages},
+    application::handlers::client::TxHandler, commands::client::tx::ClientTxContext,
+    crypto::public::PublicKey, types::tx::Messages,
 };
 
 use crate::{
@@ -30,7 +29,7 @@ impl TxHandler for GovClientHandler {
         &self,
         _ctx: &mut ClientTxContext,
         command: Self::TxCommands,
-        from_address: AccAddress,
+        pubkey: PublicKey,
     ) -> anyhow::Result<Messages<Self::Message>> {
         let command = match command.command {
             GovTxCommands::Deposit(DepositCliCommand {
@@ -38,7 +37,7 @@ impl TxHandler for GovClientHandler {
                 amount,
             }) => GovMsg::Deposit(Deposit {
                 proposal_id,
-                depositor: from_address,
+                depositor: pubkey.get_address(),
                 amount,
             }),
             GovTxCommands::Vote(VoteCliCommand {
@@ -46,7 +45,7 @@ impl TxHandler for GovClientHandler {
                 option,
             }) => GovMsg::Vote(Vote {
                 proposal_id,
-                voter: from_address,
+                voter: pubkey.get_address(),
                 option,
             }),
             GovTxCommands::WeightedVote(WeightedVoteCliCommand {
@@ -54,7 +53,7 @@ impl TxHandler for GovClientHandler {
                 options,
             }) => GovMsg::Weighted(MsgVoteWeighted {
                 proposal_id,
-                voter: from_address,
+                voter: pubkey.get_address(),
                 options,
             }),
             GovTxCommands::SubmitProposal(ProposalCliCommand {
@@ -65,7 +64,7 @@ impl TxHandler for GovClientHandler {
                     GovMsg::Proposal(MsgSubmitProposal {
                         content: TextProposal { title, description }.into(),
                         initial_deposit,
-                        proposer: from_address,
+                        proposer: pubkey.get_address(),
                     })
                 }
                 ProposalCliSubcommand::ParamChange(ParamChangeProposalCliCommand { file }) => {
@@ -77,7 +76,7 @@ impl TxHandler for GovClientHandler {
                     GovMsg::Proposal(MsgSubmitProposal {
                         content: proposal.into(),
                         initial_deposit,
-                        proposer: from_address,
+                        proposer: pubkey.get_address(),
                     })
                 }
             },

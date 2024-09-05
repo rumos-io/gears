@@ -11,8 +11,6 @@ pub struct CollectGentxCliAux<AI: ApplicationInfo> {
     pub gentx_dir: PathBuf,
     #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = AI::home_dir(), help = "directory for config and data")]
     pub home: PathBuf,
-    #[arg(required = true)]
-    pub moniker: String,
     /// Backup original files
     #[arg(long, default_value_t = false)]
     pub backup: bool,
@@ -31,7 +29,7 @@ impl<AI: ApplicationInfo> TryFrom<CollectGentxCliAux<AI>> for CollectGentxCmd {
         CollectGentxCliAux {
             gentx_dir,
             home,
-            moniker,
+
             backup,
             generate_only,
             _marker,
@@ -52,19 +50,16 @@ impl<AI: ApplicationInfo> TryFrom<CollectGentxCliAux<AI>> for CollectGentxCmd {
                 (true, false) => Ok(Self {
                     gentx_dir,
                     home,
-                    moniker,
                     mode: CollectMode::File(true),
                 }),
                 (false, true) => Ok(Self {
                     gentx_dir,
                     home,
-                    moniker,
                     mode: CollectMode::Display,
                 }),
                 (false, false) => Ok(Self {
                     gentx_dir,
                     home,
-                    moniker,
                     mode: CollectMode::File(false),
                 }),
             },
