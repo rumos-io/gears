@@ -112,7 +112,7 @@ impl FromStr for DecimalCoin {
 
         let amount = input[..i]
             .parse::<Decimal256>()
-            .map_err(|e| CoinError::Uint(e.to_string()))?;
+            .map_err(|e| CoinError::Decimal(e.to_string()))?;
 
         let denom = input[i..]
             .parse::<Denom>()

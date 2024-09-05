@@ -42,6 +42,13 @@ impl TxMessage for Message {
             Message::Undelegate(_) => "/cosmos.staking.v1beta1.MsgUndelegate",
         }
     }
+
+    fn amino_url(&self) -> &'static str {
+        match self {
+            Message::Delegate(_) => "cosmos-sdk/MsgDelegate",
+            _ => self.type_url(),
+        }
+    }
 }
 
 impl From<Message> for Any {

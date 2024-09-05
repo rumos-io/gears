@@ -9,10 +9,18 @@ pub struct Pagination {
     /// offset is a numeric offset that can be used when key is unavailable.
     /// It is less efficient than using key. Only one of offset or key should
     /// be set.
+    #[serde(alias = "pagination.offset")]
     offset: Option<u32>,
     /// limit is the total number of results to be returned in the result page.
     /// If left empty it will default to a value to be set by each app.
+    #[serde(alias = "pagination.limit")]
     limit: Option<u8>,
+}
+
+impl Pagination {
+    pub fn new(offset: Option<u32>, limit: Option<u8>) -> Pagination {
+        Pagination { offset, limit }
+    }
 }
 
 impl From<Pagination> for PaginationRequest {

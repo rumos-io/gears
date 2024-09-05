@@ -43,6 +43,7 @@ tendermint-rpc = { git = "https://github.com/rumos-io/tendermint-rs", branch = "
     "http-client",
 ] }
 tendermint-config = { git = "https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x" }
+async-trait = "0.1.81"
 
 
 [dev-dependencies]

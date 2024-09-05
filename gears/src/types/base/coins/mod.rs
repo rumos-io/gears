@@ -1,4 +1,6 @@
+use core_types::Protobuf;
 pub use decimal::*;
+use prost::Message;
 pub use unsigned::*;
 
 mod decimal;
@@ -8,13 +10,12 @@ use std::{marker::PhantomData, str::FromStr};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::types::denom::Denom;
-
 use super::{
     coin::Coin,
     errors::{CoinError, CoinsError, CoinsParseError},
     ZeroNumeric,
 };
+use crate::types::denom::Denom;
 
 #[derive(Serialize, Deserialize)]
 pub struct CoinsRaw<U>(Vec<U>);
@@ -31,6 +32,51 @@ impl<T: Clone + ZeroNumeric, U: Coin<Amount = T>> TryFrom<CoinsRaw<U>> for Coins
     fn try_from(CoinsRaw(value): CoinsRaw<U>) -> Result<Self, Self::Error> {
         Self::new(value)
     }
+}
+
+/// Represents raw version of coins. Implements `prost::Message` and Protobuf
+#[derive(Serialize, Deserialize, Message)]
+pub struct ProtoCoinsRaw<C: Message + Default>(#[prost(message, repeated, tag = "1")] Vec<C>);
+
+impl<T, U, C> From<Coins<T, U>> for ProtoCoinsRaw<C>
+where
+    T: ZeroNumeric,
+    U: Coin<Amount = T>,
+    C: Message + Default + From<U>,
+{
+    fn from(Coins { storage, _marker }: Coins<T, U>) -> Self {
+        Self(storage.into_iter().map(Into::into).collect())
+    }
+}
+
+impl<T, U, C> TryFrom<ProtoCoinsRaw<C>> for Coins<T, U>
+where
+    T: Clone + ZeroNumeric,
+    U: Coin<Amount = T>,
+    C: Message + Default + TryInto<U>,
+    <C as TryInto<U>>::Error: std::fmt::Debug,
+{
+    type Error = CoinsError;
+
+    fn try_from(ProtoCoinsRaw(value): ProtoCoinsRaw<C>) -> Result<Self, Self::Error> {
+        let mut coins = vec![];
+        for c in value {
+            coins.push(
+                c.try_into()
+                    .map_err(|e| CoinsError::Coin(format!("{e:?}")))?,
+            );
+        }
+        Self::new(coins)
+    }
+}
+
+impl<T, U, C> Protobuf<ProtoCoinsRaw<C>> for Coins<T, U>
+where
+    T: Clone + ZeroNumeric,
+    U: Coin<Amount = T>,
+    C: Message + Default + From<U> + TryInto<U>,
+    <C as TryInto<U>>::Error: std::fmt::Debug,
+{
 }
 
 // Represents a list of coins with the following properties:

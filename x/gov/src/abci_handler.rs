@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use bytes::Bytes;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
     baseapp::{errors::QueryError, QueryResponse},
@@ -106,6 +105,7 @@ impl<
         &self,
         _ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         _tx: &TxWithRaw<Self::Message>,
+        _: bool,
     ) -> Result<(), TxError> {
         Ok(())
     }
@@ -239,7 +239,7 @@ impl<
             height: _,
             prove: _,
         }: RequestQuery,
-    ) -> Result<Bytes, QueryError> {
+    ) -> Result<Vec<u8>, QueryError> {
         let query = match path.as_str() {
             QueryDepositRequest::QUERY_URL => GovQuery::Deposit(QueryDepositRequest::decode(data)?),
             QueryDepositsRequest::QUERY_URL => {

@@ -54,6 +54,7 @@ fn run_tx_local(
             chain_id: ChainId::from_str("test-chain")?,
             fees: None,
             inner: WrappedGaiaTxCommands(command),
+            account: gears::commands::client::tx::AccountProvider::Online,
         },
         &GaiaCoreClient,
         &QueryNodeFetcher,
