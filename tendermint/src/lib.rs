@@ -38,7 +38,6 @@ pub fn write_keys_and_genesis(
 
     // write node private validator key
     let priv_key = crypto::new_private_key();
-    let public_key = priv_key.public_key();
     let address: tendermint_informal::account::Id = priv_key.public_key().into();
     let priv_validator_key = PrivValidatorKey {
         address,
@@ -50,8 +49,6 @@ pub fn write_keys_and_genesis(
             .expect("PrivValidatorKey structure serialization will always succeed")
             .as_bytes(),
     )?;
-
-    let validator = tendermint_informal::validator::Info::new(public_key, 10u32.into());
 
     // write genesis file
     // TODO: create a Genesis struct in this crate and define a default
@@ -75,7 +72,7 @@ pub fn write_keys_and_genesis(
             },
             version: None,
         },
-        validators: vec![validator],
+        validators: vec![],
         app_hash: vec![].try_into().unwrap(),
         app_state,
     };
