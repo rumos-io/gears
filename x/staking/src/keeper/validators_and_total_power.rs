@@ -3,7 +3,7 @@ use gears::{
     context::InfallibleContext, core::Protobuf, store::database::ext::UnwrapCorrupt,
     types::base::coin::Uint256Proto,
 };
-use prost::Message;
+use prost::{bytes::Bytes, Message};
 
 impl<
         SK: StoreKey,
@@ -91,8 +91,7 @@ impl<
         validator: &Validator,
     ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let power_reduction = self.power_reduction(ctx);
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
+        let mut store = ctx.kv_store_mut(&self.store_key);
         store.delete(&validator.key_by_power_index_key(power_reduction))
     }
 
@@ -100,13 +99,19 @@ impl<
     pub fn last_validators_by_addr<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> HashMap<String, Vec<u8>> {
+    ) -> HashMap<ValAddress, u64> {
         let mut last = HashMap::new();
         let store = ctx.infallible_store(&self.store_key);
         let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
         for (k, v) in store.into_range(..) {
-            let k: ValAddress = serde_json::from_slice(&k).unwrap_or_corrupt();
-            last.insert(k.to_string(), v.to_vec());
+            let k = ValAddress::try_from_prefix_length_bytes(&k).unwrap_or_corrupt();
+            last.insert(
+                k,
+                i64::decode::<Bytes>(v.to_vec().into())
+                    .unwrap_or_corrupt()
+                    .try_into()
+                    .unwrap_or_corrupt(),
+            );
         }
         last
     }
@@ -156,6 +161,6 @@ impl<
     ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
-        delegations_store.delete(validator.to_string().as_bytes())
+        delegations_store.delete(&validator.prefix_len_bytes())
     }
 }
