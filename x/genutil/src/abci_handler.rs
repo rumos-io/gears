@@ -108,37 +108,43 @@ impl<
         ctx: &mut gears::context::init::InitContext<'_, DB, Self::StoreKey>,
         genesis: Self::Genesis,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        for mut tx in genesis.gen_txs {
-            tx.set_signatures_data();
-            let tx = TxWithRaw::from(tx);
-            let ante_check_res = self.ante_handler.run(
-                ctx,
-                &tx,
-                false,
-                NodeOptions::new(MinGasPrices::default()),
-                Arc::new(RefCell::new(GasMeter::infinite())),
-            );
+        if genesis.gen_txs.is_empty() {
+            vec![]
+        } else {
+            for mut tx in genesis.gen_txs {
+                tx.set_signatures_data();
+                let tx = TxWithRaw::from(tx);
+                let ante_check_res = self.ante_handler.run(
+                    ctx,
+                    &tx,
+                    false,
+                    NodeOptions::new(MinGasPrices::default()),
+                    Arc::new(RefCell::new(GasMeter::infinite())),
+                );
 
-            match ante_check_res {
-                Ok(_) => (),
-                Err(err) => panic!("Failed to run ante checks for tx: {err}"),
+                match ante_check_res {
+                    Ok(_) => (),
+                    Err(err) => panic!("Failed to run ante checks for tx: {err}"),
+                }
+
+                let msg = tx.tx.body.messages.first(); // We know that such tx should contain only one message
+
+                let tx_result = self.staking.create_validator(
+                    ctx,
+                    ctx.consensus_params().validator.clone(),
+                    msg,
+                );
+
+                match tx_result {
+                    Ok(_) => (),
+                    Err(err) => panic!("Failed to run message from tx: {err}"),
+                }
             }
 
-            let msg = tx.tx.body.messages.first(); // We know that such tx should contain only one message
-
-            let tx_result =
-                self.staking
-                    .create_validator(ctx, ctx.consensus_params().validator.clone(), msg);
-
-            match tx_result {
-                Ok(_) => (),
-                Err(err) => panic!("Failed to run message from tx: {err}"),
+            match self.staking.apply_and_return_validator_set_updates(ctx) {
+                Ok(res) => res,
+                Err(err) => panic!("failed to apply validators err: {err}"),
             }
-        }
-
-        match self.staking.apply_and_return_validator_set_updates(ctx) {
-            Ok(res) => res,
-            Err(err) => panic!("failed to apply validators err: {err}"),
         }
     }
 
