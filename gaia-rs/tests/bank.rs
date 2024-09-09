@@ -14,13 +14,12 @@ use bank::{
 use gaia_rs::{
     client::{GaiaQueryCommands, GaiaTxCommands, WrappedGaiaQueryCommands, WrappedGaiaTxCommands},
     query::GaiaQueryResponse,
-    GaiaCoreClient,
+    GaiaCoreClient, QueryNodeFetcher,
 };
 use gears::{
     commands::client::{
-        keys::KeyringBackend,
         query::{run_query, QueryCommand},
-        tx::{run_tx, Keyring, LocalInfo, TxCommand},
+        tx::{run_tx, ClientTxContext, TxCommand},
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
     tendermint::{
@@ -110,17 +109,17 @@ fn send_tx() -> anyhow::Result<()> {
 
     let responses = run_tx(
         TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_owned(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fees: None,
+            ctx: ClientTxContext::new_online(
+                tendermint.1.to_path_buf(),
+                200_000_u32.try_into().expect("default gas is valid"),
+                DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
+                ChainId::from_str("test-chain")?,
+                KEY_NAME,
+            ),
             inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
         },
         &GaiaCoreClient,
+        &QueryNodeFetcher,
     )?
     .broadcast()
     .expect("broadcast tx inside");

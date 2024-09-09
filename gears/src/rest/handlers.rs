@@ -1,19 +1,24 @@
+use crate::application::ApplicationInfo;
+use crate::baseapp::NodeQueryHandler;
+use crate::ext::{IteratorPaginateByOffset, PaginationByOffset};
 use crate::rest::error::HTTPError;
 use crate::types::pagination::response::PaginationResponse;
 use crate::types::request::tx::BroadcastTxRequest;
 use crate::types::response::any::AnyTx;
+use crate::types::response::block::GetBlockByHeightResponse;
+use crate::types::response::node_info::{GetNodeInfoResponse, VersionInfo};
 use crate::types::response::tx::{
     BroadcastTxResponse, BroadcastTxResponseLight, TxResponse, TxResponseLight,
 };
 use crate::types::response::tx_event::GetTxsEventResponse;
+use crate::types::response::validators::GetLatestValidatorSetResponse;
 use crate::types::tx::{Tx, TxMessage};
 use axum::extract::{Path, Query as AxumQuery, State};
 use axum::Json;
 use bytes::Bytes;
 use core_types::Protobuf;
 use ibc_proto::cosmos::tx::v1beta1::BroadcastMode;
-use serde::{Deserialize, Serialize};
-use tendermint::informal::node::Info;
+use serde::Deserialize;
 use tendermint::informal::Hash;
 use tendermint::rpc::client::{Client, HttpClient, HttpClientUrl};
 use tendermint::rpc::query::Query;
@@ -21,34 +26,114 @@ use tendermint::rpc::response::tx::search::Response;
 use tendermint::rpc::url::Url;
 use tendermint::rpc::Order;
 
-use super::{parse_pagination, Pagination};
+use super::{parse_pagination, Pagination, RestState};
 
 // TODO:
 // 1. handle multiple events in /cosmos/tx/v1beta1/txs request
-// 2. include application information in NodeInfoResponse
 // 3. get block in /cosmos/tx/v1beta1/txs so that the timestamp can be added to TxResponse
 
-#[derive(Serialize, Deserialize)]
-pub struct NodeInfoResponse {
-    #[serde(rename = "default_node_info")]
-    node_info: Info,
-    //TODO: application_version
-}
-
-pub async fn node_info(
-    State(tendermint_rpc_address): State<HttpClientUrl>,
-) -> Result<Json<NodeInfoResponse>, HTTPError> {
-    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+pub async fn node_info<QReq, QRes, App: NodeQueryHandler<QReq, QRes> + ApplicationInfo>(
+    State(state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<GetNodeInfoResponse>, HTTPError> {
+    let client = HttpClient::new::<Url>(state.tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
 
     let res = client.status().await.map_err(|e| {
         tracing::error!("Error connecting to Tendermint: {e}");
         HTTPError::gateway_timeout()
     })?;
 
-    let node_info = NodeInfoResponse {
-        node_info: res.node_info,
+    let node_info = GetNodeInfoResponse {
+        default_node_info: Some(res.node_info.into()),
+        // TODO: extend ApplicationInfo trait and add member to form the version info
+        application_version: Some(VersionInfo {
+            name: App::APP_NAME.to_string(),
+            app_name: App::APP_NAME.to_string(),
+            version: App::APP_VERSION.to_string(),
+            git_commit: "".to_string(),
+            build_tags: "".to_string(),
+            rust_version: "1".to_string(),
+            build_deps: vec![],
+            cosmos_sdk_version: "".to_string(),
+        }),
     };
     Ok(Json(node_info))
+}
+
+pub async fn validatorsets_latest(
+    AxumQuery(pagination): AxumQuery<Pagination>,
+    State(tendermint_rpc_address): State<HttpClientUrl>,
+) -> Result<Json<GetLatestValidatorSetResponse>, HTTPError> {
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+
+    let (page, limit) = parse_pagination(&pagination);
+    let res = client
+        .validators_latest(tendermint::rpc::client::Paging::Specific {
+            page_number: (page as usize).into(),
+            per_page: limit.into(),
+        })
+        .await
+        .map_err(|e| {
+            tracing::error!("Error connecting to Tendermint: {e}");
+            HTTPError::gateway_timeout()
+        })
+        .map(|res| {
+            let (pagination_result, iter) = res
+                .validators
+                .into_iter()
+                .map(Into::into)
+                .paginate_by_offset(PaginationByOffset::from((
+                    page as usize - 1,
+                    limit as usize,
+                )));
+            let validators = iter.collect();
+            GetLatestValidatorSetResponse {
+                block_height: res.block_height.into(),
+                validators,
+                pagination: Some(pagination_result.into()),
+            }
+        })?;
+    Ok(Json(res))
+}
+
+pub async fn validatorsets(
+    Path(height): Path<u32>,
+    AxumQuery(pagination): AxumQuery<Pagination>,
+    State(tendermint_rpc_address): State<HttpClientUrl>,
+) -> Result<Json<GetLatestValidatorSetResponse>, HTTPError> {
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+
+    let (page, limit) = parse_pagination(&pagination);
+    let res = client
+        .validators(
+            height,
+            tendermint::rpc::client::Paging::Specific {
+                page_number: (page as usize).into(),
+                per_page: limit.into(),
+            },
+        )
+        .await
+        .map_err(|e| {
+            tracing::error!("Error connecting to Tendermint: {e}");
+            HTTPError::gateway_timeout()
+        })
+        .map(|res| {
+            let (pagination_result, iter) = res
+                .validators
+                .into_iter()
+                .map(Into::into)
+                .paginate_by_offset(PaginationByOffset::from((
+                    page as usize - 1,
+                    limit as usize,
+                )));
+            let validators = iter.collect();
+            GetLatestValidatorSetResponse {
+                block_height: res.block_height.into(),
+                validators,
+                pagination: Some(pagination_result.into()),
+            }
+        })?;
+
+    Ok(Json(res))
 }
 
 #[derive(Deserialize)]
@@ -208,32 +293,43 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
     })
 }
 
-// This is a hack for now to make the front end work
-// TODO: remove this once the staking module is implemented
-//#[get("/cosmos/staking/v1beta1/params")]
-pub async fn staking_params() -> &'static str {
-    r#"
-    {
-        "params": {
-          "unbonding_time": "0",
-          "max_validators": 0,
-          "max_entries": 0,
-          "historical_entries": 0,
-          "bond_denom": "uatom",
-          "min_commission_rate": "0"
-        }
-      }
-    "#
+pub async fn block(
+    Path(height): Path<u32>,
+    State(tendermint_rpc_address): State<HttpClientUrl>,
+) -> Result<Json<GetBlockByHeightResponse>, HTTPError> {
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+
+    let res = client
+        .block(height)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error connecting to Tendermint: {e}");
+            HTTPError::gateway_timeout()
+        })
+        .map(|res| GetBlockByHeightResponse {
+            block_id: Some(res.block_id.into()),
+            block: Some(res.block.clone()),
+            sdk_block: Some(res.block),
+        })?;
+    Ok(Json(res))
 }
 
 pub async fn block_latest(
     State(tendermint_rpc_address): State<HttpClientUrl>,
-) -> Result<Json<tendermint::rpc::endpoint::Response>, HTTPError> {
+) -> Result<Json<GetBlockByHeightResponse>, HTTPError> {
     let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
 
-    let res = client.latest_block().await.map_err(|e| {
-        tracing::error!("Error connecting to Tendermint: {e}");
-        HTTPError::gateway_timeout()
-    })?;
+    let res = client
+        .latest_block()
+        .await
+        .map_err(|e| {
+            tracing::error!("Error connecting to Tendermint: {e}");
+            HTTPError::gateway_timeout()
+        })
+        .map(|res| GetBlockByHeightResponse {
+            block_id: Some(res.block_id.into()),
+            block: Some(res.block.clone()),
+            sdk_block: Some(res.block),
+        })?;
     Ok(Json(res))
 }

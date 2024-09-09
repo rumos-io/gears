@@ -1,6 +1,6 @@
 use database::prefix::PrefixDB;
 use kv_store::store::kv::{immutable::KVStore, mutable::KVStoreMut};
-use tendermint::types::{proto::event::Event, time::timestamp::Timestamp};
+use tendermint::types::{chain_id::ChainId, proto::event::Event, time::timestamp::Timestamp};
 
 use crate::types::store::kv::{mutable::StoreMut, Store};
 
@@ -15,7 +15,7 @@ pub trait QueryableContext<DB, SK> {
     fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>>;
 
     fn height(&self) -> u32;
-    // fn chain_id(&self) -> &ChainId;
+    fn chain_id(&self) -> &ChainId;
 }
 
 pub trait InfallibleContext<DB, SK>: QueryableContext<DB, SK> {

@@ -88,3 +88,15 @@ impl<M: TxMessage> TxWithRaw<M> {
         })
     }
 }
+
+impl<M: TxMessage> From<Tx<M>> for TxWithRaw<M> {
+    fn from(tx: Tx<M>) -> Self {
+        let tx_len = tx.encode_vec().len();
+
+        Self {
+            tx: tx.clone(),
+            raw: TxRaw::from(&tx),
+            tx_len,
+        }
+    }
+}

@@ -1,7 +1,7 @@
 use crate::{
     types::query::{
         QueryAllBalancesRequest, QueryBalanceRequest, QueryDenomMetadataRequest,
-        QueryTotalSupplyRequest,
+        QuerySupplyOfRequest, QueryTotalSupplyRequest,
     },
     BankNodeQueryRequest, BankNodeQueryResponse,
 };
@@ -30,6 +30,36 @@ pub async fn supply<
         pagination: Some(PaginationRequest::from(pagination.0)),
     });
 
+    let res = rest_state.app.typed_query(req)?;
+    Ok(Json(res))
+}
+
+/// Gets the total supply of every denom
+pub async fn supply_by_denom<
+    QReq: QueryRequest + From<BankNodeQueryRequest>,
+    QRes: QueryResponse,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    query: Query<QueryData>,
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<QRes>, HTTPError> {
+    let req = BankNodeQueryRequest::SupplyOf(QuerySupplyOfRequest {
+        denom: query.0.denom,
+    });
+    let res = rest_state.app.typed_query(req)?;
+    Ok(Json(res))
+}
+
+/// Gets the total supply of every denom
+pub async fn supply_by_denom_path<
+    QReq: QueryRequest + From<BankNodeQueryRequest>,
+    QRes: QueryResponse,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    Path(denom): Path<Denom>,
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<QRes>, HTTPError> {
+    let req = BankNodeQueryRequest::SupplyOf(QuerySupplyOfRequest { denom });
     let res = rest_state.app.typed_query(req)?;
     Ok(Json(res))
 }
@@ -102,6 +132,8 @@ pub fn get_router<
 >() -> Router<RestState<QReq, QRes, App>> {
     Router::new()
         .route("/v1beta1/supply", get(supply))
+        .route("/v1beta1/supply/by_denom", get(supply_by_denom))
+        .route("/v1beta1/supply/:denom", get(supply_by_denom_path))
         .route("/v1beta1/balances/:address", get(get_balances))
         .route(
             "/v1beta1/balances/:address/by_denom",

@@ -21,6 +21,7 @@ use errors::QueryError;
 use kv_store::bank::multi::{ApplicationMultiBank, TransactionMultiBank};
 use mode::build_tx_gas_meter;
 use tendermint::types::{
+    chain_id::ChainId,
     proto::{event::Event, header::Header},
     request::query::RequestQuery,
 };
@@ -63,7 +64,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         };
 
         let height = multi_store.head_version();
-        let ctx = SimpleContext::new((&mut multi_store).into(), height);
+        let ctx = SimpleContext::new((&mut multi_store).into(), height, ChainId::default());
 
         let max_gas = baseapp_params_keeper
             .block_params(&ctx)
@@ -101,7 +102,9 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let ctx = self.state.read().expect(POISONED_LOCK).query_ctx(version)?;
 
-        self.abci_handler.query(&ctx, request.clone())
+        self.abci_handler
+            .query(&ctx, request.clone())
+            .map(Into::into)
     }
 
     fn run_tx<MD: ExecutionMode<DB, H>>(
@@ -122,7 +125,11 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let consensus_params = {
             self.baseapp_params_keeper
-                .consensus_params(&SimpleContext::new(multi_store.into(), height))
+                .consensus_params(&SimpleContext::new(
+                    multi_store.into(),
+                    height,
+                    header.chain_id.clone(),
+                ))
         };
 
         let mut ctx = TxContext::new(
@@ -132,7 +139,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             consensus_params,
             build_tx_gas_meter(height, Some(&tx_with_raw.tx.auth_info.fee)),
             gas_meter,
-            true,
             self.options.clone(),
         );
 
@@ -159,6 +165,13 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             gas_used,
         })
     }
+}
+
+impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ApplicationInfo
+    for BaseApp<DB, PSK, H, AI>
+{
+    const APP_NAME: &'static str = AI::APP_NAME;
+    const APP_VERSION: &'static str = AI::APP_VERSION;
 }
 
 #[derive(Debug, Clone)]

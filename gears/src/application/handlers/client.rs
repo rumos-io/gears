@@ -2,28 +2,24 @@ use std::path::PathBuf;
 
 use crate::{
     baseapp::Query,
-    commands::client::{
-        query::execute_query,
-        tx::{broadcast_tx_commit, ClientTxContext},
-    },
+    commands::client::tx::{broadcast_tx_commit, AccountProvider, ClientTxContext},
     crypto::{
         info::{create_signed_transaction_direct, create_signed_transaction_textual, SigningInfo},
         keys::{GearsPublicKey, ReadAccAddress, SigningKey},
+        public::PublicKey,
     },
     runtime::runtime,
     signing::{handler::MetadataGetter, renderer::value_renderer::ValueRenderer},
     types::{
-        account::Account,
+        account::{Account, BaseAccount},
         address::AccAddress,
-        auth::fee::Fee,
-        base::coins::UnsignedCoins,
         denom::Denom,
-        tx::{body::TxBody, Messages, Tx, TxMessage},
+        tx::{body::TxBody, metadata::Metadata, Messages, Tx, TxMessage},
     },
 };
 
 use anyhow::anyhow;
-use core_types::{tx::mode_info::SignMode, Protobuf};
+use core_types::tx::mode_info::SignMode;
 use serde::Serialize;
 
 use tendermint::{
@@ -31,12 +27,7 @@ use tendermint::{
         client::{Client, HttpClient},
         response::tx::broadcast::Response,
     },
-    types::{chain_id::ChainId, proto::block::Height},
-};
-
-use super::types::{
-    QueryAccountRequest, QueryAccountResponse, QueryDenomMetadataRequest,
-    QueryDenomMetadataResponse, RawQueryDenomMetadataResponse,
+    types::proto::block::Height,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -79,40 +70,43 @@ pub trait TxHandler {
         &self,
         client_tx_context: &mut ClientTxContext,
         command: Self::TxCommands,
-        from_address: AccAddress,
+        pubkey: PublicKey,
     ) -> anyhow::Result<Messages<Self::Message>>;
 
-    fn account(
+    fn account<F: NodeFetcher>(
         &self,
         address: AccAddress,
         client_tx_context: &mut ClientTxContext,
+        fetcher: &F,
     ) -> anyhow::Result<Option<Account>> {
-        Ok(get_account_latest(address, client_tx_context.node.as_str())?.account)
+        match client_tx_context.account {
+            AccountProvider::Offline {
+                sequence,
+                account_number,
+            } => Ok(Some(Account::Base(BaseAccount {
+                address,
+                pub_key: None,
+                account_number,
+                sequence,
+            }))),
+            AccountProvider::Online => {
+                fetcher.latest_account(address, client_tx_context.node.as_str())
+            }
+        }
     }
 
-    fn sign_msg<K: SigningKey + ReadAccAddress + GearsPublicKey>(
+    fn sign_msg<K: SigningKey + ReadAccAddress + GearsPublicKey, F: NodeFetcher + Clone>(
         &self,
         msgs: Messages<Self::Message>,
         key: &K,
-        node: &url::Url,
-        chain_id: ChainId,
-        fees: Option<UnsignedCoins>,
         mode: SignMode,
-        client_tx_context: &mut ClientTxContext,
+        ctx: &mut ClientTxContext,
+        fetcher: &F,
     ) -> anyhow::Result<Tx<Self::Message>> {
-        let fee = Fee {
-            amount: fees,
-            gas_limit: 200_000_u64
-                .try_into()
-                .expect("hard coded gas limit is valid"), //TODO: remove hard coded gas limit
-            payer: None,        //TODO: remove hard coded payer
-            granter: "".into(), //TODO: remove hard coded granter
-        };
-
         let address = key.get_address();
 
         let account = self
-            .account(address.to_owned(), client_tx_context)?
+            .account(address.to_owned(), ctx, fetcher)?
             .ok_or_else(|| anyhow!("account not found: {}", address))?;
 
         let signing_infos = vec![SigningInfo {
@@ -123,26 +117,34 @@ pub trait TxHandler {
 
         let tx_body = TxBody {
             messages: msgs.into_msgs(),
-            memo: String::new(),                    // TODO: remove hard coded
-            timeout_height: 0,                      // TODO: remove hard coded
-            extension_options: vec![],              // TODO: remove hard coded
+            memo: ctx.memo.clone().unwrap_or_default(),
+            timeout_height: match ctx.timeout_height {
+                Some(height) => height,
+                None => 0,
+            },
+            extension_options: vec![], // TODO: remove hard coded
             non_critical_extension_options: vec![], // TODO: remove hard coded
         };
 
         let tip = None; //TODO: remove hard coded
 
         match mode {
-            SignMode::Direct => {
-                create_signed_transaction_direct(signing_infos, chain_id, fee, tip, tx_body)
-                    .map_err(|e| anyhow!(e.to_string()))
-            }
+            SignMode::Direct => create_signed_transaction_direct(
+                signing_infos,
+                ctx.chain_id.clone(),
+                ctx.fee.clone(),
+                tip,
+                tx_body,
+            )
+            .map_err(|e| anyhow!(e.to_string())),
             SignMode::Textual => create_signed_transaction_textual(
                 signing_infos,
-                chain_id,
-                fee,
+                ctx.chain_id.clone(),
+                ctx.fee.clone(),
                 tip,
-                node.clone(),
+                ctx.node.clone(),
                 tx_body,
+                fetcher,
             )
             .map_err(|e| anyhow!(e.to_string())),
             _ => Err(anyhow!("unsupported sign mode")),
@@ -154,10 +156,22 @@ pub trait TxHandler {
         raw_tx: Tx<Self::Message>,
         client_tx_context: &mut ClientTxContext,
     ) -> anyhow::Result<TxExecutionResult> {
-        let client = HttpClient::new(tendermint::rpc::url::Url::try_from(
-            client_tx_context.node.clone(),
-        )?)?;
-        broadcast_tx_commit(client, Into::into(&raw_tx)).map(Into::into)
+        match client_tx_context.account {
+            AccountProvider::Offline {
+                sequence: _,
+                account_number: _,
+            } => {
+                println!("{}", serde_json::to_string_pretty(&raw_tx)?);
+
+                Ok(TxExecutionResult::None)
+            }
+            AccountProvider::Online => {
+                let client = HttpClient::new(tendermint::rpc::url::Url::try_from(
+                    client_tx_context.node.clone(),
+                )?)?;
+                broadcast_tx_commit(client, Into::into(&raw_tx)).map(Into::into)
+            }
+        }
     }
 }
 
@@ -213,52 +227,37 @@ pub trait QueryHandler {
     ) -> anyhow::Result<Self::QueryResponse>;
 }
 
-mod inner {
-    pub use core_types::query::response::auth::QueryAccountResponse;
+pub trait NodeFetcher {
+    /// Query node to get latest account state
+    fn latest_account(
+        &self,
+        address: AccAddress,
+        node: impl AsRef<str>,
+    ) -> anyhow::Result<Option<Account>>;
+
+    /// Query node to get denom metadata
+    fn denom_metadata(
+        &self,
+        base: Denom,
+        node: impl AsRef<str>,
+    ) -> anyhow::Result<Option<Metadata>>;
 }
 
-// TODO: we're assuming here that the app has an auth module which handles this query
-pub(crate) fn get_account_latest(
-    address: AccAddress,
-    node: &str,
-) -> anyhow::Result<QueryAccountResponse> {
-    let query = QueryAccountRequest { address };
-
-    execute_query::<QueryAccountResponse, inner::QueryAccountResponse>(
-        "/cosmos.auth.v1beta1.Query/Account".into(),
-        query.encode_vec(),
-        node,
-        None,
-    )
-}
-
-// TODO: we're assuming here that the app has a bank module which handles this query
-pub(crate) fn get_denom_metadata(
-    base: Denom,
-    node: &str,
-) -> anyhow::Result<QueryDenomMetadataResponse> {
-    let query = QueryDenomMetadataRequest { denom: base };
-
-    execute_query::<QueryDenomMetadataResponse, RawQueryDenomMetadataResponse>(
-        "/cosmos.bank.v1beta1.Query/DenomMetadata".into(),
-        query.encode_vec(),
-        node,
-        None,
-    )
-}
-
-pub struct MetadataViaRPC {
+pub struct MetadataViaRPC<F: NodeFetcher> {
     pub node: url::Url,
+    pub fetcher: F,
 }
 
-impl MetadataGetter for MetadataViaRPC {
+impl<F: NodeFetcher> MetadataGetter for MetadataViaRPC<F> {
     type Error = anyhow::Error;
 
     fn metadata(
         &self,
         denom: &Denom,
     ) -> Result<Option<crate::types::tx::metadata::Metadata>, Self::Error> {
-        let res = get_denom_metadata(denom.to_owned(), self.node.as_str())?;
-        Ok(res.metadata)
+        let res = self
+            .fetcher
+            .denom_metadata(denom.to_owned(), self.node.as_str())?;
+        Ok(res)
     }
 }

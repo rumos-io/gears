@@ -1,6 +1,9 @@
 use crate::{
+    application::ApplicationInfo,
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
-    rest::handlers::{block_latest, node_info, send_tx, staking_params, tx, txs},
+    rest::handlers::{
+        block, block_latest, node_info, send_tx, tx, txs, validatorsets, validatorsets_latest,
+    },
     runtime::runtime,
     types::tx::TxMessage,
 };
@@ -16,7 +19,7 @@ pub fn run_rest_server<
     M: TxMessage,
     QReq: QueryRequest,
     QRes: QueryResponse,
-    App: NodeQueryHandler<QReq, QRes>,
+    App: NodeQueryHandler<QReq, QRes> + ApplicationInfo,
 >(
     app: App,
     listen_addr: SocketAddr,
@@ -59,7 +62,7 @@ async fn launch<
     M: TxMessage,
     QReq: QueryRequest,
     QRes: QueryResponse,
-    App: NodeQueryHandler<QReq, QRes>,
+    App: NodeQueryHandler<QReq, QRes> + ApplicationInfo,
 >(
     app: App,
     listen_addr: SocketAddr,
@@ -77,14 +80,25 @@ async fn launch<
     };
 
     let app = Router::new()
-        .route("/cosmos/base/tendermint/v1beta1/node_info", get(node_info))
-        .route("/cosmos/staking/v1beta1/params", get(staking_params))
+        .route(
+            "/cosmos/base/tendermint/v1beta1/node_info",
+            get(node_info::<QReq, QRes, App>),
+        )
+        .route(
+            "/cosmos/base/tendermint/v1beta1/validatorsets/latest",
+            get(validatorsets_latest),
+        )
+        .route(
+            "/cosmos/base/tendermint/v1beta1/validatorsets/:height",
+            get(validatorsets),
+        )
         .route("/cosmos/tx/v1beta1/txs", get(txs::<M>).post(send_tx))
         .route("/cosmos/tx/v1beta1/txs/:hash", get(tx::<M>))
         .route(
             "/cosmos/base/tendermint/v1beta1/blocks/latest",
             get(block_latest),
         )
+        .route("/cosmos/base/tendermint/v1beta1/blocks/:height", get(block))
         .merge(router)
         .layer(cors)
         .layer(TraceLayer::new_for_http())

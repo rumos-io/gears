@@ -14,6 +14,7 @@ use gears::{application::handlers::node::ModuleInfo, context::init::InitContext}
 use gears::{application::handlers::node::TxError, config::Config};
 use gears::{baseapp::errors::QueryError, context::query::QueryContext};
 use gears::{context::tx::TxContext, x::ante::DefaultSignGasConsumer};
+use genutil::abci_handler::GenutilAbciHandler;
 
 #[derive(Debug, Clone)]
 struct BankModuleInfo;
@@ -70,6 +71,24 @@ pub struct GaiaABCIHandler {
         DefaultSignGasConsumer,
         GaiaModules,
     >,
+    genutil_handler: GenutilAbciHandler<
+        GaiaStoreKey,
+        GaiaParamsStoreKey,
+        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+        bank::Keeper<
+            GaiaStoreKey,
+            GaiaParamsStoreKey,
+            auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+            GaiaModules,
+        >,
+        staking::MockHookKeeper<
+            GaiaStoreKey,
+            auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+            GaiaModules,
+        >,
+        GaiaModules,
+        DefaultSignGasConsumer,
+    >,
 }
 
 impl GaiaABCIHandler {
@@ -106,18 +125,20 @@ impl GaiaABCIHandler {
         );
 
         let ibc_keeper = ibc_rs::keeper::Keeper::new(GaiaStoreKey::IBC, GaiaParamsStoreKey::IBC);
+        let ante_handler = BaseAnteHandler::new(
+            auth_keeper.clone(),
+            bank_keeper.clone(),
+            DefaultSignGasConsumer,
+            GaiaModules::FeeCollector,
+        );
 
         GaiaABCIHandler {
-            bank_abci_handler: bank::BankABCIHandler::new(bank_keeper.clone()),
-            auth_abci_handler: auth::AuthABCIHandler::new(auth_keeper.clone()),
+            bank_abci_handler: bank::BankABCIHandler::new(bank_keeper),
+            auth_abci_handler: auth::AuthABCIHandler::new(auth_keeper),
+            genutil_handler: GenutilAbciHandler::new(staking_keeper.clone(), ante_handler.clone()),
             staking_abci_handler: staking::StakingABCIHandler::new(staking_keeper),
             ibc_abci_handler: ibc_rs::ABCIHandler::new(ibc_keeper.clone()),
-            ante_handler: BaseAnteHandler::new(
-                auth_keeper,
-                bank_keeper,
-                DefaultSignGasConsumer,
-                GaiaModules::FeeCollector,
-            ),
+            ante_handler: ante_handler,
         }
     }
 }
@@ -141,7 +162,7 @@ impl ABCIHandler for GaiaABCIHandler {
         }
     }
 
-    fn begin_block<'a, DB: Database>(
+    fn begin_block<DB: Database>(
         &self,
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         request: gears::tendermint::types::request::begin_block::RequestBeginBlock,
@@ -149,7 +170,7 @@ impl ABCIHandler for GaiaABCIHandler {
         self.staking_abci_handler.begin_block(ctx, request);
     }
 
-    fn end_block<'a, DB: Database>(
+    fn end_block<DB: Database>(
         &self,
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         request: gears::tendermint::types::request::end_block::RequestEndBlock,
@@ -166,6 +187,11 @@ impl ABCIHandler for GaiaABCIHandler {
         let validator_updates = self.staking_abci_handler.genesis(ctx, genesis.staking);
         self.ibc_abci_handler.genesis(ctx, genesis.ibc);
         self.auth_abci_handler.genesis(ctx, genesis.auth);
+        let genutil_updates = self.genutil_handler.init_genesis(ctx, genesis.genutil);
+
+        if !genutil_updates.is_empty() && !validator_updates.is_empty() {
+            panic!("validator InitGenesis updates already set by a previous module")
+        }
 
         validator_updates
     }
@@ -174,7 +200,7 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &QueryContext<DB, GaiaStoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, QueryError> {
+    ) -> Result<Vec<u8>, QueryError> {
         if query.path.starts_with("/cosmos.auth") {
             self.auth_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/cosmos.bank") {
@@ -192,8 +218,15 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         tx: &TxWithRaw<Message>,
+        is_check: bool,
     ) -> Result<(), TxError> {
-        self.ante_handler.run(ctx, tx)
+        self.ante_handler.run(
+            ctx,
+            tx,
+            is_check,
+            ctx.node_opt.clone(),
+            ctx.gas_meter.clone(),
+        )
     }
 
     fn typed_query<DB: Database + Send + Sync>(

@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [dependencies]
 anyhow = { workspace = true }
+axum = { workspace = true }
 bytes = { workspace = true }
 clap = { workspace = true }
 gears = { path = "../../gears", features = ["cli", "xmods"] }

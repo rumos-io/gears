@@ -1,4 +1,4 @@
-#![cfg(feature = "it")]
+// #![cfg(feature = "it")]
 
 use auth::{
     cli::query::{AccountCommand, AuthCommands, AuthQueryCli, AuthQueryResponse},

@@ -39,8 +39,15 @@ impl From<inner::BlockId> for BlockId {
     }
 }
 
+impl From<inner::Id> for BlockId {
+    fn from(value: inner::Id) -> Self {
+        inner::BlockId::from(value).into()
+    }
+}
+
 pub use tendermint_informal::block::Height; // TODO
 
 pub(crate) mod inner {
+    pub use tendermint_informal::block::Id;
     pub use tendermint_proto::types::BlockId;
 }
