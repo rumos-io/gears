@@ -638,10 +638,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &CTX,
         denom: &Denom,
     ) -> Result<Option<UnsignedCoin>, GasStoreErrors> {
-        let store = ctx.kv_store(&self.store_key);
-        let supply_store = store.prefix_store(SUPPLY_KEY);
+        let supply_store = ctx.kv_store(&self.store_key).prefix_store(SUPPLY_KEY);
 
-        let amount_bytes = supply_store.get(denom.as_str().as_bytes())?;
+        let amount_bytes = supply_store.get(denom)?;
 
         match amount_bytes {
             Some(bytes) => Ok(Some(UnsignedCoin {
@@ -914,9 +913,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     /// account by address. For standard accounts, the result will always be no coins.
     /// For vesting accounts, locked_coins is delegated to the concrete vesting account
     /// type.
-    fn locked_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn locked_coins<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
         addr: &AccAddress,
         // TODO: consider to add struct Coins that can have empty coins list
     ) -> Result<Vec<UnsignedCoin>, BankKeeperError> {
@@ -970,6 +969,33 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             Ok(())
         } else {
             Err(AccountNotFound::from(addr.to_owned()))?
+        }
+    }
+
+    /// returns the coins the given address can spend alongside the total amount of coins it holds.
+    /// It exists for gas efficiency, in order to avoid to have to get balance multiple times.
+    pub fn spendable_coins<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        addr: &AccAddress,
+        pagination: Option<Pagination>,
+    ) -> Result<
+        (
+            Option<UnsignedCoins>,
+            UnsignedCoins,
+            Option<PaginationResult>,
+        ),
+        BankKeeperError,
+    > {
+        let (pagination, total) = self.all_balances(ctx, addr.clone(), pagination)?;
+        let locked = self.locked_coins(ctx, addr)?;
+
+        let total = UnsignedCoins::new(total)?;
+        let locked = UnsignedCoins::new(locked)?;
+
+        match total.checked_sub(&locked) {
+            Ok(spendable) => Ok((Some(spendable), total, pagination)),
+            Err(_) => Ok((None, total, pagination)),
         }
     }
 }

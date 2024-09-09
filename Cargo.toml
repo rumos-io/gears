@@ -119,6 +119,13 @@ byteorder = { version = "1.5.0" }
 handlebars = { version = "5.1.0" }
 rpassword = { version = "7.2.0" }
 
+#macros
+quote = "1.0"
+syn = "2.0" 
+proc-macro2 = "1.0"
+darling = "0.20"
+
+
 [workspace.lints.clippy]
 unused_async = "deny"
 rust_2018_idioms = "deny"

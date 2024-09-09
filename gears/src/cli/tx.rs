@@ -1,5 +1,6 @@
 use std::{marker::PhantomData, path::PathBuf, str::FromStr};
 
+use address::AccAddress;
 use clap::{ArgAction, Args, Subcommand, ValueEnum, ValueHint};
 use strum::Display;
 use tendermint::types::chain_id::ChainId;
@@ -8,16 +9,19 @@ use crate::{
     application::ApplicationInfo,
     commands::client::{
         keys::KeyringBackend,
-        tx::{Keyring as TxKeyring, LocalInfo, TxCommand},
+        tx::{AccountProvider, ClientTxContext, Keyring as TxKeyring, LocalInfo, TxCommand},
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
-    types::base::coins::UnsignedCoins,
+    types::{
+        auth::{fee::Fee, gas::Gas},
+        base::coins::UnsignedCoins,
+    },
 };
 
 /// Transaction subcommands
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
-    #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
+    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
     home: PathBuf,
     /// <host>:<port> to Tendermint RPC interface for this chain
     #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]
@@ -25,9 +29,9 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     /// the network chain-id
     #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = ChainId::from_str( "test-chain" ).expect("unreachable: default should be valid"))]
     pub chain_id: ChainId,
-    /// TODO
-    #[arg(long, global = true, action = ArgAction::Set)]
-    pub fees: Option<UnsignedCoins>,
+
+    #[command(flatten)]
+    pub fee: FeeCli,
 
     #[arg(long, short, default_value_t = Keyring::Local)]
     pub keyring: Keyring,
@@ -37,10 +41,84 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     pub local: Option<Local>,
 
     #[command(flatten)]
+    #[group(id = "Broadcast mode", global = true)]
+    pub mode: Mode,
+
+    /// Note to add a description to the transaction
+    #[arg(long, global = true, action = ArgAction::Set, required = false )]
+    pub note: Option<String>,
+
+    /// Set a block timeout height to prevent the tx from being committed past a certain height
+    #[arg(long, global = true, action = ArgAction::Set, required = false )]
+    pub timeout_height: Option<u32>,
+
+    #[command(flatten)]
     pub command: C,
 
     #[arg(skip)]
     _marker: PhantomData<T>,
+}
+
+#[derive(Debug, Clone, ::clap::Args)]
+pub struct FeeCli {
+    // TODO: Cosmos has "auto" feature to calculate gas price if needed
+    /// gas limit to set per-transaction
+    #[arg(long, short, global = true, action = ArgAction::Set, default_value_t = 200_000)]
+    pub gas_limit: u64,
+    /// Fees to pay along with transaction; eg: 10uatom
+    #[arg(long, global = true, action = ArgAction::Set)]
+    pub fees: Option<UnsignedCoins>,
+    /// Fee payer pays fees for the transaction instead of deducting from the signer
+    #[arg(long = "fee-payer", global = true, action = ArgAction::Set, required = false )]
+    pub payer: Option<AccAddress>,
+    /// Fee granter grants fees for the transaction
+    #[arg(long = "fee-granter", global = true, action = ArgAction::Set, required = false )]
+    pub granter: Option<String>,
+}
+
+impl TryFrom<FeeCli> for Fee {
+    type Error = anyhow::Error;
+
+    fn try_from(
+        FeeCli {
+            gas_limit,
+            fees,
+            payer,
+            granter,
+        }: FeeCli,
+    ) -> Result<Self, Self::Error> {
+        let gas_limit = Gas::try_from(gas_limit)?;
+
+        if granter.as_ref().is_some_and(|this| this.is_empty()) {
+            Err(anyhow::anyhow!("`fee-granter` can't be empty"))?
+        }
+
+        Ok(Self {
+            amount: fees,
+            gas_limit,
+            payer,
+            granter: match granter {
+                Some(var) => var,
+                None => "".to_owned(),
+            },
+        })
+    }
+}
+
+#[derive(Debug, Clone, ::clap::Args)]
+pub struct Mode {
+    /// makes sure that the client will not reach out to full node.
+    /// As a result, the account and sequence number queries will not be performed and
+    /// it is required to set such parameters manually. Note, invalid values will cause
+    /// the transaction to fail.
+    #[arg(long, default_value_t = false, help_heading = "Broadcast mode")]
+    pub offline: bool,
+    /// The sequence number of the signing account (offline mode only)
+    #[arg(long, required = false, help_heading = "Broadcast mode")]
+    pub sequence: Option<u64>,
+    /// The account number of the signing account (offline mode only)
+    #[arg(long, required = false, help_heading = "Broadcast mode")]
+    pub account_number: Option<u64>,
 }
 
 #[derive(ValueEnum, Debug, Clone, Display)]
@@ -89,10 +167,13 @@ where
             home,
             node,
             chain_id,
-            fees: fee,
             _marker,
             keyring,
             local,
+            mode,
+            note,
+            timeout_height,
+            fee,
             command,
         } = value;
 
@@ -113,13 +194,46 @@ where
             }
         };
 
+        let account = match mode {
+            Mode {
+                offline: true,
+                sequence,
+                account_number,
+            } => AccountProvider::Offline {
+                sequence: sequence.unwrap_or_default(),
+                account_number: account_number.unwrap_or_default(),
+            },
+            Mode {
+                offline: false,
+                sequence: Some(sequence),
+                account_number,
+            } => AccountProvider::Offline {
+                sequence: sequence,
+                account_number: account_number.unwrap_or_default(),
+            },
+            Mode {
+                offline: false,
+                sequence,
+                account_number: Some(account_number),
+            } => AccountProvider::Offline {
+                sequence: sequence.unwrap_or_default(),
+                account_number: account_number,
+            },
+            _ => AccountProvider::Online,
+        };
+
         Ok(Self {
-            home,
-            node,
-            chain_id,
-            fees: fee,
-            keyring,
             inner: command.try_into()?,
+            ctx: ClientTxContext {
+                home,
+                node,
+                chain_id,
+                keyring,
+                account,
+                memo: note,
+                timeout_height,
+                fee: fee.try_into()?,
+            },
         })
     }
 }

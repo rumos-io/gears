@@ -22,7 +22,8 @@ use crate::errors::BankTxError;
 use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
     QueryDenomMetadataRequest, QueryDenomMetadataResponse, QueryDenomsMetadataRequest,
-    QueryDenomsMetadataResponse, QueryParamsRequest, QueryParamsResponse, QuerySupplyOfRequest,
+    QueryDenomsMetadataResponse, QueryParamsRequest, QueryParamsResponse,
+    QuerySpendableBalancesRequest, QuerySpendableBalancesResponse, QuerySupplyOfRequest,
     QuerySupplyOfResponse, QueryTotalSupplyRequest, QueryTotalSupplyResponse,
 };
 use crate::{GenesisState, Keeper, Message};
@@ -44,10 +45,11 @@ pub enum BankNodeQueryRequest {
     Balance(QueryBalanceRequest),
     AllBalances(QueryAllBalancesRequest),
     TotalSupply(QueryTotalSupplyRequest),
-    SupplyOf(QuerySupplyOfRequest),
     DenomsMetadata(QueryDenomsMetadataRequest),
     DenomMetadata(QueryDenomMetadataRequest),
     Params(QueryParamsRequest),
+    SupplyOf(QuerySupplyOfRequest),
+    Spendable(QuerySpendableBalancesRequest),
 }
 
 impl QueryRequest for BankNodeQueryRequest {
@@ -62,10 +64,11 @@ pub enum BankNodeQueryResponse {
     Balance(QueryBalanceResponse),
     AllBalances(QueryAllBalancesResponse),
     TotalSupply(QueryTotalSupplyResponse),
-    SupplyOf(QuerySupplyOfResponse),
     DenomsMetadata(QueryDenomsMetadataResponse),
     DenomMetadata(QueryDenomMetadataResponse),
     Params(QueryParamsResponse),
+    SupplyOf(QuerySupplyOfResponse),
+    Spendable(QuerySpendableBalancesResponse),
 }
 
 impl<
@@ -102,9 +105,6 @@ impl<
             BankNodeQueryRequest::TotalSupply(req) => {
                 BankNodeQueryResponse::TotalSupply(self.query_total_supply(ctx, req))
             }
-            BankNodeQueryRequest::SupplyOf(req) => {
-                BankNodeQueryResponse::SupplyOf(self.query_supply_of(ctx, req))
-            }
             BankNodeQueryRequest::DenomsMetadata(req) => {
                 BankNodeQueryResponse::DenomsMetadata(self.query_denoms(ctx, req))
             }
@@ -120,6 +120,27 @@ impl<
                     params: self.keeper.params(ctx),
                 })
             }
+            BankNodeQueryRequest::SupplyOf(req) => {
+                BankNodeQueryResponse::SupplyOf(self.query_supply_of(ctx, req))
+            }
+            BankNodeQueryRequest::Spendable(QuerySpendableBalancesRequest {
+                address,
+                pagination,
+            }) => {
+                // TODO: edit error "handling"
+                let (spendable, pagination_result) = self
+                    .keeper
+                    .spendable_coins(ctx, &address, pagination.map(Pagination::from))
+                    .map(|(spendable, _, pag)| {
+                        (spendable.map(Vec::from), pag.map(PaginationResponse::from))
+                    })
+                    .unwrap_or_default();
+
+                BankNodeQueryResponse::Spendable(QuerySpendableBalancesResponse {
+                    balances: spendable.unwrap_or_default(),
+                    pagination: pagination_result,
+                })
+            }
         }
     }
 
@@ -127,6 +148,7 @@ impl<
         &self,
         _: &mut TxContext<'_, DB, Self::StoreKey>,
         _: &gears::types::tx::raw::TxWithRaw<Self::Message>,
+        _: bool,
     ) -> Result<(), TxError> {
         Ok(())
     }
@@ -159,7 +181,7 @@ impl<
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, QueryError> {
+    ) -> Result<Vec<u8>, QueryError> {
         match query.path.as_str() {
             QueryAllBalancesRequest::QUERY_URL => {
                 let req = QueryAllBalancesRequest::decode(query.data)?;

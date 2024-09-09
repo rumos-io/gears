@@ -1,5 +1,6 @@
 use gears::{
     core::{errors::CoreError, Protobuf},
+    derive::AppMessage,
     types::{
         address::{AccAddress, AddressError, ValAddress},
         base::coins::UnsignedCoins,
@@ -36,9 +37,11 @@ impl From<MsgWithdrawDelegatorReward> for MsgWithdrawDelegatorRewardRaw {
 
 /// MsgWithdrawDelegatorReward represents delegation withdrawal to a delegator
 /// from a single validator.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, AppMessage)]
+#[msg(url = "/cosmos.distribution.v1beta1.WithdrawRewards")]
 pub struct MsgWithdrawDelegatorReward {
     pub validator_address: ValAddress,
+    #[msg(signer)]
     pub delegator_address: AccAddress,
     pub withdraw_commission: bool,
 }
@@ -87,8 +90,10 @@ impl From<MsgSetWithdrawAddr> for MsgSetWithdrawAddrRaw {
 
 /// MsgSetWithdrawAddr represents delegation withdrawal to a delegator
 /// from a single validator.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, AppMessage)]
+#[msg(url = "/cosmos.distribution.v1beta1.SetWithdrawAddr")]
 pub struct MsgSetWithdrawAddr {
+    #[msg(signer)]
     pub delegator_address: AccAddress,
     pub withdraw_address: AccAddress,
 }
@@ -130,9 +135,11 @@ impl From<MsgFundCommunityPool> for MsgFundCommunityPoolRaw {
 
 /// MsgFundCommunityPool represents delegation withdrawal to a delegator
 /// from a single validator.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, AppMessage)]
+#[msg(url = "/cosmos.distribution.v1beta1.FundCommunityPool")]
 pub struct MsgFundCommunityPool {
     pub amount: UnsignedCoins,
+    #[msg(signer)]
     pub depositor: AccAddress,
 }
 

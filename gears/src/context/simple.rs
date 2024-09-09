@@ -4,6 +4,7 @@ use kv_store::{
     store::kv::immutable::KVStore,
     StoreKey,
 };
+use tendermint::types::chain_id::ChainId;
 
 use crate::types::store::kv::Store;
 
@@ -31,13 +32,15 @@ impl<'a, DB, SK> From<&'a mut TransactionMultiBank<DB, SK>> for SimpleBackend<'a
 pub struct SimpleContext<'a, DB, SK> {
     multi_store: SimpleBackend<'a, DB, SK>,
     height: u32,
+    chain_id: ChainId,
 }
 
 impl<'a, DB, SK> SimpleContext<'a, DB, SK> {
-    pub fn new(multi_store: SimpleBackend<'a, DB, SK>, height: u32) -> Self {
+    pub fn new(multi_store: SimpleBackend<'a, DB, SK>, height: u32, chain_id: ChainId) -> Self {
         Self {
             multi_store,
             height,
+            chain_id,
         }
     }
 }
@@ -54,6 +57,10 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for SimpleContext<'_, 
             SimpleBackend::Application(var) => KVStore::from(var.kv_store(store_key)).into(),
             SimpleBackend::Transactional(var) => KVStore::from(var.kv_store(store_key)).into(),
         }
+    }
+
+    fn chain_id(&self) -> &ChainId {
+        &self.chain_id
     }
 }
 

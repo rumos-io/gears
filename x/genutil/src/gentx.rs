@@ -1,10 +1,11 @@
 use std::{net::SocketAddr, path::PathBuf};
 
 use gears::{
-    application::handlers::client::TxHandler,
-    commands::client::tx::{ClientTxContext, TxCommand},
+    application::handlers::client::{NodeFetcher, TxHandler},
+    commands::client::tx::{AccountProvider, ClientTxContext, TxCommand},
     crypto::{ed25519::Ed25519PubKey, public::PublicKey},
     types::{
+        account::{Account, BaseAccount},
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
         decimal256::Decimal256,
         tx::Messages,
@@ -13,7 +14,7 @@ use gears::{
 };
 use staking::{CommissionRates, CreateValidator, Description};
 
-use crate::utils::{parse_staking_params_from_genesis, GenesisAccounts, GenesisBalanceIter};
+use crate::utils::{parse_staking_params_from_genesis, GenesisBalanceIter};
 
 use gears::tendermint::types::proto::crypto::PublicKey as TendermintPublicKey;
 
@@ -21,7 +22,7 @@ use gears::tendermint::types::proto::crypto::PublicKey as TendermintPublicKey;
 pub struct GentxCmd {
     pub pubkey: Option<TendermintPublicKey>,
     pub amount: UnsignedCoin,
-    pub moniker: String,
+    pub moniker: Option<String>,
     pub identity: String,
     pub website: String,
     pub security_contact: String,
@@ -36,16 +37,15 @@ pub struct GentxCmd {
     pub node_id: Option<String>,
 }
 
-pub fn gentx_cmd(
+pub fn gentx_cmd<F: NodeFetcher + Clone>(
     cmd: TxCommand<GentxCmd>,
     balance_sk: &'static str,
     staking_sk: &'static str,
-    auth_sk: &'static str,
+    fetcher: &F,
 ) -> anyhow::Result<()> {
-    let gentx_handler =
-        GentxTxHandler::new(cmd.inner.output.clone(), balance_sk, staking_sk, auth_sk)?;
+    let gentx_handler = GentxTxHandler::new(cmd.inner.output.clone(), balance_sk, staking_sk)?;
 
-    gears::commands::client::tx::run_tx(cmd, &gentx_handler)?;
+    gears::commands::client::tx::run_tx(cmd, &gentx_handler, fetcher)?;
 
     Ok(())
 }
@@ -55,7 +55,6 @@ struct GentxTxHandler {
     output_dir: Option<PathBuf>,
     pub balance_sk: &'static str,
     pub staking_sk: &'static str,
-    pub auth_sk: &'static str,
 }
 
 impl GentxTxHandler {
@@ -63,7 +62,6 @@ impl GentxTxHandler {
         output_dir: Option<PathBuf>,
         balance_sk: &'static str,
         staking_sk: &'static str,
-        auth_sk: &'static str,
     ) -> anyhow::Result<Self> {
         match output_dir {
             Some(output_dir) => {
@@ -79,14 +77,12 @@ impl GentxTxHandler {
                     output_dir: Some(output_dir),
                     balance_sk,
                     staking_sk,
-                    auth_sk,
                 })
             }
             None => Ok(Self {
                 output_dir: None,
                 balance_sk,
                 staking_sk,
-                auth_sk,
             }),
         }
     }
@@ -97,11 +93,33 @@ impl TxHandler for GentxTxHandler {
 
     type TxCommands = GentxCmd;
 
+    fn account<F: NodeFetcher>(
+        &self,
+        address: gears::types::address::AccAddress,
+        client_tx_context: &mut ClientTxContext,
+        _fetcher: &F,
+    ) -> anyhow::Result<Option<gears::types::account::Account>> {
+        match client_tx_context.account {
+                AccountProvider::Offline {
+                    sequence,
+                    account_number,
+                } => Ok(Some(Account::Base(BaseAccount {
+                    address,
+                    pub_key: None,
+                    account_number,
+                    sequence,
+                }))),
+                AccountProvider::Online => {
+                   Err(anyhow::anyhow!("Can't use online mode for gentx account. You need to specify `account-number` and `sequence`"))
+                }
+            }
+    }
+
     fn prepare_tx(
         &self,
         client_tx_context: &mut ClientTxContext,
         Self::TxCommands {
-            pubkey,
+            pubkey: pub_key,
             amount,
             moniker,
             identity,
@@ -116,7 +134,7 @@ impl TxHandler for GentxTxHandler {
             ip,
             node_id,
         }: Self::TxCommands,
-        from_address: gears::types::address::AccAddress,
+        pubkey: PublicKey,
     ) -> anyhow::Result<gears::types::tx::Messages<Self::Message>> {
         let coins = UnsignedCoins::new([amount.clone()]).expect("hardcoded coin"); // I don't want to comment this code. See: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/genutil/client/cli/gentx.go#L118-L147
 
@@ -126,6 +144,8 @@ impl TxHandler for GentxTxHandler {
             client_tx_context.home.join("config/genesis.json"), // todo: better way to get path to genesis file
         )?
         .into_inner();
+
+        let from_address = pubkey.get_address();
 
         match txs_iter.get(&from_address) {
             Some(acc_coins) => {
@@ -147,7 +167,7 @@ impl TxHandler for GentxTxHandler {
             ))?,
         }
 
-        let pub_key = match pubkey {
+        let pub_key = match pub_key {
             Some(var) => PublicKey::from(var),
             None => {
                 #[derive(serde::Deserialize)]
@@ -175,7 +195,7 @@ impl TxHandler for GentxTxHandler {
 
         let tx = Messages::from(CreateValidator {
             description: Description {
-                moniker,
+                moniker: moniker.unwrap_or_default(),
                 identity,
                 website,
                 security_contact,
@@ -194,18 +214,6 @@ impl TxHandler for GentxTxHandler {
         });
 
         Ok(tx)
-    }
-
-    fn account(
-        &self,
-        address: gears::types::address::AccAddress,
-        client_tx_context: &mut ClientTxContext,
-    ) -> anyhow::Result<Option<gears::types::account::Account>> {
-        GenesisAccounts::new(
-            self.auth_sk,
-            client_tx_context.home.join("config/genesis.json"),
-        )
-        .map(|this| this.into_inner().remove(&address))
     }
 
     fn handle_tx(

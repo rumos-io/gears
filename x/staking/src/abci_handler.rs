@@ -127,7 +127,12 @@ impl<
             }
             StakingNodeQueryRequest::UnbondingDelegations(req) => {
                 StakingNodeQueryResponse::UnbondingDelegations(
-                    self.keeper.query_unbonding_delegations(ctx, req),
+                    self.keeper.query_unbonding_delegations(ctx, req).unwrap_or(
+                        QueryDelegatorUnbondingDelegationsResponse {
+                            unbonding_responses: vec![],
+                            pagination: None,
+                        },
+                    ),
                 )
             }
             StakingNodeQueryRequest::Redelegation(req) => {
@@ -146,6 +151,7 @@ impl<
         &self,
         _: &mut TxContext<'_, DB, Self::StoreKey>,
         _: &gears::types::tx::raw::TxWithRaw<Self::Message>,
+        _: bool,
     ) -> Result<(), TxError> {
         Ok(())
     }
@@ -156,7 +162,10 @@ impl<
         msg: &Self::Message,
     ) -> Result<(), TxError> {
         let result = match msg {
-            Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
+            Message::CreateValidator(msg) => {
+                self.keeper
+                    .create_validator(ctx, ctx.consensus_params().validator.clone(), msg)
+            }
             Message::EditValidator(msg) => self.keeper.edit_validator(ctx, msg),
             Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
             Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),
@@ -178,7 +187,7 @@ impl<
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
-    ) -> Result<prost::bytes::Bytes, QueryError> {
+    ) -> Result<Vec<u8>, QueryError> {
         match query.path.as_str() {
             "/cosmos.staking.v1beta1.Query/Validator" => {
                 let req = QueryValidatorRequest::decode(query.data)?;
@@ -218,7 +227,7 @@ impl<
 
                 Ok(self
                     .keeper
-                    .query_unbonding_delegations(ctx, req)
+                    .query_unbonding_delegations(ctx, req)?
                     .into_bytes()
                     .into())
             }
@@ -273,7 +282,10 @@ impl<
         ctx: &mut InitContext<'_, DB, SK>,
         genesis: GenesisState,
     ) -> Vec<ValidatorUpdate> {
-        self.keeper.init_genesis(ctx, genesis)
+        match self.keeper.init_genesis(ctx, genesis) {
+            Ok(updates) => updates,
+            Err(err) => panic!("{err}"),
+        }
     }
 
     fn query_redelegations<DB: Database>(
