@@ -91,7 +91,8 @@ impl<
         validator: &Validator,
     ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let power_reduction = self.power_reduction(ctx);
-        let mut store = ctx.kv_store_mut(&self.store_key);
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
         store.delete(&validator.key_by_power_index_key(power_reduction))
     }
 
@@ -104,8 +105,10 @@ impl<
         let store = ctx.infallible_store(&self.store_key);
         let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
         for (k, v) in store.into_range(..) {
-            let k = ValAddress::try_from_prefix_length_bytes(&k).unwrap_or_corrupt();
-            last.insert(k.to_string(), v.to_vec());
+            match serde_json::from_slice::<ValAddress>(&k) {
+                Ok(k) => last.insert(k.to_string(), v.to_vec()),
+                Err(_) => continue,
+            };
         }
         last
     }
@@ -155,6 +158,6 @@ impl<
     ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
-        delegations_store.delete(&validator.prefix_len_bytes())
+        delegations_store.delete(validator.to_string().as_bytes())
     }
 }
