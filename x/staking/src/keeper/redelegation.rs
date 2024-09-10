@@ -1,14 +1,14 @@
 use super::*;
 use crate::types::keys;
 use crate::{
-    length_prefixed_val_del_addrs_key, unbonding_delegation_time_key, DvvTriplets,
-    RedelegationEntry,
+    length_prefixed_val_del_addrs_key, redelegation_time_key, DvvTriplets, RedelegationEntry,
 };
 use gears::core::Protobuf;
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
     store::database::ext::UnwrapCorrupt,
 };
+use prost::bytes::Bytes;
 
 impl<
         SK: StoreKey,
@@ -333,18 +333,13 @@ impl<
             let store = storage.prefix_store(REDELEGATION_QUEUE_KEY);
 
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
-            let end = unbonding_delegation_time_key(time).to_vec();
+            let end = redelegation_time_key(time);
             let mut mature_redelegations = vec![];
             let mut keys = vec![];
-            // gets an iterator for all timeslices from time 0 until the current Blockheader time
-            let mut previous_was_end = false;
-            for (k, v) in store.into_range(..).take_while(|(k, _)| {
-                let is_not_end = **k != end;
-                let res = is_not_end && !previous_was_end;
-                previous_was_end = !is_not_end;
-                res
-            }) {
-                let time_slice: Vec<DvvTriplet> = serde_json::from_slice(&v).unwrap_or_corrupt();
+            for (k, v) in store.into_range(..=end) {
+                let time_slice: Vec<DvvTriplet> = DvvTriplets::decode::<Bytes>(v.to_vec().into())
+                    .unwrap_or_corrupt()
+                    .triplets;
                 mature_redelegations.extend(time_slice);
                 keys.push(k.to_vec());
             }
