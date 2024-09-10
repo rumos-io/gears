@@ -1,6 +1,7 @@
 use crate::{
     consts::keeper::VALIDATORS_BY_POWER_INDEX_KEY, Commission, CommissionRates, Description,
 };
+use gears::derive::Protobuf;
 use gears::{
     core::serializers::serialize_number_to_string,
     tendermint::types::time::timestamp::NewTimestampError,
@@ -312,7 +313,14 @@ impl Validator {
 
 mod inner {
     pub use ibc_proto::cosmos::staking::v1beta1::Description;
+    pub use ibc_proto::cosmos::staking::v1beta1::ValAddresses;
     pub use ibc_proto::cosmos::staking::v1beta1::Validator;
+}
+#[derive(Debug, Clone, Deserialize, Serialize, Protobuf)]
+#[proto(raw = "inner::ValAddresses")]
+pub struct ValAddresses {
+    #[proto(repeated)]
+    pub addresses: Vec<ValAddress>,
 }
 
 impl From<Validator> for inner::Validator {
