@@ -442,13 +442,11 @@ impl<
             match validator.status {
                 BondStatus::Unbonded => {
                     self.unbonded_to_bonded(ctx, &mut validator)?;
-                    amt_from_not_bonded_to_bonded =
-                        amt_from_not_bonded_to_bonded + validator.tokens;
+                    amt_from_not_bonded_to_bonded += validator.tokens;
                 }
                 BondStatus::Unbonding => {
                     self.unbonding_to_bonded(ctx, &mut validator)?;
-                    amt_from_not_bonded_to_bonded =
-                        amt_from_not_bonded_to_bonded + validator.tokens;
+                    amt_from_not_bonded_to_bonded += validator.tokens;
                 }
                 BondStatus::Bonded => {}
                 BondStatus::Unspecified => return Err(anyhow!("unexpected validator status")),
@@ -485,7 +483,7 @@ impl<
                 .validator(ctx, &val_addr)?
                 .expect("validator should be presented in store");
             self.bonded_to_unbonding(ctx, &mut validator)?;
-            amt_from_bonded_to_not_bonded = amt_from_bonded_to_not_bonded + validator.tokens;
+            amt_from_bonded_to_not_bonded += validator.tokens;
             self.delete_last_validator_power(ctx, &validator.operator_address)?;
             updates.push(validator.abci_validator_update_zero());
         }

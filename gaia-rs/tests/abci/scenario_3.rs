@@ -15,6 +15,4 @@ fn scenario_3() {
         hex::encode(app_hash),
         "47cea41289131655a4843a77f02b551d1f91e155d73826aecb8062de80ec8b75"
     );
-
-    assert!(false);
 }
