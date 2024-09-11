@@ -116,7 +116,7 @@ pub fn gen_app_state_from_config(
 
             let config_output = add_peers_to_tm_toml_config(&home, persistent_peers)?;
 
-            println!("# config.toml\n{}", config_output.to_string());
+            println!("# config.toml\n{}", config_output);
         }
     }
 

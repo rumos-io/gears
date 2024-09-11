@@ -47,7 +47,7 @@ fn run_tx_local(
             inner: WrappedGaiaTxCommands(command),
             ctx: ClientTxContext::new_online(
                 home,
-                200_000_u32.try_into().expect("default gas is valid"),
+                200_000_u32.into(),
                 DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
                 ChainId::from_str("test-chain")?,
                 from_key,

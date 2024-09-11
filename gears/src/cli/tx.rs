@@ -208,7 +208,7 @@ where
                 sequence: Some(sequence),
                 account_number,
             } => AccountProvider::Offline {
-                sequence: sequence,
+                sequence,
                 account_number: account_number.unwrap_or_default(),
             },
             Mode {
@@ -217,7 +217,7 @@ where
                 account_number: Some(account_number),
             } => AccountProvider::Offline {
                 sequence: sequence.unwrap_or_default(),
-                account_number: account_number,
+                account_number,
             },
             _ => AccountProvider::Online,
         };
