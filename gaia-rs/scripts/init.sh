@@ -15,7 +15,7 @@ echo "race draft rival universe maid cheese steel logic crowd fork comic easy tr
 
 cargo run -- add-genesis-account cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux "$amount"uatom
 
-echo "Collecting genesis txs..."
-cargo run -- gentx 10uatom --from-key alice --account-number 2 --sequence 0 --keyring-backend=test
+cargo run -- gentx 10000000000uatom --from-key alice --min-self-delegation 1 --moniker test --account-number 0 --sequence 0 --keyring-backend=test
 
+echo "Collecting genesis txs..."
 cargo run -- collect-gentxs

@@ -102,7 +102,7 @@ impl TxHandler for GentxTxHandler {
         match client_tx_context.account {
                 AccountProvider::Offline {
                     sequence,
-                    account_number,
+                    account_number, //TODO: account number should always be 0 see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/auth/ante/sigverify.go#L272
                 } => Ok(Some(Account::Base(BaseAccount {
                     address,
                     pub_key: None,

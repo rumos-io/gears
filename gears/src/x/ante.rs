@@ -444,7 +444,6 @@ impl<
         for (i, signature_data) in signature_data.iter().enumerate() {
             let signer = signers[i];
 
-            // check sequence number
             let acct = self
                 .auth_keeper
                 .get_account(ctx, signer)?
@@ -462,13 +461,20 @@ impl<
                 .get_public_key()
                 .expect("account pub keys are set in set_pub_key_ante_handler"); //TODO: but can't they be set to None?
 
+            let genesis = ctx.height() == 0;
+            let account_number = if genesis {
+                0
+            } else {
+                acct.get_account_number()
+            };
+
             let sign_bytes = match &signature_data.mode_info {
                 ModeInfo::Single(mode) => match mode {
                     SignMode::Direct => SignDoc {
                         body_bytes: tx.raw.body_bytes.clone(),
                         auth_info_bytes: tx.raw.auth_info_bytes.clone(),
                         chain_id: ctx.chain_id().to_string(),
-                        account_number: acct.get_account_number(),
+                        account_number,
                     }
                     .encode_to_vec(),
                     SignMode::LegacyAminoJson => {
@@ -480,7 +486,7 @@ impl<
                             })
                         }
                         let doc = std_sign_doc::StdSignDoc {
-                            account_number: acct.get_account_number().to_string(),
+                            account_number: account_number.to_string(),
                             chain_id: ctx.chain_id().to_string(),
                             fee: tx.tx.auth_info.fee.clone().into(),
                             memo: tx.tx.get_memo().to_string(),
@@ -501,7 +507,7 @@ impl<
                         let signer_data = SignerData {
                             address: signer.to_owned(),
                             chain_id: ctx.chain_id().to_owned(),
-                            account_number: acct.get_account_number(),
+                            account_number,
                             sequence: account_seq,
                             pub_key: public_key.to_owned(),
                         };

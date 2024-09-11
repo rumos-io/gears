@@ -5,6 +5,7 @@ use crate::{
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use anyhow::anyhow;
+use gears::core::Protobuf;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
@@ -413,7 +414,7 @@ impl<
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;
         let mut amt_from_bonded_to_not_bonded = Uint256::zero();
-        let amt_from_not_bonded_to_bonded = Uint256::zero();
+        let mut amt_from_not_bonded_to_bonded = Uint256::zero();
 
         let mut last = self.last_validators_by_addr(ctx);
         let validators_map = self.validators_power_store_vals_map(ctx)?;
@@ -442,12 +443,12 @@ impl<
             match validator.status {
                 BondStatus::Unbonded => {
                     self.unbonded_to_bonded(ctx, &mut validator)?;
-                    amt_from_bonded_to_not_bonded =
+                    amt_from_not_bonded_to_bonded =
                         amt_from_not_bonded_to_bonded + validator.tokens;
                 }
                 BondStatus::Unbonding => {
                     self.unbonding_to_bonded(ctx, &mut validator)?;
-                    amt_from_bonded_to_not_bonded =
+                    amt_from_not_bonded_to_bonded =
                         amt_from_not_bonded_to_bonded + validator.tokens;
                 }
                 BondStatus::Bonded => {}
@@ -458,6 +459,7 @@ impl<
             let old_power = last.get(&val_addr);
             let new_power = validator.consensus_power(power_reduction);
             // update the validator set if power has changed
+
             if old_power.is_none() || old_power != Some(&new_power) {
                 // TODO: check unwraps and update types to omit conversion
                 updates.push(validator.abci_validator_update(power_reduction).unwrap());
@@ -484,7 +486,7 @@ impl<
                 .validator(ctx, &val_addr)?
                 .expect("validator should be presented in store");
             self.bonded_to_unbonding(ctx, &mut validator)?;
-            amt_from_bonded_to_not_bonded = amt_from_not_bonded_to_bonded + validator.tokens;
+            amt_from_bonded_to_not_bonded = amt_from_bonded_to_not_bonded + validator.tokens;
             self.delete_last_validator_power(ctx, &validator.operator_address)?;
             updates.push(validator.abci_validator_update_zero());
         }
