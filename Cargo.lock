@@ -2035,6 +2035,7 @@ dependencies = [
  "serde",
  "serde_json",
  "staking",
+ "tendermint 0.1.0",
  "toml_edit",
  "url",
 ]

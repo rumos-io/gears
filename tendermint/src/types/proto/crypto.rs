@@ -60,6 +60,19 @@ impl TryFrom<inner::PublicKey> for PublicKey {
     }
 }
 
+impl TryFrom<inner::PublicKeyInformal> for PublicKey {
+    type Error = Error;
+
+    fn try_from(pk: inner::PublicKeyInformal) -> Result<Self, Self::Error> {
+        match pk {
+            inner::PublicKeyInformal::Ed25519(pk) => Ok(PublicKey::Ed25519(pk.as_bytes().to_vec())),
+            _ => Err(Error::InvalidData(
+                "unsupported public key type".to_string(),
+            )),
+        }
+    }
+}
+
 impl From<PublicKey> for ConsAddress {
     fn from(pk: PublicKey) -> Self {
         match pk {
@@ -144,6 +157,7 @@ impl From<inner::ProofOps> for ProofOps {
 }
 
 pub(crate) mod inner {
+    pub use tendermint_informal::PublicKey as PublicKeyInformal;
     pub use tendermint_proto::crypto::public_key::Sum;
     pub use tendermint_proto::crypto::ProofOp;
     pub use tendermint_proto::crypto::ProofOps;

@@ -7,7 +7,7 @@ edition = "2021"
 workspace = true
 
 [dependencies]
-gears = { path = "../../gears", features = [ "cli", "xmods" ] }
+gears = { path = "../../gears", features = ["cli", "xmods"] }
 staking = { path = "../staking" }
 
 # unsorted
@@ -16,5 +16,6 @@ anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 url = { workspace = true }
-toml_edit = "0.22.20" # to preserve order, comments and sane look better to use toml_edit crate
+toml_edit = "0.22.20"                      # to preserve order, comments and sane look better to use toml_edit crate
+tendermint = { path = "../../tendermint" }
 # bip32 = { workspace = true }
