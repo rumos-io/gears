@@ -6,7 +6,7 @@ use tendermint_config::{
     RpcConfig, StatesyncConfig, StorageConfig, TendermintConfig, TransferRate, TxIndexConfig,
     TxIndexer,
 };
-use types::chain_id::ChainId;
+use types::{chain_id::ChainId, proto::crypto::PublicKey};
 
 pub mod abci;
 pub mod application;
@@ -19,6 +19,12 @@ pub mod types;
 
 //TODO: comma separated list fields; check all "serialize_comma_separated_list" in TendermintConfig
 //TODO: expose write_tm_config_file args
+
+pub fn get_validator_pub_key(priv_validator_key_file: File) -> Result<PublicKey, Error> {
+    let priv_validator_key: PrivValidatorKey = serde_json::from_reader(priv_validator_key_file)?;
+    let pub_key = priv_validator_key.pub_key.try_into()?;
+    Ok(pub_key)
+}
 
 pub fn write_keys_and_genesis(
     mut node_key_file: File,

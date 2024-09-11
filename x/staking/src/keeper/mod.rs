@@ -5,7 +5,6 @@ use crate::{
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use anyhow::anyhow;
-use gears::core::Protobuf;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{

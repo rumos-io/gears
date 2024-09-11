@@ -3,7 +3,7 @@ use std::{net::SocketAddr, path::PathBuf};
 use gears::{
     application::handlers::client::{NodeFetcher, TxHandler},
     commands::client::tx::{AccountProvider, ClientTxContext, TxCommand},
-    crypto::{ed25519::Ed25519PubKey, public::PublicKey},
+    crypto::public::PublicKey,
     types::{
         account::{Account, BaseAccount},
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
@@ -134,7 +134,7 @@ impl TxHandler for GentxTxHandler {
             ip,
             node_id,
         }: Self::TxCommands,
-        pubkey: PublicKey,
+        pubkey: PublicKey, // TODO: this should be a TendermintPublicKey
     ) -> anyhow::Result<gears::types::tx::Messages<Self::Message>> {
         let coins = UnsignedCoins::new([amount.clone()]).expect("hardcoded coin"); // I don't want to comment this code. See: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/genutil/client/cli/gentx.go#L118-L147
 
@@ -170,21 +170,12 @@ impl TxHandler for GentxTxHandler {
         let pub_key = match pub_key {
             Some(var) => PublicKey::from(var),
             None => {
-                #[derive(serde::Deserialize)]
-                struct NodeKeyJson {
-                    pub priv_key: gears::tendermint::crypto::PrivateKey,
-                }
-
-                let key: NodeKeyJson = serde_json::from_reader(std::fs::File::open(
-                    client_tx_context.home.join("config/node_key.json"),
-                )?)?;
-
-                match key.priv_key {
-                    gears::tendermint::crypto::PrivateKey::Ed25519(var) => PublicKey::Ed25519(
-                        Ed25519PubKey::try_from(var.verification_key().as_bytes().to_vec())?,
-                    ),
-                    _ => unreachable!(),
-                }
+                let file = std::fs::File::open(
+                    client_tx_context
+                        .home
+                        .join("config/priv_validator_key.json"), // TODO: delegate this to tendermint crate
+                )?;
+                tendermint::get_validator_pub_key(file).unwrap().into()
             }
         };
 
