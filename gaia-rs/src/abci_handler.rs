@@ -138,7 +138,7 @@ impl GaiaABCIHandler {
             genutil_handler: GenutilAbciHandler::new(staking_keeper.clone(), ante_handler.clone()),
             staking_abci_handler: staking::StakingABCIHandler::new(staking_keeper),
             ibc_abci_handler: ibc_rs::ABCIHandler::new(ibc_keeper.clone()),
-            ante_handler: ante_handler,
+            ante_handler,
         }
     }
 }

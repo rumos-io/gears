@@ -453,7 +453,7 @@ impl<
             }
 
             // fetch the old power
-            let old_power = last.get(&val_addr);
+            let old_power = last.get(val_addr);
             let new_power = validator.consensus_power(power_reduction);
             // update the validator set if power has changed
 
@@ -471,7 +471,7 @@ impl<
                 )?;
             }
 
-            last.remove(&val_addr);
+            last.remove(val_addr);
 
             total_power += new_power;
         }

@@ -117,17 +117,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler for AuthABCIHa
             "/cosmos.auth.v1beta1.Query/Account" => {
                 let req = QueryAccountRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_account(ctx, req).encode_vec().into())
+                Ok(self.keeper.query_account(ctx, req).encode_vec())
             }
             "/cosmos.auth.v1beta1.Query/Accounts" => {
                 let req = QueryAccountsRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_accounts(ctx, req).encode_vec().into())
+                Ok(self.keeper.query_accounts(ctx, req).encode_vec())
             }
             "/cosmos.auth.v1beta1.Query/Params" => {
                 let req = QueryParamsRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_params(ctx, req).encode_vec().into())
+                Ok(self.keeper.query_params(ctx, req).encode_vec())
             }
             _ => Err(QueryError::PathNotFound),
         }
