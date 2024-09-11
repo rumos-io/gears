@@ -175,7 +175,7 @@ impl TxHandler for GentxTxHandler {
                         .home
                         .join("config/priv_validator_key.json"), // TODO: delegate this to tendermint crate
                 )?;
-                tendermint::get_validator_pub_key(file).unwrap().into()
+                tendermint::get_validator_pub_key(file)?.into()
             }
         };
 
