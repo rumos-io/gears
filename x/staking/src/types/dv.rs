@@ -47,7 +47,7 @@ impl TryFrom<inner::DvvTriplet> for DvvTriplet {
 
 #[derive(Debug, Clone)]
 pub struct DvvTriplets {
-    triplets: Vec<DvvTriplet>,
+    pub triplets: Vec<DvvTriplet>,
 }
 
 impl From<Vec<DvvTriplet>> for DvvTriplets {

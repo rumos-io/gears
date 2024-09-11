@@ -413,7 +413,7 @@ impl<
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;
         let mut amt_from_bonded_to_not_bonded = Uint256::zero();
-        let amt_from_not_bonded_to_bonded = Uint256::zero();
+        let mut amt_from_not_bonded_to_bonded = Uint256::zero();
 
         let mut last = self.last_validators_by_addr(ctx);
         let validators_map = self.validators_power_store_vals_map(ctx)?;
@@ -442,27 +442,22 @@ impl<
             match validator.status {
                 BondStatus::Unbonded => {
                     self.unbonded_to_bonded(ctx, &mut validator)?;
-                    amt_from_bonded_to_not_bonded =
-                        amt_from_not_bonded_to_bonded + validator.tokens;
+                    amt_from_not_bonded_to_bonded += validator.tokens;
                 }
                 BondStatus::Unbonding => {
                     self.unbonding_to_bonded(ctx, &mut validator)?;
-                    amt_from_bonded_to_not_bonded =
-                        amt_from_not_bonded_to_bonded + validator.tokens;
+                    amt_from_not_bonded_to_bonded += validator.tokens;
                 }
                 BondStatus::Bonded => {}
                 BondStatus::Unspecified => return Err(anyhow!("unexpected validator status")),
             }
 
-            // fetch the old power bytes
-            let val_addr_str = val_addr.to_string();
-            let old_power_bytes = last.get(&val_addr_str);
+            // fetch the old power
+            let old_power = last.get(&val_addr);
             let new_power = validator.consensus_power(power_reduction);
-            let new_power_bytes = new_power.to_be_bytes();
             // update the validator set if power has changed
-            if old_power_bytes.is_none()
-                || old_power_bytes.map(|v| v.as_slice()) != Some(&new_power_bytes)
-            {
+
+            if old_power.is_none() || old_power != Some(&new_power) {
                 // TODO: check unwraps and update types to omit conversion
                 updates.push(validator.abci_validator_update(power_reduction).unwrap());
 
@@ -476,23 +471,19 @@ impl<
                 )?;
             }
 
-            last.remove(&val_addr_str);
+            last.remove(&val_addr);
 
             total_power += new_power;
         }
 
-        let no_longer_bonded = sort_no_longer_bonded(&last)?;
+        let no_longer_bonded = sort_no_longer_bonded(last)?;
 
         for val_addr in no_longer_bonded {
             let mut validator = self
-                .validator(
-                    ctx,
-                    &ValAddress::from_bech32(&val_addr)
-                        .expect("Expected correct validator address"),
-                )?
+                .validator(ctx, &val_addr)?
                 .expect("validator should be presented in store");
             self.bonded_to_unbonding(ctx, &mut validator)?;
-            amt_from_bonded_to_not_bonded = amt_from_not_bonded_to_bonded + validator.tokens;
+            amt_from_bonded_to_not_bonded += validator.tokens;
             self.delete_last_validator_power(ctx, &validator.operator_address)?;
             updates.push(validator.abci_validator_update_zero());
         }
@@ -504,11 +495,11 @@ impl<
         // need to be transferred to the NotBonded pool.
         // Compare and subtract the respective amounts to only perform one transfer.
         // This is done in order to avoid doing multiple updates inside each iterator/loop.
-        match amt_from_bonded_to_not_bonded.cmp(&amt_from_not_bonded_to_bonded) {
+        match amt_from_not_bonded_to_bonded.cmp(&amt_from_bonded_to_not_bonded) {
             Ordering::Greater => {
                 self.not_bonded_tokens_to_bonded(
                     ctx,
-                    amt_from_bonded_to_not_bonded - amt_from_not_bonded_to_bonded,
+                    amt_from_not_bonded_to_bonded - amt_from_bonded_to_not_bonded,
                 )?;
             }
             Ordering::Less => {
@@ -517,7 +508,9 @@ impl<
                     amt_from_bonded_to_not_bonded - amt_from_not_bonded_to_bonded,
                 )?;
             }
-            Ordering::Equal => {}
+            Ordering::Equal => {
+                // equal amounts of tokens; no update required
+            }
         }
 
         // set total power on lookup index if there are any updates
@@ -618,8 +611,8 @@ impl<
 
 /// given a map of remaining validators to previous bonded power
 /// returns the list of validators to be unbonded, sorted by operator address
-fn sort_no_longer_bonded(last: &HashMap<String, Vec<u8>>) -> anyhow::Result<Vec<String>> {
-    let mut no_longer_bonded = last.iter().map(|(k, _v)| k.clone()).collect::<Vec<_>>();
+fn sort_no_longer_bonded(last: HashMap<ValAddress, u64>) -> anyhow::Result<Vec<ValAddress>> {
+    let mut no_longer_bonded = last.into_keys().collect::<Vec<_>>();
     // sorted by address - order doesn't matter
     no_longer_bonded.sort();
     Ok(no_longer_bonded)

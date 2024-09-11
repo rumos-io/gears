@@ -519,8 +519,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
         self.auth_keeper
-            .check_create_new_module_account(ctx, sender_pool)?;
-        self.auth_keeper
             .check_create_new_module_account(ctx, recepient_pool)?;
 
         let msg = MsgSend {
@@ -567,12 +565,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
             from_balance.amount -= send_coin.amount;
 
-            from_account_store.set(
-                send_coin.denom.clone().to_string().into_bytes(),
-                from_balance.encode_vec(),
-            )?;
-
-            //TODO: if balance == 0 then denom should be removed from store
+            // if balance == 0 then denom should be removed from store
+            if from_balance.amount.is_zero() {
+                from_account_store.delete(send_coin.denom.to_string().as_bytes())?;
+            } else {
+                from_account_store.set(
+                    send_coin.denom.clone().to_string().into_bytes(),
+                    from_balance.encode_vec(),
+                )?;
+            }
 
             let mut to_account_store = self.get_address_balances_store(ctx, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes())?;

@@ -172,11 +172,10 @@ impl ABCIHandler for GaiaABCIHandler {
 
     fn end_block<DB: Database>(
         &self,
-        _ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
-        _request: gears::tendermint::types::request::end_block::RequestEndBlock,
+        ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
+        request: gears::tendermint::types::request::end_block::RequestEndBlock,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        //self.staking_abci_handler.end_block(ctx, request)
-        vec![]
+        self.staking_abci_handler.end_block(ctx, request)
     }
 
     fn init_genesis<DB: Database>(
@@ -185,16 +184,19 @@ impl ABCIHandler for GaiaABCIHandler {
         genesis: GenesisState,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
         self.bank_abci_handler.genesis(ctx, genesis.bank);
-        let validator_updates = self.staking_abci_handler.genesis(ctx, genesis.staking);
+        let staking_updates = self.staking_abci_handler.genesis(ctx, genesis.staking);
         self.ibc_abci_handler.genesis(ctx, genesis.ibc);
         self.auth_abci_handler.genesis(ctx, genesis.auth);
         let genutil_updates = self.genutil_handler.init_genesis(ctx, genesis.genutil);
 
-        if !genutil_updates.is_empty() && !validator_updates.is_empty() {
-            panic!("validator InitGenesis updates already set by a previous module")
+        match (genutil_updates.is_empty(), staking_updates.is_empty()) {
+            (true, true) => vec![],
+            (true, false) => staking_updates,
+            (false, true) => genutil_updates,
+            (false, false) => {
+                panic!("validator InitGenesis updates already set by a previous module")
+            }
         }
-
-        validator_updates
     }
 
     fn query<DB: Database + Send + Sync>(

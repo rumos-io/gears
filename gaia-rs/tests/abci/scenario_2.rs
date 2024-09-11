@@ -20,7 +20,7 @@ fn scenario_2() {
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
     assert_eq!(
         hex::encode(app_hash),
-        "3de46dd2cfc6c80718b3c70149ef0faf0a69e1f56a2cd82336521288092e47ad"
+        "e6e9ca71bd1f2c472018e02306c70b7058196e4211f62c93803a6e6c74922711"
     );
 
     //----------------------------------------
@@ -61,7 +61,7 @@ fn scenario_2() {
     let app_hash = node.step(txs, Timestamp::try_new(0, 0).unwrap());
     assert_eq!(
         hex::encode(app_hash),
-        "d5170c89bd5de8774bc0d596a341fe422152a0407289610c27b904ba61b8ca26"
+        "6f02c4708c36481eeb65acf704340d906af5737702dbf05fc8bf4dd29a92f16e"
     );
 
     //----------------------------------------
@@ -87,7 +87,7 @@ fn scenario_2() {
     let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
     assert_eq!(
         hex::encode(app_hash),
-        "323c2ba83da0cd456c2406365259a8783e7fee8e726324faea32f3d1d5c5003c"
+        "68f309714a2273b0f8ad93f318bc5a0dd418bd2bdd1431a6a848ae104c98a39b"
     );
 
     //----------------------------------------
@@ -106,7 +106,7 @@ fn scenario_2() {
 
     assert_eq!(
         hex::encode(app_hash),
-        "ddea07dad9c7ea9430c4bc1041e4a890f2c4e21d615362f961d45501b9440539"
+        "2511608d208a0a99b5761f3820f8719ae71c6b67b577961caa993389d94985e7"
     );
 
     //----------------------------------------
@@ -126,7 +126,7 @@ fn scenario_2() {
 
     assert_eq!(
         hex::encode(app_hash),
-        "3ff5e4bf5583eece172e9235cc4655c256cff8d8ccb60656b0808bb1224ccd27"
+        "0cd0c37bfd4457d991ef5a694b3d903dc673a4836632147ba8ff1177c8d9632a"
     );
 
     //----------------------------------------
@@ -145,6 +145,6 @@ fn scenario_2() {
 
     assert_eq!(
         hex::encode(app_hash),
-        "3582cbcbf99cb8b7748d24eac62d009746bd779ac2913c8af1ad3b2c4b22c945"
+        "faf91423473800d139357be23c124a6d3b2919e9859e81d4b86a8c8f44d33b3d"
     );
 }

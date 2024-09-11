@@ -6,7 +6,7 @@ use tendermint_config::{
     RpcConfig, StatesyncConfig, StorageConfig, TendermintConfig, TransferRate, TxIndexConfig,
     TxIndexer,
 };
-use types::chain_id::ChainId;
+use types::{chain_id::ChainId, proto::crypto::PublicKey};
 
 pub mod abci;
 pub mod application;
@@ -19,6 +19,12 @@ pub mod types;
 
 //TODO: comma separated list fields; check all "serialize_comma_separated_list" in TendermintConfig
 //TODO: expose write_tm_config_file args
+
+pub fn get_validator_pub_key(priv_validator_key_file: File) -> Result<PublicKey, Error> {
+    let priv_validator_key: PrivValidatorKey = serde_json::from_reader(priv_validator_key_file)?;
+    let pub_key = priv_validator_key.pub_key.try_into()?;
+    Ok(pub_key)
+}
 
 pub fn write_keys_and_genesis(
     mut node_key_file: File,
@@ -38,7 +44,6 @@ pub fn write_keys_and_genesis(
 
     // write node private validator key
     let priv_key = crypto::new_private_key();
-    let public_key = priv_key.public_key();
     let address: tendermint_informal::account::Id = priv_key.public_key().into();
     let priv_validator_key = PrivValidatorKey {
         address,
@@ -50,8 +55,6 @@ pub fn write_keys_and_genesis(
             .expect("PrivValidatorKey structure serialization will always succeed")
             .as_bytes(),
     )?;
-
-    let validator = tendermint_informal::validator::Info::new(public_key, 10u32.into());
 
     // write genesis file
     // TODO: create a Genesis struct in this crate and define a default
@@ -75,7 +78,7 @@ pub fn write_keys_and_genesis(
             },
             version: None,
         },
-        validators: vec![validator],
+        validators: vec![],
         app_hash: vec![].try_into().unwrap(),
         app_state,
     };

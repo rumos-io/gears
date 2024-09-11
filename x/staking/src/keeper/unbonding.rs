@@ -1,9 +1,9 @@
 use super::*;
 use crate::{
-    consts::error::SERDE_ENCODING_DOMAIN_TYPE,
     parse_validator_queue_key,
     types::keys::{get_ubd_by_val_index_key, get_ubd_key, get_unbonding_delegation_time_key},
     unbonding_delegation_time_key, validator_queue_key, DvPairs, UnbondingDelegationEntry,
+    ValAddresses,
 };
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
@@ -11,7 +11,8 @@ use gears::{
     store::database::ext::UnwrapCorrupt,
     tendermint::types::time::timestamp::Timestamp,
 };
-use std::ops::Bound;
+
+use std::{collections::BTreeMap, ops::Bound};
 
 impl<
         SK: StoreKey,
@@ -222,7 +223,7 @@ impl<
         // ValidatorQueueKey | timeBzLen (8-byte big endian) | timeBz | heightBz (8-byte big endian),
         // so it may be possible that certain validator addresses that are iterated
         // over are not ready to unbond, so an explicit check is required.
-        let unbonding_val_map: HashMap<Vec<u8>, Vec<ValAddress>> =
+        let unbonding_val_map: BTreeMap<Vec<u8>, Vec<ValAddress>> =
             self.unbonding_validator_queue_map(ctx, &block_time, block_height);
         // TODO: in context of solving issues with shared and mutable references it is need to
         // create owned collection. It's less performant even if we update iterator to infallible
@@ -369,6 +370,8 @@ impl<
         ctx: &mut CTX,
         validator: &mut Validator,
     ) -> anyhow::Result<()> {
+        let params = self.staking_params_keeper.try_get(ctx).unwrap();
+
         // delete the validator by power index, as the key will change
         self.delete_validator_by_power_index(ctx, validator)?;
         // sanity check
@@ -381,17 +384,20 @@ impl<
         validator.update_status(BondStatus::Unbonding);
 
         // set the unbonding completion time and completion height appropriately
-        validator.unbonding_time = ctx.get_time();
+        validator.unbonding_time = ctx
+            .get_time()
+            .checked_add(Duration::new_from_nanos(params.unbonding_time()))
+            .unwrap();
         validator.unbonding_height = ctx.height();
 
         // save the now unbonded validator record and power index
         self.set_validator(ctx, validator)?;
         self.set_validator_by_power_index(ctx, validator)?;
 
-        // Adds to unbonding validator queue
+        // add to unbonding validator queue
         self.insert_unbonding_validator_queue(ctx, validator)?;
 
-        // trigger hook
+        // // trigger hook
         self.after_validator_begin_unbonding(ctx, validator)?;
         Ok(())
     }
@@ -420,10 +426,9 @@ impl<
         end_height: u32,
         addrs: Vec<ValAddress>,
     ) -> Result<(), GasStoreErrors> {
-        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
+        let mut store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let key = validator_queue_key(&end_time, end_height);
-        let value = serde_json::to_vec(&addrs).expect(SERDE_ENCODING_DOMAIN_TYPE);
+        let value = ValAddresses { addresses: addrs }.encode_vec();
         store.set(key, value)?;
         Ok(())
     }
@@ -447,17 +452,20 @@ impl<
         ctx: &CTX,
         block_time: &Timestamp,
         block_height: u32,
-    ) -> HashMap<Vec<u8>, Vec<ValAddress>> {
+    ) -> BTreeMap<Vec<u8>, Vec<ValAddress>> {
         let store = ctx.infallible_store(&self.store_key);
         let start = VALIDATOR_QUEUE_KEY.to_vec();
         let mut end = validator_queue_key(block_time, block_height);
-        end.push(0);
-        let mut res = HashMap::new();
+        end.push(0); //TODO: why is this needed? Is it because we use an excluded bound?
+        let mut res = BTreeMap::new();
         for (k, v) in store.into_range((
             Bound::Included(start.clone()),
             Bound::Excluded([start, end].concat()),
         )) {
-            res.insert(k.to_vec(), serde_json::from_slice(&v).unwrap_or_corrupt());
+            res.insert(
+                k.to_vec(),
+                ValAddresses::decode_vec(&v).unwrap_or_corrupt().addresses,
+            );
         }
         res
     }
