@@ -1,6 +1,6 @@
 use crate::{
     DistributionNodeQueryRequest, DistributionNodeQueryResponse, QueryCommunityPoolRequest,
-    QueryDelegatorParams,
+    QueryDelegatorParams, QueryParamsRequest,
 };
 use axum::{
     extract::{Path, State},
@@ -40,6 +40,18 @@ pub async fn community_pool<
     Ok(Json(res))
 }
 
+pub async fn params<
+    QReq: QueryRequest + From<DistributionNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<DistributionNodeQueryResponse>,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<QRes>, HTTPError> {
+    let req = DistributionNodeQueryRequest::Params(QueryParamsRequest {});
+    let res = rest_state.app.typed_query(req)?;
+    Ok(Json(res))
+}
+
 pub fn get_router<
     QReq: QueryRequest + From<DistributionNodeQueryRequest>,
     QRes: QueryResponse + TryInto<DistributionNodeQueryResponse>,
@@ -52,4 +64,5 @@ pub fn get_router<
             "/v1beta1/delegators/:delegator_address/rewards",
             get(delegation_delegator_rewards),
         )
+        .route("/v1beta1/params", get(params))
 }
