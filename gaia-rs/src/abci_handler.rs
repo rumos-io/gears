@@ -247,6 +247,9 @@ impl ABCIHandler for GaiaABCIHandler {
             GaiaNodeQueryRequest::Staking(req) => {
                 GaiaNodeQueryResponse::Staking(self.staking_abci_handler.typed_query(ctx, req))
             }
+            GaiaNodeQueryRequest::Slashing(_req) => {
+                todo!()
+            }
         }
     }
 }

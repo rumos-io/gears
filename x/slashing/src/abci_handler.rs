@@ -14,6 +14,7 @@ use gears::{
     types::pagination::response::PaginationResponse,
     x::{keepers::staking::SlashingStakingKeeper, module::Module},
 };
+use serde::Serialize;
 
 #[derive(Debug, Clone)]
 pub struct ABCIHandler<
@@ -32,7 +33,7 @@ pub enum SlashingNodeQueryRequest {
     SigningInfos(QuerySigningInfosRequest),
     Params(QueryParamsRequest),
 }
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub enum SlashingNodeQueryResponse {
     // SigningInfo(QuerySigningInfoResponse),
     SigningInfos(QuerySigningInfosResponse),

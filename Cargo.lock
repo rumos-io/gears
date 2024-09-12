@@ -1938,6 +1938,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "slashing",
  "staking",
  "strum",
  "tonic",

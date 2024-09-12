@@ -18,10 +18,25 @@ pub async fn params<
     Ok(Json(res))
 }
 
+pub async fn const_params() -> &'static str {
+    r#"{
+      "params": {
+        "signed_blocks_window": "10000",
+        "min_signed_per_window": "0.050000000000000000",
+        "downtime_jail_duration": "600s",
+        "slash_fraction_double_sign": "0.050000000000000000",
+        "slash_fraction_downtime":"0.000100000000000000"
+      }
+    }"#
+}
+
 pub fn get_router<
     QReq: QueryRequest + From<SlashingNodeQueryRequest>,
     QRes: QueryResponse + TryInto<SlashingNodeQueryResponse>,
     App: NodeQueryHandler<QReq, QRes>,
 >() -> Router<RestState<QReq, QRes, App>> {
-    Router::new().route("/v1beta1/params", get(params))
+    // TODO: remove const handler and route after integration and update route
+    Router::new()
+        .route("/v1beta1/params/current", get(params))
+        .route("/v1beta1/params", get(const_params))
 }
