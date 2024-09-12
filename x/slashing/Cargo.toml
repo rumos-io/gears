@@ -5,14 +5,14 @@ version = "0.1.0"
 
 [dependencies]
 anyhow = { workspace = true }
+axum = { workspace = true }
 bytes = { workspace = true }
-# chrono = { version = "0.4.38", features = ["serde"] }
 clap = { workspace = true }
 gears = { path = "../../gears", features = ["cli", "xmods"] }
+nz = { workspace = true }
 prost = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
 serde-aux = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
-nz = { workspace = true }

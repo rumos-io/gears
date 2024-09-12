@@ -4987,6 +4987,7 @@ name = "slashing"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum 0.7.5",
  "bytes",
  "clap",
  "gears",
