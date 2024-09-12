@@ -147,4 +147,13 @@ fn scenario_2() {
         hex::encode(app_hash),
         "faf91423473800d139357be23c124a6d3b2919e9859e81d4b86a8c8f44d33b3d"
     );
+
+    //----------------------------------------
+    // Jump forward in time
+
+    let app_hash = node.step(vec![], Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap()); // 30 days which is greater than the unbonding time
+    assert_eq!(
+        hex::encode(app_hash),
+        "3d8b7d855a8728d93c1a3918774cfdbf093b3263fdcdba1e1a0a9093466b43e9"
+    );
 }
