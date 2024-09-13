@@ -33,7 +33,6 @@ use gears::{
         types::validator::BondStatus,
     },
 };
-use prost::bytes::BufMut;
 use std::{cmp::Ordering, collections::HashMap};
 
 // Each module contains methods of keeper with logic related to its name. It can be delegation and
