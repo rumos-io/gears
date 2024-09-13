@@ -195,7 +195,7 @@ impl Node {
 
                 loop {
                     match &**left_node {
-                        Node::Leaf(leaf) => return leaf.key.clone(),
+                        Node::Leaf(leaf) => break leaf.key.clone(),
                         Node::Inner(inner) => match &inner.left_node {
                             Some(inner_left_node) => {
                                 left_node = &inner_left_node;
