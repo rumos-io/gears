@@ -465,18 +465,6 @@ impl<
         res
     }
 
-    pub fn unbonding_validator_queue_iter<'a, DB: Database, CTX: InfallibleContext<DB, SK>>(
-        &'a self,
-        ctx: &'a CTX,
-        block_time: &Timestamp,
-        block_height: u32,
-    ) -> UnbondingValidatorsIterator<'a, DB> {
-        let store = ctx.kv_store(&self.store_key);
-        let start = VALIDATOR_QUEUE_KEY.to_vec();
-        let end = validator_queue_key(block_time, block_height);
-        UnbondingValidatorsIterator::new(store, start, end)
-    }
-
     pub fn delete_unbonding_validators_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
