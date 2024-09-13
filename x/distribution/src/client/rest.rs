@@ -1,6 +1,6 @@
 use crate::{
-    DistributionNodeQueryRequest, DistributionNodeQueryResponse, QueryCommunityPoolRequest,
-    QueryDelegatorParams, QueryParamsRequest,
+    DistributionNodeQueryRequest, DistributionNodeQueryResponse, DistributionParams,
+    QueryCommunityPoolRequest, QueryDelegatorParams, QueryParamsRequest, QueryParamsResponse,
 };
 use axum::{
     extract::{Path, State},
@@ -52,6 +52,13 @@ pub async fn params<
     Ok(Json(res))
 }
 
+pub async fn const_params() -> Result<Json<QueryParamsResponse>, HTTPError> {
+    let res = QueryParamsResponse {
+        params: DistributionParams::default(),
+    };
+    Ok(Json(res))
+}
+
 pub fn get_router<
     QReq: QueryRequest + From<DistributionNodeQueryRequest>,
     QRes: QueryResponse + TryInto<DistributionNodeQueryResponse>,
@@ -64,5 +71,7 @@ pub fn get_router<
             "/v1beta1/delegators/:delegator_address/rewards",
             get(delegation_delegator_rewards),
         )
-        .route("/v1beta1/params", get(params))
+        // TODO: remove const handler and route after integration and update route
+        .route("/v1beta1/params/current", get(params))
+        .route("/v1beta1/params", get(const_params))
 }

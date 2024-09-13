@@ -4,7 +4,10 @@ use gears::{
     rest::{error::HTTPError, RestState},
 };
 
-use crate::{QueryParamsRequest, SlashingNodeQueryRequest, SlashingNodeQueryResponse};
+use crate::{
+    QueryParamsRequest, QueryParamsResponse, SlashingNodeQueryRequest, SlashingNodeQueryResponse,
+    SlashingParams,
+};
 
 pub async fn params<
     QReq: QueryRequest + From<SlashingNodeQueryRequest>,
@@ -18,16 +21,11 @@ pub async fn params<
     Ok(Json(res))
 }
 
-pub async fn const_params() -> &'static str {
-    r#"{
-      "params": {
-        "signed_blocks_window": "10000",
-        "min_signed_per_window": "0.050000000000000000",
-        "downtime_jail_duration": "600s",
-        "slash_fraction_double_sign": "0.050000000000000000",
-        "slash_fraction_downtime":"0.000100000000000000"
-      }
-    }"#
+pub async fn const_params() -> Result<Json<QueryParamsResponse>, HTTPError> {
+    let res = QueryParamsResponse {
+        params: SlashingParams::default(),
+    };
+    Ok(Json(res))
 }
 
 pub fn get_router<

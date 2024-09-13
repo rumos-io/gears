@@ -18,6 +18,8 @@ use clap::Subcommand;
 use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use client::WrappedGaiaQueryCommands;
+use distribution::DistributionNodeQueryRequest;
+use distribution::DistributionNodeQueryResponse;
 use gears::application::client::Client;
 use gears::application::handlers::client::NodeFetcher;
 use gears::application::handlers::client::{QueryHandler, TxHandler};
@@ -195,6 +197,7 @@ pub enum GaiaNodeQueryRequest {
     Auth(AuthNodeQueryRequest),
     Staking(StakingNodeQueryRequest),
     Slashing(SlashingNodeQueryRequest),
+    Distribution(DistributionNodeQueryRequest),
 }
 
 impl QueryRequest for GaiaNodeQueryRequest {
@@ -227,6 +230,12 @@ impl From<SlashingNodeQueryRequest> for GaiaNodeQueryRequest {
     }
 }
 
+impl From<DistributionNodeQueryRequest> for GaiaNodeQueryRequest {
+    fn from(req: DistributionNodeQueryRequest) -> Self {
+        GaiaNodeQueryRequest::Distribution(req)
+    }
+}
+
 #[derive(Clone, Serialize)]
 #[serde(untagged)]
 pub enum GaiaNodeQueryResponse {
@@ -234,6 +243,7 @@ pub enum GaiaNodeQueryResponse {
     Auth(AuthNodeQueryResponse),
     Staking(StakingNodeQueryResponse),
     Slashing(SlashingNodeQueryResponse),
+    Distribution(DistributionNodeQueryResponse),
 }
 
 impl TryFrom<GaiaNodeQueryResponse> for BankNodeQueryResponse {
@@ -281,6 +291,19 @@ impl TryFrom<GaiaNodeQueryResponse> for SlashingNodeQueryResponse {
     fn try_from(res: GaiaNodeQueryResponse) -> Result<Self, Status> {
         match res {
             GaiaNodeQueryResponse::Slashing(res) => Ok(res),
+            _ => Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            )),
+        }
+    }
+}
+
+impl TryFrom<GaiaNodeQueryResponse> for DistributionNodeQueryResponse {
+    type Error = Status;
+
+    fn try_from(res: GaiaNodeQueryResponse) -> Result<Self, Status> {
+        match res {
+            GaiaNodeQueryResponse::Distribution(res) => Ok(res),
             _ => Err(Status::internal(
                 "An internal error occurred while querying the application state.",
             )),

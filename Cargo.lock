@@ -1928,6 +1928,7 @@ dependencies = [
  "bytes",
  "clap",
  "data-encoding",
+ "distribution",
  "gears",
  "genutil",
  "gov",
