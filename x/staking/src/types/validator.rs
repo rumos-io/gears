@@ -466,7 +466,7 @@ pub struct IbcV046Validator {
     /// description defines the description terms for the validator.
     pub description: Description,
     /// consensus_pubkey is the consensus public key of the validator, as a Protobuf Any.
-    pub consensus_pubkey: PublicKey,
+    pub consensus_pubkey: gears::crypto::public::PublicKey,
     /// jailed defined whether the validator has been jailed from bonded status or not.
     pub jailed: bool,
     /// tokens define the delegated tokens (incl. self-delegation).
@@ -483,6 +483,9 @@ pub struct IbcV046Validator {
     pub status: BondStatus,
     /// list of unbonding ids, each uniquely identifing an unbonding of this validator
     pub unbonding_ids: Vec<u64>,
+    pub unbonding_on_hold_ref_count: Uint256,
+    pub validator_bond_shares: Decimal256,
+    pub liquid_shares: Decimal256,
 }
 
 impl From<Validator> for IbcV046Validator {
@@ -505,7 +508,7 @@ impl From<Validator> for IbcV046Validator {
             operator_address,
             delegator_shares,
             description,
-            consensus_pubkey,
+            consensus_pubkey: consensus_pubkey.into(),
             jailed,
             tokens,
             unbonding_height,
@@ -514,6 +517,9 @@ impl From<Validator> for IbcV046Validator {
             min_self_delegation,
             status,
             unbonding_ids: vec![],
+            unbonding_on_hold_ref_count: Uint256::default(),
+            validator_bond_shares: Decimal256::default(),
+            liquid_shares: Decimal256::default(),
         }
     }
 }
@@ -530,9 +536,7 @@ impl From<IbcV046Validator> for inner::Validator {
                 security_contact: value.description.security_contact,
                 details: value.description.details,
             }),
-            consensus_pubkey: Some(
-                gears::crypto::public::PublicKey::from(value.consensus_pubkey).into(),
-            ),
+            consensus_pubkey: Some(value.consensus_pubkey.into()),
             jailed: value.jailed,
             tokens: value.tokens.to_string(),
             unbonding_height: value.unbonding_height as i64,
@@ -646,6 +650,9 @@ impl TryFrom<inner::Validator> for IbcV046Validator {
                 ibc_proto::cosmos::staking::v1beta1::BondStatus::Bonded => BondStatus::Bonded,
             },
             unbonding_ids: vec![],
+            unbonding_on_hold_ref_count: Uint256::default(),
+            validator_bond_shares: Decimal256::default(),
+            liquid_shares: Decimal256::default(),
         })
     }
 }
