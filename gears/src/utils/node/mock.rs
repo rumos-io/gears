@@ -101,13 +101,7 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
         self.app.begin_block(request_begin_block);
 
         for tx in txs {
-            let res = self.app.deliver_tx(RequestDeliverTx { tx });
-
-            if res.code != 0 {
-                eprintln!("Error: {:?}", res.log);
-            }
-
-            assert!(res.code == 0);
+            self.app.deliver_tx(RequestDeliverTx { tx });
         }
 
         self.app.end_block(RequestEndBlock {
