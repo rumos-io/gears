@@ -26,6 +26,8 @@ const KEY_TALLY_PARAMS: &str = "tallyparams";
 
 const DEFAULT_PERIOD: Duration = Duration::new_from_secs(172800); // 2 days
 
+mod environment;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DepositParams {
     pub min_deposit: UnsignedCoins,
@@ -35,9 +37,10 @@ pub struct DepositParams {
 impl Default for DepositParams {
     fn default() -> Self {
         Self {
-            min_deposit: UnsignedCoins::new(vec![
-                UnsignedCoin::from_str("10000000uatom").expect("default is valid")
-            ])
+            min_deposit: UnsignedCoins::new(vec![UnsignedCoin::from_str(
+                environment::DEFAULT_MIN_DEPOSIT,
+            )
+            .expect("default is valid")])
             .expect("default is valid"),
             max_deposit_period: DEFAULT_PERIOD,
         }
