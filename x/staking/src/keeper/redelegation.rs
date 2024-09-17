@@ -1,12 +1,16 @@
 use super::*;
 use crate::types::keys;
 use crate::{
-    length_prefixed_val_del_addrs_key, unbonding_delegation_time_key, DvvTriplets,
-    RedelegationEntry,
+    length_prefixed_val_del_addrs_key, redelegation_time_key, DvvTriplets, RedelegationEntry,
 };
 use gears::context::{InfallibleContext, InfallibleContextMut};
 use gears::core::Protobuf;
 use gears::extensions::corruption::UnwrapCorrupt;
+use gears::{
+    context::{InfallibleContext, InfallibleContextMut},
+    store::database::ext::UnwrapCorrupt,
+};
+use prost::bytes::Bytes;
 
 impl<
         SK: StoreKey,
@@ -169,13 +173,10 @@ impl<
         val_dst_addr: &ValAddress,
     ) -> Result<Option<Redelegation>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
-        let store = store.prefix_store(REDELEGATION_KEY);
-        let mut key = del_addr.to_string().as_bytes().to_vec();
-        key.put(val_src_addr.to_string().as_bytes());
-        key.put(val_dst_addr.to_string().as_bytes());
+        let key = keys::redelegation_key(&del_addr, &val_src_addr, &val_dst_addr);
         Ok(store
             .get(&key)?
-            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt()))
+            .map(|bytes| Redelegation::decode::<Bytes>(bytes.into()).unwrap_or_corrupt()))
     }
 
     pub fn set_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -217,12 +218,24 @@ impl<
         ctx: &mut CTX,
         delegation: &Redelegation,
     ) -> Option<Vec<u8>> {
-        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
-        let mut delegations_store = store.prefix_store_mut(REDELEGATION_KEY);
-        let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
-        key.put(delegation.validator_src_address.to_string().as_bytes());
-        key.put(delegation.validator_dst_address.to_string().as_bytes());
-        delegations_store.delete(&key)
+        let mut store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
+        store.delete(&keys::redelegation_key(
+            &delegation.delegator_address,
+            &delegation.validator_src_address,
+            &delegation.validator_dst_address,
+        ));
+
+        store.delete(&keys::redelegation_by_val_src_index_key(
+            &delegation.delegator_address,
+            &delegation.validator_src_address,
+            &delegation.validator_dst_address,
+        ));
+
+        store.delete(&keys::redelegation_by_val_dst_index_key(
+            &delegation.delegator_address,
+            &delegation.validator_src_address,
+            &delegation.validator_dst_address,
+        ))
     }
 
     pub fn complete_redelegation<DB: Database>(
@@ -331,18 +344,13 @@ impl<
             let store = storage.prefix_store(REDELEGATION_QUEUE_KEY);
 
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
-            let end = unbonding_delegation_time_key(time).to_vec();
+            let end = redelegation_time_key(time);
             let mut mature_redelegations = vec![];
             let mut keys = vec![];
-            // gets an iterator for all timeslices from time 0 until the current Blockheader time
-            let mut previous_was_end = false;
-            for (k, v) in store.into_range(..).take_while(|(k, _)| {
-                let is_not_end = **k != end;
-                let res = is_not_end && !previous_was_end;
-                previous_was_end = !is_not_end;
-                res
-            }) {
-                let time_slice: Vec<DvvTriplet> = serde_json::from_slice(&v).unwrap_or_corrupt();
+            for (k, v) in store.into_range(..=end) {
+                let time_slice: Vec<DvvTriplet> = DvvTriplets::decode::<Bytes>(v.to_vec().into())
+                    .unwrap_or_corrupt()
+                    .triplets;
                 mature_redelegations.extend(time_slice);
                 keys.push(k.to_vec());
             }

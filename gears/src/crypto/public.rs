@@ -18,6 +18,7 @@ pub enum PublicKey {
     #[serde(rename = "/cosmos.crypto.secp256k1.PubKey")]
     Secp256k1(Secp256k1PubKey),
     //Secp256r1(Vec<u8>),
+    #[serde(rename = "/cosmos.crypto.ed25519.PubKey")]
     Ed25519(Ed25519PubKey),
     //Multisig(Vec<u8>),
 }
@@ -81,6 +82,7 @@ impl From<PublicKey> for Any {
     }
 }
 
+use tendermint::informal::PublicKey as InformalPublicKey;
 use tendermint::types::proto::crypto::PublicKey as TendermintPublicKey;
 
 /// This is needed for compatibility with the Cosmos SDK which uses the application
@@ -92,6 +94,20 @@ impl From<TendermintPublicKey> for PublicKey {
             TendermintPublicKey::Secp256k1(value) => {
                 PublicKey::Secp256k1(value.try_into().unwrap()) //TODO: unwrap can be removed once tendermint type checks are in place (probably the safest thing to do is to expose the underlying key type)
             }
+        }
+    }
+}
+
+impl From<InformalPublicKey> for PublicKey {
+    fn from(key: InformalPublicKey) -> Self {
+        match key {
+            InformalPublicKey::Ed25519(value) => {
+                PublicKey::Ed25519(value.as_bytes().to_owned().try_into().unwrap())
+            }
+            // TODO: under feature secp256k1
+            _ => todo!(), // InformalPublicKey::Secp256k1(value) => {
+                          //     PublicKey::Secp256k1(value.as_bytes().to_owned().try_into().unwrap())
+                          // }
         }
     }
 }

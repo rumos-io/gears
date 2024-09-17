@@ -11,6 +11,7 @@ workspace = true
 #local
 auth = { path = "../x/auth" }
 bank = { path = "../x/bank" }
+distribution = { path = "../x/distribution" }
 ibc-rs = { path = "../x/ibc-rs" }
 gov = { path = "../x/gov" }
 gears = { path = "../gears", features = [
@@ -18,6 +19,7 @@ gears = { path = "../gears", features = [
     "xmods",
     "governance",
 ] }
+slashing = { path = "../x/slashing" }
 staking = { path = "../x/staking" }
 genutil = { path = "../x/genutil" }
 

@@ -123,12 +123,6 @@ pub fn get_unbonding_delegation_time_key(timestamp: Timestamp) -> Vec<u8> {
     [&UNBONDING_QUEUE_KEY, bz.as_slice()].concat()
 }
 
-// // GetUnbondingDelegationTimeKey creates the prefix for all unbonding delegations from a delegator
-// func GetUnbondingDelegationTimeKey(timestamp time.Time) []byte {
-// 	bz := sdk.FormatTimeBytes(timestamp)
-// 	return append(UnbondingQueueKey, bz...)
-// }
-
 #[cfg(test)]
 mod tests {
     use gears::extensions::testing::UnwrapTesting;

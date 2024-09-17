@@ -1,9 +1,8 @@
 use super::*;
 use crate::{
-    consts::error::SERDE_ENCODING_DOMAIN_TYPE,
     parse_validator_queue_key,
     types::keys::{get_ubd_by_val_index_key, get_ubd_key, get_unbonding_delegation_time_key},
-    unbonding_delegation_time_key, validator_queue_key, DvPairs, UnbondingDelegationEntry,
+    validator_queue_key, DvPairs, UnbondingDelegationEntry, ValAddresses,
 };
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
@@ -11,7 +10,9 @@ use gears::{
     extensions::corruption::UnwrapCorrupt,
     tendermint::types::time::timestamp::Timestamp,
 };
-use std::ops::Bound;
+use prost::bytes::Bytes;
+
+use std::{collections::BTreeMap, ops::Bound};
 
 impl<
         SK: StoreKey,
@@ -80,6 +81,10 @@ impl<
     ) -> Option<Vec<u8>> {
         let mut store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let key = get_ubd_key(&delegation.delegator_address, &delegation.validator_address);
+        store.delete(&key);
+
+        let key =
+            get_ubd_by_val_index_key(&delegation.delegator_address, &delegation.validator_address);
         store.delete(&key)
     }
 
@@ -106,18 +111,15 @@ impl<
         let (keys, mature_unbonds) = {
             let storage = InfallibleContext::infallible_store(ctx, &self.store_key);
             let store = storage.prefix_store(UNBONDING_QUEUE_KEY);
-            let end = unbonding_delegation_time_key(time).to_vec();
+
+            let end = crate::unbonding_delegation_time_key(time).to_vec();
             let mut mature_unbonds = vec![];
             let mut keys = vec![];
-            // gets an iterator for all timeslices from time 0 until the current Blockheader time
-            let mut previous_was_end = false;
-            for (k, v) in store.into_range(..).take_while(|(k, _)| {
-                let is_not_end = **k != end;
-                let res = is_not_end && !previous_was_end;
-                previous_was_end = !is_not_end;
-                res
-            }) {
-                let time_slice: Vec<DvPair> = serde_json::from_slice(&v).unwrap_or_corrupt();
+            // iterate over all timeslices from time 0 until the current Blockheader time
+            for (k, v) in store.into_range(..=end) {
+                let time_slice: Vec<DvPair> = DvPairs::decode::<Bytes>(v.to_vec().into())
+                    .unwrap_or_corrupt()
+                    .pairs;
                 mature_unbonds.extend(time_slice);
                 keys.push(k.to_vec());
             }
@@ -222,7 +224,7 @@ impl<
         // ValidatorQueueKey | timeBzLen (8-byte big endian) | timeBz | heightBz (8-byte big endian),
         // so it may be possible that certain validator addresses that are iterated
         // over are not ready to unbond, so an explicit check is required.
-        let unbonding_val_map: HashMap<Vec<u8>, Vec<ValAddress>> =
+        let unbonding_val_map: BTreeMap<Vec<u8>, Vec<ValAddress>> =
             self.unbonding_validator_queue_map(ctx, &block_time, block_height);
         // TODO: in context of solving issues with shared and mutable references it is need to
         // create owned collection. It's less performant even if we update iterator to infallible
@@ -245,7 +247,7 @@ impl<
             // We only unbond if the height and time are less than the current height
             // and time.
 
-            if height < block_height && (time <= block_time) {
+            if height <= block_height && time <= block_time {
                 for val_addr in v {
                     let mut validator = self
                         .validator(ctx, val_addr)?
@@ -262,13 +264,10 @@ impl<
                         self.remove_validator(ctx, &validator)?;
                     }
                 }
-            }
 
-            let store = ctx.kv_store_mut(&self.store_key);
-            let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
-            unbonding_val_map.keys().for_each(|k| {
+                let mut store = ctx.kv_store_mut(&self.store_key);
                 store.delete(k);
-            });
+            }
         }
 
         Ok(())
@@ -325,7 +324,7 @@ impl<
             if entry.is_mature(&ctx_time) {
                 // track undelegation only when remaining or truncated shares are non-zero
                 let amount = entry.balance;
-                if amount.is_zero() {
+                if !amount.is_zero() {
                     let coin = UnsignedCoin {
                         denom: bond_denom.clone(),
                         amount,
@@ -369,6 +368,8 @@ impl<
         ctx: &mut CTX,
         validator: &mut Validator,
     ) -> anyhow::Result<()> {
+        let params = self.staking_params_keeper.try_get(ctx).unwrap();
+
         // delete the validator by power index, as the key will change
         self.delete_validator_by_power_index(ctx, validator)?;
         // sanity check
@@ -381,17 +382,20 @@ impl<
         validator.update_status(BondStatus::Unbonding);
 
         // set the unbonding completion time and completion height appropriately
-        validator.unbonding_time = ctx.get_time();
+        validator.unbonding_time = ctx
+            .get_time()
+            .checked_add(Duration::new_from_nanos(params.unbonding_time()))
+            .unwrap();
         validator.unbonding_height = ctx.height();
 
         // save the now unbonded validator record and power index
         self.set_validator(ctx, validator)?;
         self.set_validator_by_power_index(ctx, validator)?;
 
-        // Adds to unbonding validator queue
+        // add to unbonding validator queue
         self.insert_unbonding_validator_queue(ctx, validator)?;
 
-        // trigger hook
+        // // trigger hook
         self.after_validator_begin_unbonding(ctx, validator)?;
         Ok(())
     }
@@ -420,10 +424,9 @@ impl<
         end_height: u32,
         addrs: Vec<ValAddress>,
     ) -> Result<(), GasStoreErrors> {
-        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
+        let mut store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let key = validator_queue_key(&end_time, end_height);
-        let value = serde_json::to_vec(&addrs).expect(SERDE_ENCODING_DOMAIN_TYPE);
+        let value = ValAddresses { addresses: addrs }.encode_vec();
         store.set(key, value)?;
         Ok(())
     }
@@ -438,7 +441,7 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
-        store.delete(&validator_queue_key(&end_time, end_height))?;
+        store.delete(&validator_queue_key(&end_time, end_height))?; //TODO: should we NOT be using the prefix store here - since the validator_queue_key adds the prefix?
         Ok(())
     }
 
@@ -447,17 +450,17 @@ impl<
         ctx: &CTX,
         block_time: &Timestamp,
         block_height: u32,
-    ) -> HashMap<Vec<u8>, Vec<ValAddress>> {
+    ) -> BTreeMap<Vec<u8>, Vec<ValAddress>> {
         let store = ctx.infallible_store(&self.store_key);
         let start = VALIDATOR_QUEUE_KEY.to_vec();
         let mut end = validator_queue_key(block_time, block_height);
-        end.push(0);
-        let mut res = HashMap::new();
-        for (k, v) in store.into_range((
-            Bound::Included(start.clone()),
-            Bound::Excluded([start, end].concat()),
-        )) {
-            res.insert(k.to_vec(), serde_json::from_slice(&v).unwrap_or_corrupt());
+        end.push(0); //TODO: why is this needed? Is it because we use an excluded bound?
+        let mut res = BTreeMap::new();
+        for (k, v) in store.into_range((Bound::Included(start.clone()), Bound::Excluded(end))) {
+            res.insert(
+                k.to_vec(),
+                ValAddresses::decode_vec(&v).unwrap_or_corrupt().addresses,
+            );
         }
         res
     }

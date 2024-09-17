@@ -1,4 +1,5 @@
 use address::ValAddress;
+use ibc_proto::protobuf::Protobuf;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
@@ -93,6 +94,8 @@ impl TryFrom<inner::ValidatorUpdate> for ValidatorUpdate {
         })
     }
 }
+
+impl Protobuf<inner::ValidatorUpdate> for ValidatorUpdate {}
 
 /// Validator
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

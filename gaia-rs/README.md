@@ -90,14 +90,14 @@ Which returns:
   "balances": [
     {
       "denom": "uatom",
-      "amount": "34"
+      "amount": "990000000000"
     }
   ],
   "pagination": null
 }
 ```
 
-The balance of this address was set to 34 in the genesis file.
+The balance of this address was set in the genesis file.
 
 3. Import the key corresponding to the above address into the gaia-rs key store:
 

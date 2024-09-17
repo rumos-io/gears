@@ -54,12 +54,16 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             consensus_params,
             validators: _, // TODO: should it be ignored?
             app_genesis,
-            initial_height,
+            ..
         }: RequestInitChain<H::Genesis>,
     ) -> ResponseInitChain {
         let mut state = self.state.write().expect(POISONED_LOCK);
 
         //TODO: handle request height > 1 as is done in SDK
+        // On a new chain, we consider the init chain block height as 0, even though
+        // req.InitialHeight is 1 by default.
+        // see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/baseapp/abci.go#L28-L29
+        let initial_height = 0;
 
         let mut ctx = state.init_ctx(
             initial_height,

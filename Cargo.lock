@@ -1937,6 +1937,7 @@ dependencies = [
  "bip32",
  "clap",
  "data-encoding",
+ "distribution",
  "gears",
  "genutil",
  "gov",
@@ -1947,6 +1948,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "slashing",
  "staking",
  "strum",
  "tonic",
@@ -2044,6 +2046,7 @@ dependencies = [
  "serde",
  "serde_json",
  "staking",
+ "tendermint 0.1.0",
  "toml_edit",
 ]
 
@@ -4997,6 +5000,7 @@ name = "slashing"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum 0.7.5",
  "bytes",
  "clap",
  "gears",

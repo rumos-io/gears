@@ -169,6 +169,13 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 }
 
+impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ApplicationInfo
+    for BaseApp<DB, PSK, H, AI>
+{
+    const APP_NAME: &'static str = AI::APP_NAME;
+    const APP_VERSION: &'static str = AI::APP_VERSION;
+}
+
 #[derive(Debug, Clone)]
 pub struct RunTxInfo {
     pub events: Vec<Event>,

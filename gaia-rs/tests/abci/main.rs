@@ -20,6 +20,7 @@ use std::path::Path;
 
 mod scenario_1;
 mod scenario_2;
+mod scenario_3;
 #[cfg(test)]
 mod two_tx;
 

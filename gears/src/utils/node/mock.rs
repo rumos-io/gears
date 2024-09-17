@@ -54,6 +54,15 @@ pub struct MockNode<App, G> {
 
 impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
     pub fn new(app: App, init_state: InitState<G>) -> Self {
+        // NOTE: the use of height here is complicated. Usually the init_state height will be 1. This
+        // gets passed to the app in the init_chain call. This is consistent with TM which usually
+        // passes 1 as the initial height (this is presumably taken from the genesis file - however
+        // setting this to zero seems to break gaia - TM makes no progress - probably why it defaults to 1).
+        // If (as usual) the height passed to the app is
+        // 1 then the app subtracts 1 from the height in the header.
+        // On the first begin block the header height passed by TM is also 1. The app uses this without modification.
+        // To achieve this we initialise the height in this mock state to 0 such that on the first step this gets incremented to the correct height of 1.
+
         let res = app.init_chain(init_state.clone().into());
 
         Self {
