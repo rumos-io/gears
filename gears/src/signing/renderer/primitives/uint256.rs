@@ -24,6 +24,7 @@ impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::Uint256;
+    use extensions::testing::UnwrapTesting;
 
     use crate::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
@@ -50,7 +51,7 @@ mod tests {
         for (i, expected) in test_data {
             let actual = DefaultPrimitiveRenderer::format(Uint256::from(i));
 
-            assert_eq!(Content::try_new(expected).unwrap(), actual);
+            assert_eq!(Content::try_new(expected).unwrap_test(), actual);
         }
     }
 }

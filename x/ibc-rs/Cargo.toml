@@ -23,6 +23,7 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 constcat = { workspace = true }
 derive_more = "0.99.17"          # TODO: move to workspace
+nz = { workspace = true }
 
 #networking
 axum = { workspace = true }

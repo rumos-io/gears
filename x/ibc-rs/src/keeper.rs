@@ -51,7 +51,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: MsgCreateClient,
-    ) {
+    ) -> Result<(), ibc::core::handler::types::error::ContextError> {
         let mut ctx = Context {
             gears_ctx: ctx,
             client_keeper: &self.client_keeper,
@@ -62,7 +62,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let mut router = ClientRouter;
 
-        dispatch(&mut ctx, &mut router, msg.into()).unwrap() //TODO: unwrap
+        dispatch(&mut ctx, &mut router, msg.into())
     }
 
     pub fn client_states<DB: Database>(

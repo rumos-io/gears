@@ -125,18 +125,20 @@ pub fn get_unbonding_delegation_time_key(timestamp: Timestamp) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+    use gears::extensions::testing::UnwrapTesting;
+
     use super::*;
 
     #[test]
     fn test_redelegation_key() {
         let del_addr =
-            AccAddress::from_bech32("cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q").unwrap();
+            AccAddress::from_bech32("cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q").unwrap_test();
         let val_src_addr =
             ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")
-                .unwrap();
+                .unwrap_test();
         let val_dst_addr =
             ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")
-                .unwrap();
+                .unwrap_test();
 
         let key = redelegation_key(&del_addr, &val_src_addr, &val_dst_addr);
         assert_eq!(
@@ -153,7 +155,7 @@ mod tests {
     #[test]
     fn test_redelegations_key() {
         let del_addr =
-            AccAddress::from_bech32("cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q").unwrap();
+            AccAddress::from_bech32("cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q").unwrap_test();
 
         let key = redelegations_key(&del_addr);
         assert_eq!(
@@ -168,13 +170,13 @@ mod tests {
     #[test]
     fn test_redelegation_by_val_src_index_key() {
         let del_addr =
-            AccAddress::from_bech32("cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q").unwrap();
+            AccAddress::from_bech32("cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q").unwrap_test();
         let val_src_addr =
             ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")
-                .unwrap();
+                .unwrap_test();
         let val_dst_addr =
             ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")
-                .unwrap();
+                .unwrap_test();
 
         let key = redelegation_by_val_src_index_key(&del_addr, &val_src_addr, &val_dst_addr);
         assert_eq!(
@@ -192,7 +194,7 @@ mod tests {
     fn test_redelegations_from_val_src_index_key() {
         let val_src_addr =
             ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")
-                .unwrap();
+                .unwrap_test();
 
         let key = redelegations_from_val_src_index_key(&val_src_addr);
         assert_eq!(
@@ -207,13 +209,13 @@ mod tests {
     #[test]
     fn test_redelegation_by_val_dst_index_key() {
         let del_addr =
-            AccAddress::from_bech32("cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q").unwrap();
+            AccAddress::from_bech32("cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q").unwrap_test();
         let val_src_addr =
             ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")
-                .unwrap();
+                .unwrap_test();
         let val_dst_addr =
             ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")
-                .unwrap();
+                .unwrap_test();
 
         let key = redelegation_by_val_dst_index_key(&del_addr, &val_src_addr, &val_dst_addr);
         assert_eq!(
@@ -231,7 +233,7 @@ mod tests {
     fn test_redelegations_by_val_dst_index_key() {
         let val_dst_addr =
             ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")
-                .unwrap();
+                .unwrap_test();
 
         let key = redelegations_by_val_dst_index_key(&val_dst_addr);
         assert_eq!(

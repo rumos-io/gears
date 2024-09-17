@@ -8,13 +8,14 @@ use crate::{
     QueryValidatorsRequest, QueryValidatorsResponse, Redelegation, RedelegationEntryResponse,
     RedelegationResponse,
 };
+use gears::extensions::gas::GasResultExt;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
     baseapp::{errors::QueryError, QueryRequest, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::Protobuf,
     derive::Query,
-    ext::Pagination,
+    extensions::pagination::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -23,7 +24,7 @@ use gears::{
             begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
         },
     },
-    types::{pagination::response::PaginationResponse, store::gas::ext::GasResultExt},
+    types::pagination::response::PaginationResponse,
     x::{
         keepers::{
             auth::AuthKeeper,
@@ -32,6 +33,7 @@ use gears::{
         module::Module,
     },
 };
+
 use serde::Serialize;
 
 #[derive(Debug, Clone)]

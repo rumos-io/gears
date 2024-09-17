@@ -8,7 +8,7 @@ use gears::{
     cli::pagination::CliPaginationRequest,
     core::Protobuf,
     derive::Query,
-    ext::FallibleMapExt,
+    extensions::try_map::FallibleMapExt,
     types::{address::AccAddress, pagination::request::PaginationRequest},
 };
 use serde::{Deserialize, Serialize};

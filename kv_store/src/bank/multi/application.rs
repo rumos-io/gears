@@ -2,7 +2,9 @@ use std::{collections::HashMap, sync::Arc};
 
 use database::{prefix::PrefixDB, Database};
 
-use crate::{bank::kv::application::ApplicationKVBank, hash::StoreInfo, StoreKey};
+use crate::{
+    bank::kv::application::ApplicationKVBank, error::MultiStoreError, hash::StoreInfo, StoreKey,
+};
 
 use super::*;
 
@@ -22,7 +24,7 @@ impl<SK, DB> MultiBankBackend<DB, SK> for ApplicationStore<DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
-    pub fn new(db: DB) -> Self {
+    pub fn new(db: DB) -> Result<Self, MultiStoreError<SK>> {
         let db = Arc::new(db);
 
         let mut store_infos = Vec::new();
@@ -36,7 +38,10 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
                 None,
                 Some(store.name().to_owned()),
             )
-            .unwrap();
+            .map_err(|err| MultiStoreError {
+                sk: store.clone(),
+                err,
+            })?;
 
             let store_info = StoreInfo {
                 name: store.name().into(),
@@ -49,12 +54,12 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
             store_infos.push(store_info)
         }
 
-        MultiBank {
+        Ok(MultiBank {
             head_version,
             head_commit_hash: crate::hash::hash_store_infos(store_infos),
             backend: ApplicationStore(stores),
             _marker: PhantomData,
-        }
+        })
     }
 
     pub fn to_tx_kind(&self) -> TransactionMultiBank<DB, SK> {

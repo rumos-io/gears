@@ -7,7 +7,7 @@ use gears::{
     baseapp::{errors::QueryError, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::Protobuf,
-    ext::Pagination,
+    extensions::pagination::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::request::{begin_block::RequestBeginBlock, query::RequestQuery},

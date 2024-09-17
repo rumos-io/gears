@@ -32,7 +32,7 @@ fn scenario_2() {
     "value": "NJWo4rSXCswNmK0Bttxzb8/1ioFNkRVi6Fio2KzAlCo="
     }"#,
     )
-    .unwrap();
+    .expect("hardcoded is valid");
 
     let msg =
         gaia_rs::message::Message::Staking(staking::Message::CreateValidator(CreateValidator {
@@ -44,21 +44,21 @@ fn scenario_2() {
                 security_contact: "".to_string(),
             },
             commission: CommissionRates::new(
-                "0.1".parse().unwrap(),
-                "1".parse().unwrap(),
-                "0.1".parse().unwrap(),
+                "0.1".parse().expect("hardcoded is valid"),
+                "1".parse().expect("hardcoded is valid"),
+                "0.1".parse().expect("hardcoded is valid"),
             )
-            .unwrap(),
+            .expect("hardcoded is valid"),
             min_self_delegation: Uint256::from(100u32),
             delegator_address: user_1.address(),
             validator_address: user_1.address().into(),
             pubkey: consensus_pub_key,
-            value: "10000uatom".parse().unwrap(),
+            value: "10000uatom".parse().expect("hardcoded is valid"),
         }));
 
     let txs = generate_txs([(0, msg)], &user_1, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::try_new(0, 0).unwrap());
+    let app_hash = node.step(txs, Timestamp::try_new(0, 0).expect("hardcoded is valid"));
     assert_eq!(
         hex::encode(app_hash),
         "6f02c4708c36481eeb65acf704340d906af5737702dbf05fc8bf4dd29a92f16e"
@@ -76,7 +76,7 @@ fn scenario_2() {
                 security_contact: Some("".to_string()),
                 details: Some("".to_string()),
             },
-            Some("0.2".parse().unwrap()),
+            Some("0.2".parse().expect("hardcoded is valid")),
             Some(Uint256::from(200u32)),
             user_1.address().into(),
         ),
@@ -84,7 +84,10 @@ fn scenario_2() {
 
     let txs = generate_txs([(1, msg)], &user_1, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
+    let app_hash = node.step(
+        txs,
+        Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
+    );
     assert_eq!(
         hex::encode(app_hash),
         "68f309714a2273b0f8ad93f318bc5a0dd418bd2bdd1431a6a848ae104c98a39b"
@@ -96,13 +99,16 @@ fn scenario_2() {
     let msg =
         gaia_rs::message::Message::Staking(staking::Message::Delegate(staking::DelegateMsg {
             validator_address: user_0.address().into(),
-            amount: "1000uatom".parse().unwrap(),
+            amount: "1000uatom".parse().expect("hardcoded is valid"),
             delegator_address: user_1.address(),
         }));
 
     let txs = generate_txs([(2, msg)], &user_1, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
+    let app_hash = node.step(
+        txs,
+        Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
+    );
 
     assert_eq!(
         hex::encode(app_hash),
@@ -117,12 +123,15 @@ fn scenario_2() {
             delegator_address: user_1.address(),
             src_validator_address: user_0.address().into(),
             dst_validator_address: user_1.address().into(),
-            amount: "500uatom".parse().unwrap(),
+            amount: "500uatom".parse().expect("hardcoded is valid"),
         }));
 
     let txs = generate_txs([(3, msg)], &user_1, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
+    let app_hash = node.step(
+        txs,
+        Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
+    );
 
     assert_eq!(
         hex::encode(app_hash),
@@ -135,13 +144,16 @@ fn scenario_2() {
     let msg =
         gaia_rs::message::Message::Staking(staking::Message::Undelegate(staking::UndelegateMsg {
             validator_address: user_0.address().into(),
-            amount: "500uatom".parse().unwrap(),
+            amount: "500uatom".parse().expect("hardcoded is valid"),
             delegator_address: user_1.address(),
         }));
 
     let txs = generate_txs([(4, msg)], &user_1, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
+    let app_hash = node.step(
+        txs,
+        Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
+    );
 
     assert_eq!(
         hex::encode(app_hash),

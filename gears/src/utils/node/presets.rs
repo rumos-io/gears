@@ -62,7 +62,8 @@ pub fn init_node<PSK: ParamsSubspaceKey, H: ABCIHandler<Genesis = GS>, GS: Genes
     let chain_id = ChainId::default();
 
     let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-    let mnemonic = bip32::Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+    let mnemonic =
+        bip32::Mnemonic::new(mnemonic, bip32::Language::English).expect("Invalid mnemonic");
     let key_pair = KeyPair::from_mnemonic(&mnemonic);
     let address = key_pair.get_address();
     let consensus_key = crate::tendermint::crypto::new_private_key();
@@ -71,10 +72,11 @@ pub fn init_node<PSK: ParamsSubspaceKey, H: ABCIHandler<Genesis = GS>, GS: Genes
         GenesisSource::File(path) => {
             println!("Loading genesis state from {:?}", path.as_path());
             // print current directory
-            let current_dir = std::env::current_dir().unwrap();
+            let current_dir = std::env::current_dir().expect("failed to get current dir");
             println!("The current directory is {}", current_dir.display());
-            let genesis_state = std::fs::read_to_string(path.as_path()).unwrap();
-            serde_json::from_str(&genesis_state).unwrap()
+            let genesis_state =
+                std::fs::read_to_string(path.as_path()).expect("failed to read genesis");
+            serde_json::from_str(&genesis_state).expect("failed to deserialize genesis state")
         }
         GenesisSource::Genesis(genesis) => genesis,
         GenesisSource::Default => {

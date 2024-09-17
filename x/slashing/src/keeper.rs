@@ -7,18 +7,19 @@ use crate::{
     GenesisState, MsgUnjail, QueryParamsRequest, QueryParamsResponse, QuerySigningInfoRequest,
     QuerySigningInfoResponse, SlashingParamsKeeper, ValidatorSigningInfo,
 };
+use gears::extensions::gas::GasResultExt;
 use gears::{
     context::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         InfallibleContextMut, QueryableContext, TransactionalContext,
     },
     core::Protobuf,
-    ext::{IteratorPaginate, Pagination, PaginationResult},
-    params::ParamsSubspaceKey,
-    store::{
-        database::{ext::UnwrapCorrupt, Database},
-        StoreKey,
+    extensions::{
+        corruption::UnwrapCorrupt,
+        pagination::{IteratorPaginate, Pagination, PaginationResult},
     },
+    params::ParamsSubspaceKey,
+    store::{database::Database, StoreKey},
     tendermint::types::{
         proto::{
             crypto::PublicKey,
@@ -30,7 +31,7 @@ use gears::{
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
         decimal256::Decimal256,
-        store::gas::{errors::GasStoreErrors, ext::GasResultExt},
+        store::gas::errors::GasStoreErrors,
     },
     x::{
         errors::AccountNotFound,
@@ -437,7 +438,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         let key = addr_pubkey_relation_key(addr);
 
         // TODO: add Protobuf for PublicKey
-        let value = serde_json::to_vec(pub_key).unwrap();
+        let value = serde_json::to_vec(pub_key).expect("serde encoding can't fail");
         store.set(key, value)
     }
 
@@ -507,7 +508,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         let mut store = ctx.infallible_store_mut(&self.store_key);
         let key = validator_missed_block_bit_array_key(addr.clone(), index);
         // TODO: something like that in sdk
-        let value = serde_json::to_vec(&missed).unwrap();
+        let value = serde_json::to_vec(&missed).expect("serde encoding can't fail");
         store.set(key, value)
     }
 

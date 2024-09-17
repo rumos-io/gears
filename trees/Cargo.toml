@@ -6,6 +6,7 @@ version = "0.1.0"
 [dependencies]
 #local
 database = {path = "../database"}
+extensions = { path = "../extensions" }
 
 #newtypes
 
@@ -29,6 +30,7 @@ rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
+extensions = { path = "../extensions" }
 
 [[bench]]
 harness = false

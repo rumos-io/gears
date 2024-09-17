@@ -1,3 +1,4 @@
+use extensions::pagination::{PaginationKey, PaginationResultElement};
 use serde::{Deserialize, Serialize};
 
 mod inner {
@@ -28,5 +29,21 @@ impl From<inner::PageResponse> for PaginationResponse {
 impl From<PaginationResponse> for inner::PageResponse {
     fn from(PaginationResponse { next_key, total }: PaginationResponse) -> Self {
         Self { next_key, total }
+    }
+}
+
+impl<T: PaginationKey> From<PaginationResultElement<T>> for PaginationResponse {
+    fn from(
+        PaginationResultElement {
+            total,
+            next_key: next_element,
+        }: PaginationResultElement<T>,
+    ) -> Self {
+        Self {
+            next_key: next_element
+                .map(|this| this.iterator_key().into_owned())
+                .unwrap_or_default(),
+            total: total as u64,
+        }
     }
 }

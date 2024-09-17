@@ -2,7 +2,7 @@ use address::AccAddress;
 use bytes::Bytes;
 
 use core_types::Protobuf as _;
-use kv_store::ext::UnwrapInfallible;
+use extensions::infallible::UnwrapInfallible;
 use prost::Message;
 use tendermint::types::chain_id::ChainId;
 

@@ -1,6 +1,5 @@
 use crate::application::ApplicationInfo;
 use crate::baseapp::NodeQueryHandler;
-use crate::ext::{IteratorPaginateByOffset, PaginationByOffset};
 use crate::rest::error::HTTPError;
 use crate::types::pagination::response::PaginationResponse;
 use crate::types::request::tx::BroadcastTxRequest;
@@ -17,6 +16,7 @@ use axum::extract::{Path, Query as AxumQuery, State};
 use axum::Json;
 use bytes::Bytes;
 use core_types::Protobuf;
+use extensions::pagination::{IteratorPaginateByOffset, PaginationByOffset};
 use ibc_proto::cosmos::tx::v1beta1::BroadcastMode;
 use serde::Deserialize;
 use tendermint::informal::Hash;

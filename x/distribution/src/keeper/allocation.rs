@@ -6,6 +6,7 @@ use crate::{
 use gears::{
     context::block::BlockContext,
     error::{MathOperation, NumericError},
+    extensions::gas::GasResultExt,
     tendermint::types::proto::{
         event::{Event, EventAttribute},
         info::VoteInfo,
@@ -103,7 +104,9 @@ impl<
                     EventAttribute {
                         key: "amount".into(),
                         // TODO: stringify coins structs
-                        value: serde_json::to_string(&proposer_reward).unwrap().into(),
+                        value: serde_json::to_string(&proposer_reward)
+                            .expect("serde can't fail")
+                            .into(),
                         index: false,
                     },
                     EventAttribute {
@@ -203,7 +206,9 @@ impl<
                 EventAttribute {
                     key: "amount".into(),
                     // TODO: stringify coins structs
-                    value: serde_json::to_string(&commission).unwrap().into(),
+                    value: serde_json::to_string(&commission)
+                        .expect("serde can't fail")
+                        .into(),
                     index: false,
                 },
                 EventAttribute {
@@ -255,7 +260,9 @@ impl<
                 EventAttribute {
                     key: "amount".into(),
                     // TODO: stringify coins structs
-                    value: serde_json::to_string(&tokens).unwrap().into(),
+                    value: serde_json::to_string(&tokens)
+                        .expect("serde can't fail")
+                        .into(),
                     index: false,
                 },
                 EventAttribute {

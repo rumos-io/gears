@@ -24,6 +24,7 @@ mod tests {
         value::{CanonicalValue, Integer},
         Value,
     };
+    use extensions::testing::UnwrapTesting;
 
     use super::Cbor;
 
@@ -62,7 +63,7 @@ mod tests {
         final_map.insert(canonical_key, 3);
 
         let mut bytes = Vec::new();
-        ciborium::into_writer(&final_map, &mut bytes).unwrap();
+        ciborium::into_writer(&final_map, &mut bytes).unwrap_test();
         let hex_bytes = hex::encode(bytes);
 
         assert_eq!(hex_bytes, "a20a022003")

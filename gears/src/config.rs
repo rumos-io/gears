@@ -4,12 +4,12 @@ use std::io::Write;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::path::{Path, PathBuf};
 
+use extensions::socket_addr;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tendermint::rpc::url::Url;
 
 use crate::defaults::{CONFIG_DIR, CONFIG_FILE_NAME, GENESIS_FILE_NAME};
-use crate::socket_addr;
 use crate::types::base::min_gas::MinGasPrices;
 
 pub const DEFAULT_GRPC_LISTEN_ADDR: SocketAddr = socket_addr!(127, 0, 0, 1, 8080);
@@ -72,7 +72,7 @@ impl<AC: ApplicationConfig> Config<AC> {
             .render("config", &cfg)
             .expect("Config will always work with the CONFIG_TEMPLATE");
 
-        let app_cfg = toml::to_string(&cfg.app_config).unwrap();
+        let app_cfg = toml::to_string(&cfg.app_config)?;
 
         file.write_all(config.as_bytes())?;
         writeln!(file)?;

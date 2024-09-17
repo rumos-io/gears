@@ -18,6 +18,7 @@ dependencies = [
  "bech32 0.9.1",
  "constcat",
  "data-encoding",
+ "extensions",
  "serde",
  "serde_json",
  "thiserror",
@@ -1331,6 +1332,7 @@ checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 name = "database"
 version = "0.1.0"
 dependencies = [
+ "extensions",
  "rocksdb",
  "sled",
  "thiserror",
@@ -1669,6 +1671,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "extensions"
+version = "0.1.0"
+dependencies = [
+ "itertools 0.13.0",
+ "vec1",
+]
+
+[[package]]
 name = "eyre"
 version = "0.6.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1925,7 +1935,6 @@ dependencies = [
  "axum 0.7.5",
  "bank",
  "bip32",
- "bytes",
  "clap",
  "data-encoding",
  "distribution",
@@ -1969,13 +1978,13 @@ dependencies = [
  "derive_more 0.99.18",
  "dircpy",
  "dirs",
+ "extensions",
  "former",
  "handlebars",
  "hex 0.4.3",
  "http 0.2.12",
  "human-panic",
  "ibc-proto 0.33.0",
- "itertools 0.13.0",
  "k256",
  "key-derive",
  "keyring",
@@ -3013,6 +3022,7 @@ dependencies = [
  "derive_more 0.99.18",
  "gears",
  "ibc",
+ "nz",
  "prost 0.12.6",
  "schemars",
  "serde",
@@ -3348,6 +3358,7 @@ dependencies = [
  "argon2",
  "bip32",
  "eth-keystore",
+ "extensions",
  "hex 0.4.3",
  "k256",
  "pkcs8",
@@ -3383,6 +3394,7 @@ name = "kv_store"
 version = "0.1.0"
 dependencies = [
  "database",
+ "extensions",
  "hex 0.4.3",
  "integer-encoding",
  "sha2 0.10.8",
@@ -5235,6 +5247,7 @@ dependencies = [
  "bytes",
  "chrono",
  "ed25519-consensus",
+ "extensions",
  "handlebars",
  "ibc-proto 0.33.0",
  "prost 0.11.9",
@@ -5812,6 +5825,7 @@ dependencies = [
  "caches",
  "criterion",
  "database",
+ "extensions",
  "handlebars",
  "hex 0.4.3",
  "integer-encoding",

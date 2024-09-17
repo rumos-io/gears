@@ -223,6 +223,7 @@ impl Protobuf<Any> for Account {}
 mod tests {
 
     use core_types::Protobuf;
+    use extensions::testing::UnwrapTesting;
 
     use crate::types::{account::BaseAccount, address::AccAddress};
 
@@ -230,7 +231,7 @@ mod tests {
     fn base_account_encode_works() {
         let account = BaseAccount {
             address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
-                .unwrap(),
+                .unwrap_test(),
             pub_key: None,
             account_number: 0,
             sequence: 0,

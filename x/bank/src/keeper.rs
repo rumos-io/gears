@@ -6,9 +6,10 @@ use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
 use gears::context::{QueryableContext, TransactionalContext};
 use gears::core::Protobuf;
-use gears::ext::{IteratorPaginate, Pagination, PaginationResult};
+use gears::extensions::corruption::UnwrapCorrupt;
+use gears::extensions::gas::GasResultExt;
+use gears::extensions::pagination::{IteratorPaginate, Pagination, PaginationResult};
 use gears::params::ParamsSubspaceKey;
-use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::prefix::PrefixDB;
 use gears::store::database::Database;
 use gears::store::StoreKey;
@@ -19,7 +20,6 @@ use gears::types::base::coins::UnsignedCoins;
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
 use gears::types::store::gas::errors::GasStoreErrors;
-use gears::types::store::gas::ext::GasResultExt;
 use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
@@ -110,7 +110,7 @@ impl<
         let account = self
             .auth_keeper
             .get_account(ctx, &module_acc_addr)?
-            .unwrap(); // TODO:
+            .ok_or(AccountNotFound::new(module_acc_addr.to_string()))?;
 
         match account.has_permissions("burner") {
             true => Ok(()),

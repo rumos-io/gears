@@ -1,7 +1,8 @@
 use core_types::{errors::CoreError, Protobuf};
 use cosmwasm_std::Uint256;
+use extensions::pagination::PaginationKey;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{borrow::Cow, str::FromStr};
 
 use crate::types::{base::errors::CoinError, denom::Denom, errors::DenomError};
 
@@ -115,3 +116,9 @@ impl From<Uint256Proto> for inner::IntProto {
 }
 
 impl Protobuf<inner::IntProto> for Uint256Proto {}
+
+impl PaginationKey for UnsignedCoin {
+    fn iterator_key(&self) -> Cow<'_, [u8]> {
+        Cow::Borrowed(self.denom.as_ref())
+    }
+}

@@ -81,7 +81,8 @@ impl<T: Iterator<Item = U>, U: Clone> IteratorPaginateByOffset for T {
 
 #[cfg(test)]
 mod tests {
-    use crate::ext::UnwrapPagination;
+
+    use crate::pagination::UnwrapPagination;
 
     use super::*;
 

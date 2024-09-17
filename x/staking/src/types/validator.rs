@@ -741,6 +741,7 @@ pub enum ValidatorsError {
 #[cfg(test)]
 mod tests {
     use data_encoding::HEXLOWER;
+    use gears::extensions::testing::UnwrapTesting;
 
     use super::*;
 
@@ -776,7 +777,7 @@ mod tests {
           "unbonding_time": "1970-01-01T00:00:00Z"
         }"#;
 
-        let val: Validator = serde_json::from_str(val_raw).unwrap();
+        let val: Validator = serde_json::from_str(val_raw).unwrap_test();
         let val_proto = val.encode_vec();
 
         assert_eq!(
@@ -833,7 +834,7 @@ mod tests {
 }
           "#;
 
-        let val: Validator = serde_json::from_str(val_raw).unwrap();
+        let val: Validator = serde_json::from_str(val_raw).unwrap_test();
 
         let res = HEXLOWER.encode(&val.key_by_power_index_key(1000000));
         let expected = "230000010000000000149c288ede7df62742fc3b7d0962045a8cef0f79f6";
@@ -875,7 +876,7 @@ mod tests {
 }
           "#;
 
-        let val: Validator = serde_json::from_str(val_raw).unwrap();
+        let val: Validator = serde_json::from_str(val_raw).unwrap_test();
         let res = val.tokens_to_consensus_power(1000000);
         assert_eq!(res, 1099511627776);
     }

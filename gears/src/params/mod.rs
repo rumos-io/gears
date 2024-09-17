@@ -6,6 +6,7 @@ use std::{
 };
 
 use database::{prefix::PrefixDB, Database};
+use extensions::corruption::UnwrapCorrupt;
 use kv_store::StoreKey;
 
 use crate::context::{InfallibleContext, InfallibleContextMut};
@@ -94,15 +95,15 @@ impl ParamKind {
         where
             <T as FromStr>::Err: std::fmt::Debug,
         {
-            String::from_utf8(value)
-                .expect("should be valid utf-8")
+            let value = String::from_utf8(value).expect("should be valid utf-8");
+
+            value
                 .strip_suffix('\"')
-                .unwrap() // TODO
-                .strip_prefix('\"')
-                .unwrap() // TODO
-                .to_owned()
+                .and_then(|this| this.strip_prefix('\"'))
+                .map(String::from)
+                .unwrap_or(value)
                 .parse()
-                .unwrap() // TODO
+                .unwrap_or_corrupt()
         }
 
         match self {

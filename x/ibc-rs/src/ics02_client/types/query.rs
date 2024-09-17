@@ -1,4 +1,4 @@
-use gears::core::errors::CoreError;
+use gears::{core::errors::CoreError, error::ProtobufError};
 use ibc::{
     core::{
         client::types::proto::v1::IdentifiedClientState as RawIdentifiedClientState,
@@ -17,7 +17,7 @@ pub struct QueryClientStatesResponse {
 }
 
 impl TryFrom<RawQueryClientStatesResponse> for QueryClientStatesResponse {
-    type Error = CoreError;
+    type Error = ProtobufError;
 
     fn try_from(raw: RawQueryClientStatesResponse) -> Result<Self, Self::Error> {
         let client_states: Result<Vec<IdentifiedClientState>, Self::Error> = raw
@@ -80,12 +80,19 @@ impl From<IdentifiedClientState> for RawIdentifiedClientState {
 }
 
 impl TryFrom<RawIdentifiedClientState> for IdentifiedClientState {
-    type Error = CoreError;
+    type Error = ProtobufError;
 
     fn try_from(value: RawIdentifiedClientState) -> Result<Self, Self::Error> {
         Ok(IdentifiedClientState {
-            client_id: value.client_id.parse().unwrap(), //TODO: unwrap
-            client_state: value.client_state.unwrap().try_into().unwrap(), //TODO: unwraps
+            client_id: value
+                .client_id
+                .parse()
+                .map_err(|e| anyhow::anyhow!("invalid client_id: {e}"))?,
+            client_state: value
+                .client_state
+                .ok_or(CoreError::MissingField("client_state".to_owned()))?
+                .try_into()
+                .map_err(|e| anyhow::anyhow!("invalid client_state: {e}"))?,
         })
     }
 }
