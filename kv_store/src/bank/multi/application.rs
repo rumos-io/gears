@@ -3,7 +3,8 @@ use std::{collections::HashMap, sync::Arc};
 use database::{prefix::PrefixDB, Database};
 
 use crate::{
-    bank::kv::application::ApplicationKVBank, build_prefixed_stores, hash::StoreInfo, StoreKey,
+    bank::kv::application::ApplicationKVBank, build_prefixed_stores, error::MultiStoreError,
+    hash::StoreInfo, StoreKey,
 };
 
 use super::*;
@@ -28,27 +29,25 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
         let mut store_infos = Vec::new();
         let mut head_version = 0;
 
-        let stores = build_prefixed_stores::<_, SK>(db)
-            .into_iter()
-            .map(|(store_key, store)| {
-                let kv_store =
-                    ApplicationKVBank::new(store, None, Some(store_key.name().to_owned()))
-                        .map_err(|err| MultiStoreError {
-                            sk: store.clone(),
-                            err,
-                        })?;
+        let map = build_prefixed_stores::<_, SK>(db);
+        let mut stores = HashMap::with_capacity(map.len());
+        for (store_key, store) in map {
+            let kv_store = ApplicationKVBank::new(store, None, Some(store_key.name().to_owned()))
+                .map_err(|err| MultiStoreError {
+                sk: store_key.clone(),
+                err,
+            })?;
 
-                let store_info = StoreInfo {
-                    name: store_key.name().into(),
-                    hash: kv_store.persistent().root_hash(),
-                };
+            let store_info = StoreInfo {
+                name: store_key.name().into(),
+                hash: kv_store.persistent().root_hash(),
+            };
 
-                store_infos.push(store_info);
-                head_version = kv_store.persistent().loaded_version();
+            store_infos.push(store_info);
+            head_version = kv_store.persistent().loaded_version();
 
-                (store_key, kv_store)
-            })
-            .collect::<HashMap<_, _>>();
+            stores.insert(store_key, kv_store);
+        }
 
         Ok(MultiBank {
             head_version,

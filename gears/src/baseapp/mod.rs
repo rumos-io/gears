@@ -61,8 +61,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     BaseApp<DB, PSK, H, AI>
 {
     pub fn new(db: DB, params_subspace_key: PSK, abci_handler: H, options: NodeOptions) -> Self {
-        let mut multi_store = ApplicationMultiBank::new(Arc::new(db));
-        let multi_store = ApplicationMultiBank::new(db);
+        let multi_store = ApplicationMultiBank::new(Arc::new(db));
         let mut multi_store = match multi_store {
             Ok(ms) => ms,
             Err(err) => panic!("Failed to init MultiStore with err: {err}"),

@@ -17,7 +17,7 @@ use crate::{
 };
 
 pub fn build_store<SK: StoreKey>() -> ApplicationMultiBank<MemDB, SK> {
-    ApplicationMultiBank::new(Arc::new(MemDB::new()))
+    ApplicationMultiBank::new(Arc::new(MemDB::new())).expect("Failed to build store")
 }
 
 pub struct ContextOptions {
