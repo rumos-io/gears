@@ -620,7 +620,7 @@ impl TryFrom<inner::Validator> for IbcV046Validator {
                 security_contact: description.security_contact,
                 details: description.details,
             },
-            consensus_pubkey: consensus_pubkey.into(),
+            consensus_pubkey,
             jailed: value.jailed,
             tokens: Uint256::from_str(&value.tokens)
                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
