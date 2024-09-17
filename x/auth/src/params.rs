@@ -201,6 +201,8 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for AuthParamsKeeper<PSK> {
 #[cfg(test)]
 mod tests {
 
+    use std::sync::Arc;
+
     use gears::{
         baseapp::ConsensusParams,
         derive::{ParamsKeys, StoreKeys},
@@ -216,7 +218,7 @@ mod tests {
             params_subspace_key: SubspaceKey::Auth,
         };
 
-        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new());
+        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(Arc::new(MemDB::new()));
 
         let before_hash = multi_store.head_commit_hash();
 

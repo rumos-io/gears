@@ -1,17 +1,17 @@
-pub mod bank;
-pub mod store;
+use database::{prefix::PrefixDB, Database};
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 use strum::IntoEnumIterator;
 
+pub mod bank;
 pub mod cache;
 pub mod error;
 pub mod ext;
-mod hash;
-
 pub mod query;
 pub mod range;
-mod utils;
+pub mod store;
 
-use std::hash::Hash;
+mod hash;
+mod utils;
 
 pub(crate) const TREE_CACHE_SIZE: usize = 100_000;
 
@@ -27,6 +27,19 @@ pub trait StoreKey:
 
     /// Return key for parameters
     fn params() -> &'static Self;
+}
+
+fn build_prefixed_stores<DB: Database, SK: StoreKey>(db: Arc<DB>) -> HashMap<SK, PrefixDB<DB>> {
+    let mut stores = HashMap::new();
+
+    for store in SK::iter() {
+        let prefix = store.name().as_bytes().to_vec();
+        let prefixed_db = PrefixDB::new(Arc::clone(&db), prefix);
+
+        stores.insert(store, prefixed_db);
+    }
+
+    stores
 }
 
 // pub trait ReadPrefixStore {

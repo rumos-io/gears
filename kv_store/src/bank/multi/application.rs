@@ -2,7 +2,9 @@ use std::{collections::HashMap, sync::Arc};
 
 use database::{prefix::PrefixDB, Database};
 
-use crate::{bank::kv::application::ApplicationKVBank, hash::StoreInfo, StoreKey};
+use crate::{
+    bank::kv::application::ApplicationKVBank, build_prefixed_stores, hash::StoreInfo, StoreKey,
+};
 
 use super::*;
 
@@ -22,32 +24,28 @@ impl<SK, DB> MultiBankBackend<DB, SK> for ApplicationStore<DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
-    pub fn new(db: DB) -> Self {
-        let db = Arc::new(db);
-
+    pub fn new(db: Arc<DB>) -> Self {
         let mut store_infos = Vec::new();
-        let mut stores = HashMap::new();
         let mut head_version = 0;
 
-        for store in SK::iter() {
-            let prefix = store.name().as_bytes().to_vec(); // TODO:NOW check that store names are not prefixes
-            let kv_store = ApplicationKVBank::new(
-                PrefixDB::new(Arc::clone(&db), prefix),
-                None,
-                Some(store.name().to_owned()),
-            )
-            .unwrap();
+        let stores = build_prefixed_stores::<_, SK>(db)
+            .into_iter()
+            .map(|(store_key, store)| {
+                let kv_store =
+                    ApplicationKVBank::new(store, None, Some(store_key.name().to_owned()))
+                        .expect("Can't build KVBank");
 
-            let store_info = StoreInfo {
-                name: store.name().into(),
-                hash: kv_store.persistent().root_hash(),
-            };
+                let store_info = StoreInfo {
+                    name: store_key.name().into(),
+                    hash: kv_store.persistent().root_hash(),
+                };
 
-            head_version = kv_store.persistent().loaded_version();
+                store_infos.push(store_info);
+                head_version = kv_store.persistent().loaded_version();
 
-            stores.insert(store, kv_store);
-            store_infos.push(store_info)
-        }
+                (store_key, kv_store)
+            })
+            .collect::<HashMap<_, _>>();
 
         MultiBank {
             head_version,

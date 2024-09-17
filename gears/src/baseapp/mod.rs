@@ -57,7 +57,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     BaseApp<DB, PSK, H, AI>
 {
     pub fn new(db: DB, params_subspace_key: PSK, abci_handler: H, options: NodeOptions) -> Self {
-        let mut multi_store = ApplicationMultiBank::new(db);
+        let mut multi_store = ApplicationMultiBank::new(Arc::new(db));
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_subspace_key,

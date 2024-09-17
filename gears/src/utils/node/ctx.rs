@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use database::MemDB;
 use kv_store::{
     bank::multi::{ApplicationMultiBank, TransactionMultiBank},
@@ -15,7 +17,7 @@ use crate::{
 };
 
 pub fn build_store<SK: StoreKey>() -> ApplicationMultiBank<MemDB, SK> {
-    ApplicationMultiBank::new(MemDB::new())
+    ApplicationMultiBank::new(Arc::new(MemDB::new()))
 }
 
 pub struct ContextOptions {
