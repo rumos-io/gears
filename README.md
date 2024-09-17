@@ -12,4 +12,4 @@ Cosmos SDK has not yet been implemented however Gears can be used to create basi
 
 # AZKR
 
-Work on Gears is primarily funded through [AZKR research](https://azkr.org/). AZKR are using Gears to build AZKR-chain which is a unique web3 ecosystem to help DAOs achieve mass adoption. [Their dashboard](http://dashboard.azkr.org/devnet) demonstrates how Gears can work seamlessly with existing Cosmos eco system tooling, in this case the [ping.pub](https://ping.pub/) dashboard.
+Work on Gears is primarily funded through [AZKR research](https://azkr.org/). AZKR are using Gears to build AZKR-chain which is a unique web3 ecosystem to help DAOs achieve mass adoption. [Their dashboard](http://dashboard.azkr.org/devnet) demonstrates how Gears can work seamlessly with existing Cosmos ecosystem tooling, in this case the [ping.pub](https://ping.pub/) dashboard.
