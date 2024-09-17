@@ -2048,6 +2048,7 @@ dependencies = [
  "staking",
  "tendermint 0.1.0",
  "toml_edit",
+ "url",
 ]
 
 [[package]]

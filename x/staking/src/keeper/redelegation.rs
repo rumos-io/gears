@@ -6,10 +6,6 @@ use crate::{
 use gears::context::{InfallibleContext, InfallibleContextMut};
 use gears::core::Protobuf;
 use gears::extensions::corruption::UnwrapCorrupt;
-use gears::{
-    context::{InfallibleContext, InfallibleContextMut},
-    store::database::ext::UnwrapCorrupt,
-};
 use prost::bytes::Bytes;
 
 impl<
