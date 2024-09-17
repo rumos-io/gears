@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
-    context::{simple::SimpleContext, tx::TxContext},
+    context::{query::QueryContext, simple::SimpleContext, tx::TxContext},
     error::POISONED_LOCK,
     params::ParamsSubspaceKey,
     types::{
@@ -18,7 +18,10 @@ use crate::{
 use bytes::Bytes;
 use database::Database;
 use errors::QueryError;
-use kv_store::bank::multi::{ApplicationMultiBank, TransactionMultiBank};
+use kv_store::{
+    bank::multi::{ApplicationMultiBank, TransactionMultiBank},
+    query::QueryMultiStore,
+};
 use mode::build_tx_gas_meter;
 use tendermint::types::{
     chain_id::ChainId,
@@ -46,6 +49,7 @@ pub use query::*;
 #[derive(Debug, Clone)]
 pub struct BaseApp<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
     state: Arc<RwLock<ApplicationState<DB, H>>>,
+    multi_store: Arc<RwLock<ApplicationMultiBank<DB, H::StoreKey>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<PSK>,
@@ -77,8 +81,9 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             baseapp_params_keeper,
             state: Arc::new(RwLock::new(ApplicationState::new(
                 Gas::from(max_gas),
-                multi_store,
+                &multi_store,
             ))),
+            multi_store: Arc::new(RwLock::new(multi_store)),
             options,
             _info_marker: PhantomData,
         }
@@ -100,7 +105,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             .try_into()
             .map_err(|_| QueryError::InvalidHeight)?;
 
-        let ctx = self.state.read().expect(POISONED_LOCK).query_ctx(version)?;
+        let store = self.multi_store.read().expect(POISONED_LOCK);
+        let ctx = QueryContext::new(QueryMultiStore::new(&*store, version)?, version)?;
 
         self.abci_handler
             .query(&ctx, request.clone())
