@@ -10,6 +10,7 @@ use crate::params::ParamsSubspaceKey;
 use crate::types::gas::Gas;
 use bytes::Bytes;
 use database::Database;
+use extensions::lock::AcquireRwLock;
 use tendermint::{
     application::ABCIApplication,
     types::{
@@ -130,7 +131,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn check_tx(&self, RequestCheckTx { tx, r#type }: RequestCheckTx) -> ResponseCheckTx {
-        let mut state = self.state.write().expect(POISONED_LOCK);
+        let mut state = self.state.acquire_write();
 
         let CheckTxMode {
             block_gas_meter,

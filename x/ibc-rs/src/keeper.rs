@@ -62,7 +62,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let mut router = ClientRouter;
 
-        dispatch(&mut ctx, &mut router, msg.into()) 
+        dispatch(&mut ctx, &mut router, msg.into())
     }
 
     pub fn client_states<DB: Database>(

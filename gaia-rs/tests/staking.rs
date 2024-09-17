@@ -28,7 +28,7 @@ use staking::{
         },
         tx::{CreateValidatorCli, StakingCommands, StakingTxCli},
     },
-    CommissionRatesRaw, CommissionRaw, DelegationResponse, Description, Validator,
+    DelegationResponse, Description, Validator,
 };
 use std::{path::PathBuf, str::FromStr};
 use utilities::{acc_address, default_coin, ACC_ADDRESS};
@@ -409,8 +409,8 @@ fn query_validator() -> anyhow::Result<()> {
     assert!(!jailed);
     assert_eq!(tokens, Uint256::from(100u64));
     assert_eq!(
-        CommissionRaw::from(commission).commission_rates,
-        Some(CommissionRatesRaw {
+        ibc_proto::cosmos::staking::v1beta1::Commission::from(commission).commission_rates,
+        Some(ibc_proto::cosmos::staking::v1beta1::CommissionRates {
             rate: 10u64.pow(17).to_string(),
             max_rate: (2 * 10u64.pow(17)).to_string(),
             max_change_rate: 10u64.pow(16).to_string(),
