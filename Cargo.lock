@@ -1928,6 +1928,7 @@ dependencies = [
  "bytes",
  "clap",
  "data-encoding",
+ "distribution",
  "gears",
  "genutil",
  "gov",
@@ -1938,6 +1939,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "slashing",
  "staking",
  "strum",
  "tonic",
@@ -4987,6 +4989,7 @@ name = "slashing"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum 0.7.5",
  "bytes",
  "clap",
  "gears",

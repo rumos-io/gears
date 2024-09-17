@@ -51,12 +51,18 @@ impl<
         let pagination = query.pagination.map(gears::ext::Pagination::from);
         let (validators, p_result) = if query.status == BondStatus::Unspecified {
             let (p_result, iterator) = iterator.maybe_paginate(pagination);
-            (iterator.map(|(_k, v)| v).collect(), p_result)
+            (
+                iterator.map(|(_k, v)| v).map(Into::into).collect(),
+                p_result,
+            )
         } else {
             let (p_result, iterator) = iterator
                 .filter(|(_k, v)| v.status == query.status)
                 .maybe_paginate(pagination);
-            (iterator.map(|(_k, v)| v).collect(), p_result)
+            (
+                iterator.map(|(_k, v)| v).map(Into::into).collect(),
+                p_result,
+            )
         };
 
         QueryValidatorsResponse {

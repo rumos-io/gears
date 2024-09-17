@@ -1,7 +1,7 @@
 use address::AddressError;
 use core_types::errors::CoreError;
 use cosmwasm_std::Decimal256RangeExceeded;
-use tendermint::error::Error as TendermintError;
+use tendermint::{error::Error as TendermintError, types::time::timestamp::NewTimestampError};
 
 use crate::types::{
     base::errors::{CoinError, CoinsError},
@@ -54,6 +54,8 @@ pub enum ProtobufError {
     Core(#[from] CoreError),
     #[error("decode adress error: {0}")]
     Tendermint(#[from] TendermintError),
+    #[error("decode adress error: {0}")]
+    NewTimestamp(#[from] NewTimestampError),
     #[error("decode adress error: {0}")]
     AddressError(#[from] AddressError),
     #[error("{0}")]
