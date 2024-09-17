@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn iterator_works() {
-        let db = RocksDB::new("tmp/1").unwrap();
+        let db = RocksDB::new("tmp/1").expect("hardcoded is valid");
         db.put(vec![1], vec![1]);
         db.put(vec![2], vec![2]);
         let got_pairs: Vec<(Box<[u8]>, Box<[u8]>)> = db.iterator().collect();
@@ -86,7 +86,7 @@ mod tests {
 
     #[test]
     fn prefix_iterator_works() {
-        let db = RocksDB::new("tmp/2").unwrap();
+        let db = RocksDB::new("tmp/2").expect("hardcoded is valid");
         db.put(vec![1, 1], vec![1]);
         db.put(vec![2, 1], vec![2]);
         db.put(vec![3, 1], vec![3]);

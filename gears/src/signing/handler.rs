@@ -71,6 +71,7 @@ mod tests {
     use ciborium::Value;
     use core_types::tx::mode_info::{ModeInfo, SignMode};
     use cosmwasm_std::Uint256;
+    use extensions::testing::UnwrapTesting;
     use std::{collections::BTreeMap, str::FromStr};
     use tendermint::types::chain_id::ChainId;
     use vec1::vec1;
@@ -96,7 +97,7 @@ mod tests {
                         denom: Denom::try_from("uatom".to_owned())?,
                         amount: Uint256::from(2000u32),
                     }])
-                    .unwrap(),
+                    .unwrap_test(),
                 ),
                 gas_limit: 100000_u64.try_into().expect("this is a valid gas limit"),
                 payer: None,
@@ -130,7 +131,7 @@ mod tests {
                     denom: Denom::try_from("uatom".to_string())?,
                     amount: Uint256::from(10000000u32),
                 }])
-                .unwrap(),
+                .unwrap_test(),
             }],
             memo: String::new(),
             timeout_height: 0,
@@ -318,7 +319,7 @@ mod tests {
                     denom: Denom::try_from("uatom".to_string())?,
                     amount: Uint256::from(1u8),
                 }])
-                .unwrap(),
+                .unwrap_test(),
             }],
             memo: String::new(),
             timeout_height: 0,
@@ -420,7 +421,7 @@ mod tests {
                     denom: Denom::try_from("uatom".to_string())?,
                     amount: Uint256::from(1u8),
                 }])
-                .unwrap(),
+                .unwrap_test(),
             }],
             memo: String::new(),
             timeout_height: 0,

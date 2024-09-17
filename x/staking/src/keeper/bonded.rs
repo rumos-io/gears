@@ -23,7 +23,7 @@ impl<
             denom: params.bond_denom().clone(),
             amount,
         }])
-        .unwrap();
+        .expect("shouldn't fail");
 
         self.bank_keeper
             .send_coins_from_module_to_module::<DB, CTX>(

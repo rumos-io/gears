@@ -1,4 +1,5 @@
 use database::Database;
+use extensions::corruption::UnwrapCorrupt;
 use kv_store::StoreKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -96,9 +97,12 @@ impl ParamsSerialize for ConsensusParams {
 impl ParamsDeserialize for ConsensusParams {
     fn from_raw(fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
-            block: serde_json::from_slice(fields.get(KEY_BLOCK_PARAMS).unwrap()).unwrap(),
-            evidence: serde_json::from_slice(fields.get(KEY_EVIDENCE_PARAMS).unwrap()).unwrap(),
-            validator: serde_json::from_slice(fields.get(KEY_VALIDATOR_PARAMS).unwrap()).unwrap(),
+            block: serde_json::from_slice(fields.get(KEY_BLOCK_PARAMS).unwrap_or_corrupt())
+                .unwrap_or_corrupt(),
+            evidence: serde_json::from_slice(fields.get(KEY_EVIDENCE_PARAMS).unwrap_or_corrupt())
+                .unwrap_or_corrupt(),
+            validator: serde_json::from_slice(fields.get(KEY_VALIDATOR_PARAMS).unwrap_or_corrupt())
+                .unwrap_or_corrupt(),
         }
     }
 }
@@ -280,6 +284,7 @@ mod tests {
 
     use super::*;
     use database::MemDB;
+    use extensions::testing::UnwrapTesting;
     use key_derive::{ParamsKeys, StoreKeys};
     use kv_store::bank::multi::ApplicationMultiBank;
     use tendermint::types::{
@@ -296,7 +301,7 @@ mod tests {
         .into();
 
         assert_eq!(
-            serde_json::to_string(&params).unwrap(),
+            serde_json::to_string(&params).expect("hardcoded is valid"),
             "{\"max_age_num_blocks\":\"0\",\"max_age_duration\":\"10000000030\",\"max_bytes\":\"0\"}"
                 .to_string()
         );
@@ -317,7 +322,8 @@ mod tests {
             params_subspace_key: SubspaceKey::Params,
         };
 
-        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(Arc::new(MemDB::new()));
+        let mut multi_store =
+            ApplicationMultiBank::<_, SubspaceKey>::new(Arc::new(MemDB::new())).unwrap_test();
 
         let before_hash = multi_store.head_commit_hash();
 
@@ -350,7 +356,8 @@ mod tests {
             params_subspace_key: SubspaceKey::Params,
         };
 
-        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(Arc::new(MemDB::new()));
+        let mut multi_store =
+            ApplicationMultiBank::<_, SubspaceKey>::new(Arc::new(MemDB::new())).unwrap_test();
 
         let mut ctx = InitContext::new(
             &mut multi_store,

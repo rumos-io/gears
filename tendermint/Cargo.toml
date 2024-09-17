@@ -47,5 +47,6 @@ async-trait = "0.1.81"
 
 
 [dev-dependencies]
+extensions = { path = "../extensions" }
 
 [features]

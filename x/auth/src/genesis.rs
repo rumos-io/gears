@@ -67,6 +67,8 @@ impl GenesisState {
 #[cfg(test)]
 mod tests {
 
+    use gears::extensions::testing::UnwrapTesting;
+
     use super::*;
 
     #[test]
@@ -74,7 +76,7 @@ mod tests {
         let mut genesis_state = GenesisState::default();
         let address = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux"
             .parse()
-            .unwrap();
+            .unwrap_test();
         genesis_state
             .add_genesis_account(address)
             .expect("will succeed because address is not in genesis_state.accounts");
@@ -88,7 +90,7 @@ mod tests {
                     account_number: 0,
                     sequence: 0,
                 })
-             if address == &AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux").unwrap()),);
+             if address == &AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux").unwrap_test()),);
     }
 
     #[test]
@@ -154,6 +156,6 @@ mod tests {
             }
         }"#;
 
-        serde_json::from_str::<GenesisState>(genesis).unwrap();
+        serde_json::from_str::<GenesisState>(genesis).unwrap_test();
     }
 }

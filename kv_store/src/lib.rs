@@ -5,7 +5,6 @@ use strum::IntoEnumIterator;
 pub mod bank;
 pub mod cache;
 pub mod error;
-pub mod ext;
 pub mod query;
 pub mod range;
 pub mod store;

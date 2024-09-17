@@ -24,7 +24,7 @@ impl<SK, DB> MultiBankBackend<DB, SK> for ApplicationStore<DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
-    pub fn new(db: Arc<DB>) -> Self {
+    pub fn new(db: Arc<DB>) -> Result<Self, MultiStoreError<SK>> {
         let mut store_infos = Vec::new();
         let mut head_version = 0;
 
@@ -33,7 +33,10 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
             .map(|(store_key, store)| {
                 let kv_store =
                     ApplicationKVBank::new(store, None, Some(store_key.name().to_owned()))
-                        .expect("Can't build KVBank");
+                        .map_err(|err| MultiStoreError {
+                            sk: store.clone(),
+                            err,
+                        })?;
 
                 let store_info = StoreInfo {
                     name: store_key.name().into(),
@@ -47,12 +50,12 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
             })
             .collect::<HashMap<_, _>>();
 
-        MultiBank {
+        Ok(MultiBank {
             head_version,
             head_commit_hash: crate::hash::hash_store_infos(store_infos),
             backend: ApplicationStore(stores),
             _marker: PhantomData,
-        }
+        })
     }
 
     pub fn to_tx_kind(&self) -> TransactionMultiBank<DB, SK> {

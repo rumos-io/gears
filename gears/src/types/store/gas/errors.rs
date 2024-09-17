@@ -1,6 +1,6 @@
-use crate::types::{auth::gas::GasError, gas::GasMeteringErrors};
+use extensions::{gas::UnwrapGasError, pagination::PaginationKey};
 
-use super::ext::UnwrapGasError;
+use crate::types::{auth::gas::GasError, gas::GasMeteringErrors};
 
 // TODO: this error should have two variants, out of gas and gas overflow
 #[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
@@ -28,3 +28,9 @@ impl GasStoreErrors {
 }
 
 impl UnwrapGasError for GasStoreErrors {}
+
+impl PaginationKey for GasStoreErrors {
+    fn iterator_key(&self) -> std::borrow::Cow<'_, [u8]> {
+        std::borrow::Cow::Borrowed(&self.key)
+    }
+}

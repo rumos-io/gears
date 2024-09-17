@@ -1,9 +1,11 @@
+use std::marker::PhantomData;
+
 use crate::{
     errors, ics02_client::client::cli::query::client_states::STATES_URL, keeper::Keeper,
     message::Message, types::genesis::GenesisState,
 };
 use gears::{
-    application::handlers::node::TxError,
+    application::handlers::node::{ModuleInfo, TxError},
     baseapp::errors::QueryError,
     context::{init::InitContext, query::QueryContext, tx::TxContext},
     core::errors::CoreError,
@@ -18,13 +20,14 @@ use ibc::primitives::proto::Protobuf;
 use prost::Message as ProstMessage;
 
 #[derive(Debug, Clone)]
-pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, MI> {
     //tx_keeper: TxKeeper<SK, PSK>, // TODO: Should signature for Handler always be &self or allow &mut self?
     //query_keeper: QueryKeeper<SK, PSK>,
     keeper: Keeper<SK, PSK>,
+    _marker: PhantomData<MI>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, MI: ModuleInfo> ABCIHandler<SK, PSK, MI> {
     // pub fn new(tx_keeper: TxKeeper<SK, PSK>, query_keeper: QueryKeeper<SK, PSK>) -> Self {
     //     Self {
     //         tx_keeper,
@@ -33,7 +36,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
     // }
 
     pub fn new(keeper: Keeper<SK, PSK>) -> Self {
-        Self { keeper }
+        Self {
+            keeper,
+            _marker: PhantomData,
+        }
     }
 
     pub fn msg<DB: Database + Sync + Send>(
@@ -53,7 +59,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
                 //     .tx_keeper
                 //     .client_create(ctx, &client_state, consensus_state.into())?;
 
-                self.keeper.client_create(ctx, msg);
+                self.keeper
+                    .client_create(ctx, msg)
+                    .map_err(|e| TxError::new::<MI>(e.to_string(), nz::u16!(1)))?;
 
                 Ok(())
             } // Message::ClientUpdate(msg) => {

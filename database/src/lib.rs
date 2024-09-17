@@ -1,7 +1,6 @@
 #![warn(rust_2018_idioms)]
 
 pub mod error;
-pub mod ext;
 mod memory;
 pub mod prefix;
 #[cfg(feature = "rocksdb")]

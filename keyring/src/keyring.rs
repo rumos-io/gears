@@ -95,6 +95,8 @@ mod tests {
 
     use std::path::PathBuf;
 
+    use extensions::testing::UnwrapTesting;
+
     use super::*;
 
     #[test]
@@ -104,7 +106,7 @@ mod tests {
 
         // add key should succeed
         let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap_test();
         add_key("bob", &mnemonic, KeyType::Secp256k1, Backend::Test(&path))
             .expect("key should be added");
 

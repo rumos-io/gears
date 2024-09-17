@@ -8,13 +8,14 @@ use crate::{
     QueryValidatorsRequest, QueryValidatorsResponse, Redelegation, RedelegationEntryResponse,
     RedelegationResponse,
 };
+use gears::extensions::gas::GasResultExt;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
     baseapp::{errors::QueryError, QueryRequest, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::Protobuf,
     derive::Query,
-    ext::Pagination,
+    extensions::pagination::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -23,7 +24,7 @@ use gears::{
             begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
         },
     },
-    types::{pagination::response::PaginationResponse, store::gas::ext::GasResultExt},
+    types::pagination::response::PaginationResponse,
     x::{
         keepers::{
             auth::AuthKeeper,
@@ -32,6 +33,7 @@ use gears::{
         module::Module,
     },
 };
+
 use serde::Serialize;
 
 #[derive(Debug, Clone)]
@@ -142,7 +144,13 @@ impl<
                 StakingNodeQueryResponse::Pool(self.query_pool(ctx))
             }
             StakingNodeQueryRequest::Params(_) => {
-                StakingNodeQueryResponse::Params(self.keeper.query_params(ctx))
+                // TODO: make correct params struct and serialization of it
+                let mut res = self.keeper.query_params(ctx);
+                // frontend accept seconds
+                res.params
+                    .as_mut()
+                    .map(|p| p.unbonding_time / 1_000_000_000);
+                StakingNodeQueryResponse::Params(res)
             }
         }
     }
@@ -234,7 +242,13 @@ impl<
                 Ok(self.query_redelegations(ctx, req).into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/Params" => {
-                Ok(self.keeper.query_params(ctx).into_bytes())
+                // TODO: make correct params struct and serialization of it
+                let mut res = self.keeper.query_params(ctx);
+                // frontend accept seconds
+                res.params
+                    .as_mut()
+                    .map(|p| p.unbonding_time / 1_000_000_000);
+                Ok(res.into_bytes())
             }
             _ => Err(QueryError::PathNotFound),
         }

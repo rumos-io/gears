@@ -91,26 +91,28 @@ impl Display for Denom {
 #[cfg(test)]
 mod tests {
 
+    use extensions::testing::UnwrapTesting;
+
     use super::*;
 
     #[test]
     fn from_string_successes() {
-        let res: Denom = "abcd".to_string().try_into().unwrap();
+        let res: Denom = "abcd".to_string().try_into().unwrap_test();
         assert_eq!(Denom("abcd".into()), res);
 
         let res: Denom = "ibc/7F1D3FCF4AE79E1554D670D1AD949A9BA4E4A3C76C63093E17E446A46061A7A2"
             .to_string()
             .try_into()
-            .unwrap();
+            .unwrap_test();
         assert_eq!(
             Denom("ibc/7F1D3FCF4AE79E1554D670D1AD949A9BA4E4A3C76C63093E17E446A46061A7A2".into()),
             res
         );
 
-        let res: Denom = "at0m".to_string().try_into().unwrap();
+        let res: Denom = "at0m".to_string().try_into().unwrap_test();
         assert_eq!(Denom("at0m".into()), res);
 
-        let res: Denom = "Atom".to_string().try_into().unwrap();
+        let res: Denom = "Atom".to_string().try_into().unwrap_test();
         assert_eq!(Denom("Atom".into()), res);
     }
 
@@ -149,16 +151,16 @@ mod tests {
 
     #[test]
     fn to_string_success() {
-        let denom: Denom = "atom".to_string().try_into().unwrap();
+        let denom: Denom = "atom".to_string().try_into().unwrap_test();
         assert_eq!("atom", denom.to_string());
     }
 
     #[test]
     fn serialize_success() {
-        let res: Denom = "abcd".to_string().try_into().unwrap();
+        let res: Denom = "abcd".to_string().try_into().unwrap_test();
 
         assert_eq!(
-            serde_json::to_string(&res).unwrap(),
+            serde_json::to_string(&res).unwrap_test(),
             r#""abcd""#.to_string()
         );
     }

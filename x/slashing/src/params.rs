@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use gears::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
     core::{serializers::serialize_number_to_string, Protobuf},
+    extensions::corruption::UnwrapCorrupt,
     params::{
         gas, infallible_subspace, infallible_subspace_mut, ParamKind, ParamsDeserialize,
         ParamsSerialize, ParamsSubspaceKey,
@@ -161,43 +162,55 @@ impl ParamsDeserialize for SlashingParams {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
             signed_blocks_window: ParamKind::I64
-                .parse_param(fields.remove(KEY_SIGNED_BLOCKS_WINDOW).unwrap())
+                .parse_param(fields.remove(KEY_SIGNED_BLOCKS_WINDOW).unwrap_or_corrupt())
                 .signed_64()
-                .unwrap(),
+                .unwrap_or_corrupt(),
             min_signed_per_window: Decimal256::from_str(
                 &String::from_utf8(
                     ParamKind::Bytes
-                        .parse_param(fields.remove(KEY_MIN_SIGNED_PER_WINDOW).unwrap())
+                        .parse_param(fields.remove(KEY_MIN_SIGNED_PER_WINDOW).unwrap_or_corrupt())
                         .bytes()
-                        .unwrap(),
+                        .unwrap_or_corrupt(),
                 )
-                .unwrap(),
+                .unwrap_or_corrupt(),
             )
-            .unwrap(),
+            .unwrap_or_corrupt(),
             downtime_jail_duration: ParamKind::I64
-                .parse_param(fields.remove(KEY_DOWNTIME_JAIL_DURATION).unwrap())
+                .parse_param(
+                    fields
+                        .remove(KEY_DOWNTIME_JAIL_DURATION)
+                        .unwrap_or_corrupt(),
+                )
                 .signed_64()
-                .unwrap(),
+                .unwrap_or_corrupt(),
             slash_fraction_double_sign: Decimal256::from_str(
                 &String::from_utf8(
                     ParamKind::Bytes
-                        .parse_param(fields.remove(KEY_SLASH_FRACTION_DOUBLE_SIGN).unwrap())
+                        .parse_param(
+                            fields
+                                .remove(KEY_SLASH_FRACTION_DOUBLE_SIGN)
+                                .unwrap_or_corrupt(),
+                        )
                         .bytes()
-                        .unwrap(),
+                        .unwrap_or_corrupt(),
                 )
-                .unwrap(),
+                .unwrap_or_corrupt(),
             )
-            .unwrap(),
+            .unwrap_or_corrupt(),
             slash_fraction_downtime: Decimal256::from_str(
                 &String::from_utf8(
                     ParamKind::Bytes
-                        .parse_param(fields.remove(KEY_SLASH_FRACTION_DOWNTIME).unwrap())
+                        .parse_param(
+                            fields
+                                .remove(KEY_SLASH_FRACTION_DOWNTIME)
+                                .unwrap_or_corrupt(),
+                        )
                         .bytes()
-                        .unwrap(),
+                        .unwrap_or_corrupt(),
                 )
-                .unwrap(),
+                .unwrap_or_corrupt(),
             )
-            .unwrap(),
+            .unwrap_or_corrupt(),
         }
     }
 }
@@ -207,14 +220,14 @@ impl Default for SlashingParams {
         // TODO: check defaults, especially with division
         Self {
             signed_blocks_window: 100,
-            min_signed_per_window: Decimal256::from_atomics(5u64, 1).unwrap(),
+            min_signed_per_window: Decimal256::from_atomics(5u64, 1).expect("default is valid"),
             downtime_jail_duration: 60 * 10 * 1_000_000_000,
             slash_fraction_double_sign: Decimal256::one()
-                .checked_div(Decimal256::from_atomics(20u64, 0).unwrap())
-                .unwrap(),
+                .checked_div(Decimal256::from_atomics(20u64, 0).expect("default is valid"))
+                .expect("default is valid"),
             slash_fraction_downtime: Decimal256::one()
-                .checked_div(Decimal256::from_atomics(100u64, 0).unwrap())
-                .unwrap(),
+                .checked_div(Decimal256::from_atomics(100u64, 0).expect("default is valid"))
+                .expect("default is valid"),
         }
     }
 }

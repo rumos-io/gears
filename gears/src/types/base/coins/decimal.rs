@@ -239,6 +239,7 @@ mod tests {
     use super::*;
     use crate::types::denom::Denom;
     use cosmwasm_std::Uint256;
+    use extensions::testing::UnwrapTesting;
     use std::{str::FromStr, sync::OnceLock};
 
     static DENOMS: OnceLock<[Denom; 4]> = OnceLock::new();
@@ -262,11 +263,11 @@ mod tests {
             if v != 0 {
                 coins.push(DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[i].clone(),
-                    amount: Decimal256::from_atomics(v, 0).unwrap(),
+                    amount: Decimal256::from_atomics(v, 0).unwrap_test(),
                 })
             }
         }
-        DecimalCoins::new(coins).unwrap()
+        DecimalCoins::new(coins).unwrap_test()
     }
 
     #[test]
@@ -298,25 +299,25 @@ mod tests {
     fn checked_add() -> anyhow::Result<()> {
         let dec_coins_1 = generate_coins(vec![100, 100, 100]);
         let dec_coins_2 = generate_coins(vec![50, 50, 0, 50]);
-        let dec_coins_add = dec_coins_1.checked_add(&dec_coins_2).unwrap();
+        let dec_coins_add = dec_coins_1.checked_add(&dec_coins_2).unwrap_test();
         assert_eq!(
             dec_coins_add.into_inner(),
             vec![
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
-                    amount: Decimal256::from_atomics(150u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(150u64, 0).unwrap_test(),
                 },
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[1].clone(),
-                    amount: Decimal256::from_atomics(150u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(150u64, 0).unwrap_test(),
                 },
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[2].clone(),
-                    amount: Decimal256::from_atomics(100u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(100u64, 0).unwrap_test(),
                 },
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[3].clone(),
-                    amount: Decimal256::from_atomics(50u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(50u64, 0).unwrap_test(),
                 },
             ]
         );
@@ -325,8 +326,8 @@ mod tests {
             denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
             amount: Decimal256::new(Uint256::MAX),
         }];
-        let dec_coins_1 = DecimalCoins::new(dec_coins_inner.clone()).unwrap();
-        let dec_coins_2 = DecimalCoins::new(dec_coins_inner).unwrap();
+        let dec_coins_1 = DecimalCoins::new(dec_coins_inner.clone()).unwrap_test();
+        let dec_coins_2 = DecimalCoins::new(dec_coins_inner).unwrap_test();
 
         assert!(dec_coins_1.checked_add(&dec_coins_2).is_err());
 
@@ -353,15 +354,15 @@ mod tests {
             &vec![
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
-                    amount: Decimal256::from_atomics(50u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(50u64, 0).unwrap_test(),
                 },
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[1].clone(),
-                    amount: Decimal256::from_atomics(50u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(50u64, 0).unwrap_test(),
                 },
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[2].clone(),
-                    amount: Decimal256::from_atomics(100u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(100u64, 0).unwrap_test(),
                 },
             ]
         );
@@ -381,12 +382,12 @@ mod tests {
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
                     // 3.03
-                    amount: Decimal256::from_atomics(3u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(3u64, 0).unwrap_test(),
                 },
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[1].clone(),
                     // 2.73
-                    amount: Decimal256::from_atomics(2u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(2u64, 0).unwrap_test(),
                 },
             ]
         );
@@ -395,7 +396,7 @@ mod tests {
             denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
             amount: Decimal256::new(Uint256::MAX),
         }];
-        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap();
+        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap_test();
         let dec_coins_mul_truncated =
             dec_coins.checked_mul_dec_truncate(Decimal256::new(Uint256::MAX));
         assert!(dec_coins_mul_truncated.is_err());
@@ -415,17 +416,17 @@ mod tests {
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
                     // > 2.5
-                    amount: Decimal256::from_atomics(3u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(3u64, 0).unwrap_test(),
                 },
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[1].clone(),
                     // == 2.5
-                    amount: Decimal256::from_atomics(3u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(3u64, 0).unwrap_test(),
                 },
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[2].clone(),
                     // < 2.5
-                    amount: Decimal256::from_atomics(2u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(2u64, 0).unwrap_test(),
                 },
             ]
         );
@@ -434,7 +435,7 @@ mod tests {
             denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
             amount: Decimal256::new(Uint256::MAX),
         }];
-        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap();
+        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap_test();
         let dec_coins_mul = dec_coins.checked_mul_dec(Decimal256::new(Uint256::MAX));
         assert!(dec_coins_mul.is_err());
 
@@ -453,12 +454,12 @@ mod tests {
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
                     // 1.7
-                    amount: Decimal256::from_atomics(1u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(1u64, 0).unwrap_test(),
                 },
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[1].clone(),
                     // 1.2
-                    amount: Decimal256::from_atomics(1u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(1u64, 0).unwrap_test(),
                 },
             ]
         );
@@ -482,7 +483,7 @@ mod tests {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
                     amount: Uint256::from(17u64),
                 },])
-                .unwrap()
+                .unwrap_test()
             )
         );
         assert!(change.is_none());
@@ -491,7 +492,7 @@ mod tests {
             denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
             amount: Decimal256::from_atomics(5u64, 1).expect("hardcoded value cannot fail"),
         }];
-        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap();
+        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap_test();
         let (truncated, change) = dec_coins.truncate_decimal();
         assert!(truncated.is_none());
         assert_eq!(
@@ -499,9 +500,9 @@ mod tests {
             Some(
                 DecimalCoins::new(vec![DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
-                    amount: Decimal256::from_atomics(5u64, 1).unwrap(),
+                    amount: Decimal256::from_atomics(5u64, 1).unwrap_test(),
                 },])
-                .unwrap()
+                .unwrap_test()
             )
         );
 
@@ -509,7 +510,7 @@ mod tests {
             denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
             amount: Decimal256::from_atomics(175u64, 1).expect("hardcoded value cannot fail"),
         }];
-        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap();
+        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap_test();
         let (truncated, change) = dec_coins.truncate_decimal();
         assert_eq!(
             truncated,
@@ -518,7 +519,7 @@ mod tests {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
                     amount: Uint256::from(17u64),
                 },])
-                .unwrap()
+                .unwrap_test()
             )
         );
         assert_eq!(
@@ -526,9 +527,9 @@ mod tests {
             Some(
                 DecimalCoins::new(vec![DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
-                    amount: Decimal256::from_atomics(5u64, 1).unwrap(),
+                    amount: Decimal256::from_atomics(5u64, 1).unwrap_test(),
                 },])
-                .unwrap()
+                .unwrap_test()
             )
         );
 
@@ -546,12 +547,12 @@ mod tests {
             &vec![
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
-                    amount: Decimal256::from_atomics(90u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(90u64, 0).unwrap_test(),
                 },
                 DecimalCoin {
                     denom: DENOMS.get().expect("cannot fail initialized variable")[2].clone(),
                     // 1.2
-                    amount: Decimal256::from_atomics(20u64, 0).unwrap(),
+                    amount: Decimal256::from_atomics(20u64, 0).unwrap_test(),
                 },
             ]
         );

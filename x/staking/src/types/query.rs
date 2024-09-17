@@ -1,6 +1,6 @@
 use crate::{
-    consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Pool, Redelegation, RedelegationEntry,
-    StakingParams, UnbondingDelegation, Validator,
+    consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, IbcV046Validator, Pool, Redelegation,
+    RedelegationEntry, StakingParams, UnbondingDelegation, Validator,
 };
 use gears::{
     core::{
@@ -167,7 +167,7 @@ pub struct QueryValidatorResponse {
 pub struct QueryValidatorsResponse {
     /// validators contains all the queried validators.
     #[proto(repeated)]
-    pub validators: Vec<Validator>,
+    pub validators: Vec<IbcV046Validator>,
     /// pagination defines the pagination in the response.
     #[proto(optional)]
     pub pagination: Option<PaginationResponse>,

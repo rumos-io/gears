@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use gears::{
     core::{errors::CoreError, Protobuf},
-    ext::PaginationKey,
+    extensions::pagination::PaginationKey,
     tendermint::types::time::timestamp::Timestamp,
     types::{
         address::{AccAddress, ValAddress},

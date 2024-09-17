@@ -14,7 +14,7 @@ use crate::{
 use gears::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext},
     core::Protobuf,
-    store::database::ext::UnwrapCorrupt,
+    extensions::corruption::UnwrapCorrupt,
     types::address::{AccAddress, ValAddress},
 };
 

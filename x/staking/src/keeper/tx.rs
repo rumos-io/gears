@@ -3,7 +3,7 @@ use crate::{
     Commission, CreateValidator, DelegateMsg, EditValidator, RedelegateMsg, UndelegateMsg,
 };
 use gears::{
-    baseapp::ValidatorParams, context::tx::TxContext, store::database::ext::UnwrapCorrupt,
+    baseapp::ValidatorParams, context::tx::TxContext, extensions::corruption::UnwrapCorrupt,
     types::address::ConsAddress,
 };
 

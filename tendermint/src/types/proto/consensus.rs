@@ -83,7 +83,7 @@ impl TryFrom<inner::ConsensusParams> for ConsensusParams {
 /// Consensus captures the consensus rules for processing a block in the blockchain,
 /// including all blockchain data structures and the rules of the application's
 /// state transition machine.
-#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug, Default)]
 pub struct Consensus {
     #[serde(with = "crate::types::serializers::from_str")]
     pub block: u64,

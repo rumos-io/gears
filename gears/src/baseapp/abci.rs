@@ -13,6 +13,7 @@ use crate::{
 use crate::{baseapp::RunTxInfo, context::block::BlockContext};
 use bytes::Bytes;
 use database::Database;
+use extensions::lock::AcquireRwLock;
 use tendermint::{
     application::ABCIApplication,
     types::{
@@ -135,7 +136,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn check_tx(&self, RequestCheckTx { tx, r#type }: RequestCheckTx) -> ResponseCheckTx {
-        let mut state = self.state.write().expect(POISONED_LOCK);
+        let mut state = self.state.acquire_write();
 
         let CheckTxMode {
             block_gas_meter,
@@ -232,7 +233,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
         let mut state = self.state.write().expect(POISONED_LOCK);
 
-        let height = self.get_block_header().unwrap().height;
+        let height = self.get_block_header().height;
 
         let hash = state.commit(&mut multi_store);
 
@@ -300,9 +301,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let mut state = self.state.write().expect(POISONED_LOCK);
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
-        let header = self
-            .get_block_header()
-            .expect("block header is set in begin block");
+        let header = self.get_block_header();
 
         let consensus_params = {
             let ctx = SimpleContext::new(

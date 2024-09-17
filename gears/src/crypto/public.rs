@@ -18,6 +18,7 @@ pub enum PublicKey {
     #[serde(rename = "/cosmos.crypto.secp256k1.PubKey")]
     Secp256k1(Secp256k1PubKey),
     //Secp256r1(Vec<u8>),
+    #[serde(rename = "/cosmos.crypto.ed25519.PubKey")]
     Ed25519(Ed25519PubKey),
     //Multisig(Vec<u8>),
 }

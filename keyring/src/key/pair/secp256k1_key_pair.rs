@@ -135,6 +135,7 @@ impl FromHex for Secp256k1KeyPair {
 
 #[cfg(test)]
 mod tests {
+    use extensions::testing::UnwrapTesting;
     use pkcs8::der::zeroize::Zeroizing;
 
     use super::*;
@@ -144,7 +145,7 @@ mod tests {
         let expected_pem = "-----BEGIN PRIVATE KEY-----\nMIGEAgEAMBAGByqGSM49AgEGBSuBBAAKBG0wawIBAQQg9v3Q6I45iMwQhpDigYRQ\nhHH0jrooPuth/OhY97epZC+hRANCAAT1BLBR27K+NJ00ploewlmEWRxsH+HKUS7S\nZWkTuFQKKsUHT9nzm6axXiI797T+92b2kfW3JACbcvQ2uTZQWoFE\n-----END PRIVATE KEY-----\n".to_string();
         let expected_pem = Zeroizing::new(expected_pem);
         let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap_test();
         let key_pair = Secp256k1KeyPair::from_mnemonic(&mnemonic);
 
         let pem = key_pair.to_pkcs8_pem();
@@ -155,7 +156,7 @@ mod tests {
     #[test]
     fn from_pkcs8_pem_works() {
         let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap_test();
         let expected_key_pair = Secp256k1KeyPair::from_mnemonic(&mnemonic);
 
         let pem_key_pair = Secp256k1KeyPair::from_pkcs8_pem(
@@ -168,7 +169,7 @@ mod tests {
     #[test]
     fn encrypted_scenario_works() {
         let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap_test();
         let key_pair = Secp256k1KeyPair::from_mnemonic(&mnemonic);
 
         let pem = key_pair.to_pkcs8_encrypted_pem("password");
@@ -182,12 +183,12 @@ mod tests {
     #[test]
     fn sandpit() {
         let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap_test();
         let key_pair = Secp256k1KeyPair::from_mnemonic(&mnemonic);
 
         let pem = key_pair.to_pkcs8_encrypted_pem("password");
 
         // write pem string to file
-        std::fs::write("./tmp/pem.pem", pem.as_bytes()).unwrap();
+        std::fs::write("./tmp/pem.pem", pem.as_bytes()).unwrap_test();
     }
 }

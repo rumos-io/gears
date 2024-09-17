@@ -25,6 +25,7 @@ use gears::{
         module::Module,
     },
 };
+use serde::Serialize;
 
 #[derive(Debug, Clone)]
 pub enum DistributionNodeQueryRequest {
@@ -35,7 +36,7 @@ pub enum DistributionNodeQueryRequest {
     CommunityPool(QueryCommunityPoolRequest),
     Params(QueryParamsRequest),
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum DistributionNodeQueryResponse {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsResponse),
     ValidatorCommission(QueryValidatorCommissionResponse),

@@ -259,6 +259,7 @@ pub enum AddressError {
 mod tests {
 
     use bech32::ToBase32;
+    use extensions::testing::UnwrapTesting;
 
     use super::*;
 
@@ -270,12 +271,13 @@ mod tests {
             input_address.to_base32(),
             Variant::Bech32,
         )
-        .unwrap();
+        .unwrap_test();
+
         let expected_address = BaseAddress::<0>(input_address);
 
-        let address = AccAddress::from_bech32(&encoded).unwrap();
+        let address = AccAddress::from_bech32(&encoded);
 
-        assert_eq!(expected_address, address);
+        assert_eq!(Ok(expected_address), address);
     }
 
     #[test]
@@ -286,12 +288,16 @@ mod tests {
             input_address.to_base32(),
             Variant::Bech32,
         )
-        .unwrap();
+        .unwrap_test();
+
         encoded.pop();
 
-        let err = AccAddress::from_bech32(&encoded).unwrap_err();
+        let err = AccAddress::from_bech32(&encoded);
 
-        assert_eq!(err, AddressError::Decode(bech32::Error::InvalidChecksum));
+        assert_eq!(
+            err,
+            Err(AddressError::Decode(bech32::Error::InvalidChecksum))
+        );
     }
 
     #[test]
@@ -299,7 +305,7 @@ mod tests {
         let mut hrp = BECH_32_PREFIX_ACC_ADDR.to_string();
         hrp.push_str("atom"); // adding to the BECH_32_PREFIX_ACC_ADDR ensures that hrp is different
         let encoded =
-            bech32::encode(&hrp, vec![0x00, 0x01, 0x02].to_base32(), Variant::Bech32).unwrap();
+            bech32::encode(&hrp, vec![0x00, 0x01, 0x02].to_base32(), Variant::Bech32).unwrap_test();
 
         let err = AccAddress::from_bech32(&encoded).unwrap_err();
 
@@ -319,7 +325,7 @@ mod tests {
             vec![0x00, 0x01, 0x02].to_base32(),
             Variant::Bech32m,
         )
-        .unwrap();
+        .unwrap_test();
 
         let err = AccAddress::from_bech32(&encoded).unwrap_err();
 
@@ -339,7 +345,7 @@ mod tests {
             vec![0x00; 300].to_base32(),
             Variant::Bech32,
         )
-        .unwrap();
+        .unwrap_test();
 
         let err = AccAddress::from_bech32(&encoded).unwrap_err();
 
@@ -354,8 +360,8 @@ mod tests {
 
     #[test]
     fn from_bech32_failure_empty_address() {
-        let encoded =
-            bech32::encode(BECH_32_PREFIX_ACC_ADDR, vec![].to_base32(), Variant::Bech32).unwrap();
+        let encoded = bech32::encode(BECH_32_PREFIX_ACC_ADDR, vec![].to_base32(), Variant::Bech32)
+            .unwrap_test();
 
         let err = AccAddress::from_bech32(&encoded).unwrap_err();
 
@@ -373,7 +379,7 @@ mod tests {
     fn to_string_success() {
         let addr = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string();
 
-        let acc_addr = AccAddress::from_bech32(&addr).unwrap();
+        let acc_addr = AccAddress::from_bech32(&addr).unwrap_test();
 
         assert_eq!(addr, acc_addr.to_string());
     }
@@ -382,7 +388,7 @@ mod tests {
     fn string_from_self_success() {
         let addr = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string();
 
-        let acc_addr = AccAddress::from_bech32(&addr).unwrap();
+        let acc_addr = AccAddress::from_bech32(&addr).unwrap_test();
 
         assert_eq!(addr, String::from(acc_addr));
     }
@@ -390,9 +396,9 @@ mod tests {
     #[test]
     fn serialize_works() {
         let addr = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string();
-        let acc_addr = AccAddress::from_bech32(&addr).unwrap();
+        let acc_addr = AccAddress::from_bech32(&addr).unwrap_test();
 
-        let json = serde_json::to_string(&acc_addr).unwrap();
+        let json = serde_json::to_string(&acc_addr).unwrap_test();
 
         assert_eq!(json, r#""cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux""#);
     }
@@ -400,17 +406,17 @@ mod tests {
     #[test]
     fn deserialize_works() {
         let json = r#""cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux""#;
-        let addr: AccAddress = serde_json::from_str(json).unwrap();
+        let addr = serde_json::from_str::<AccAddress>(json).unwrap_test();
         assert_eq!(
             addr,
-            AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux").unwrap()
+            AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux").unwrap_test()
         )
     }
 
     #[test]
     fn prefix_len_bytes_works() {
         let addr = vec![0x00, 0x01, 0x02];
-        let acc_addr = AccAddress::try_from(addr.as_slice()).unwrap();
+        let acc_addr = AccAddress::try_from(addr.as_slice()).unwrap_test();
 
         let prefixed = acc_addr.prefix_len_bytes();
 
