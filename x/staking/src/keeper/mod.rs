@@ -19,7 +19,7 @@ use gears::{
             event::{Event, EventAttribute},
             validator::ValidatorUpdate,
         },
-        time::{duration::Duration, timestamp::Timestamp},
+        time::timestamp::Timestamp,
     },
     types::{
         address::{AccAddress, ValAddress},
@@ -571,7 +571,7 @@ impl<
             BondStatus::Bonded => {
                 // the longest wait - just unbonding period from now
                 let params = self.staking_params_keeper.try_get(ctx)?;
-                let duration = Duration::new_from_nanos(params.unbonding_time());
+                let duration = params.unbonding_time();
 
                 let completion_time = ctx.get_time().checked_add(duration).unwrap();
                 let height = ctx.height();

@@ -144,13 +144,7 @@ impl<
                 StakingNodeQueryResponse::Pool(self.query_pool(ctx))
             }
             StakingNodeQueryRequest::Params(_) => {
-                // TODO: make correct params struct and serialization of it
-                let mut res = self.keeper.query_params(ctx);
-                // frontend accept seconds
-                if let Some(p) = res.params.as_mut() {
-                    p.unbonding_time /= 1_000_000_000;
-                }
-                StakingNodeQueryResponse::Params(res)
+                StakingNodeQueryResponse::Params(self.keeper.query_params(ctx))
             }
         }
     }
@@ -242,13 +236,7 @@ impl<
                 Ok(self.query_redelegations(ctx, req).into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/Params" => {
-                // TODO: make correct params struct and serialization of it
-                let mut res = self.keeper.query_params(ctx);
-                // frontend accept seconds
-                if let Some(p) = res.params.as_mut() {
-                    p.unbonding_time /= 1_000_000_000;
-                }
-                Ok(res.into_bytes())
+                Ok(self.keeper.query_params(ctx).into_bytes())
             }
             _ => Err(QueryError::PathNotFound),
         }

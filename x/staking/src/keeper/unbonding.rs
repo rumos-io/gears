@@ -382,10 +382,7 @@ impl<
         validator.update_status(BondStatus::Unbonding);
 
         // set the unbonding completion time and completion height appropriately
-        validator.unbonding_time = ctx
-            .get_time()
-            .checked_add(Duration::new_from_nanos(params.unbonding_time()))
-            .unwrap();
+        validator.unbonding_time = ctx.get_time().checked_add(params.unbonding_time()).unwrap();
         validator.unbonding_height = ctx.height();
 
         // save the now unbonded validator record and power index
