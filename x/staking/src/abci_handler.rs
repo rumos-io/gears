@@ -147,9 +147,9 @@ impl<
                 // TODO: make correct params struct and serialization of it
                 let mut res = self.keeper.query_params(ctx);
                 // frontend accept seconds
-                res.params
-                    .as_mut()
-                    .map(|p| p.unbonding_time / 1_000_000_000);
+                if let Some(p) = res.params.as_mut() {
+                    p.unbonding_time /= 1_000_000_000;
+                }
                 StakingNodeQueryResponse::Params(res)
             }
         }
@@ -245,9 +245,9 @@ impl<
                 // TODO: make correct params struct and serialization of it
                 let mut res = self.keeper.query_params(ctx);
                 // frontend accept seconds
-                res.params
-                    .as_mut()
-                    .map(|p| p.unbonding_time / 1_000_000_000);
+                if let Some(p) = res.params.as_mut() {
+                    p.unbonding_time /= 1_000_000_000;
+                }
                 Ok(res.into_bytes())
             }
             _ => Err(QueryError::PathNotFound),
