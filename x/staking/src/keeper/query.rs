@@ -28,7 +28,10 @@ impl<
         ctx: &QueryContext<DB, SK>,
         query: QueryValidatorRequest,
     ) -> QueryValidatorResponse {
-        let validator = self.validator(ctx, &query.validator_addr).unwrap_gas();
+        let validator = self
+            .validator(ctx, &query.validator_addr)
+            .unwrap_gas()
+            .map(Into::into);
         QueryValidatorResponse { validator }
     }
 

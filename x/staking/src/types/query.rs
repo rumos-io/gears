@@ -158,7 +158,7 @@ pub struct QueryParamsRequest {}
 pub struct QueryValidatorResponse {
     /// Full data about validator.
     #[proto(optional)]
-    pub validator: Option<Validator>,
+    pub validator: Option<IbcV046Validator>,
 }
 
 /// QueryValidatorsResponse is response type for the Query/Validators RPC method
