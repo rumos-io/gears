@@ -178,8 +178,13 @@ pub async fn tx<M: TxMessage>(
 
     let res = client.tx(hash, true).await.ok();
     let res = if let Some(r) = res {
+        let time = client
+            .block(r.height)
+            .await
+            .map(|block_res| block_res.block.header.time.to_string())
+            .unwrap_or("unable to fetch transaction timestamp".to_string());
         Some(
-            TxResponse::new_from_tx_response_and_string_time(r, "".to_string())
+            TxResponse::new_from_tx_response_and_string_time(r, time)
                 .map_err(|_| HTTPError::internal_server_error())?,
         )
     } else {
