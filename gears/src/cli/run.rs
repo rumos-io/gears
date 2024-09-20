@@ -20,6 +20,9 @@ pub struct CliRunCommand<T: ApplicationInfo> {
     pub rest_listen_addr: Option<SocketAddr>,
     #[arg(long, action = ArgAction::Set, help = format!("Bind the GRPC server to this address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]", DEFAULT_GRPC_LISTEN_ADDR))]
     pub grpc_listen_addr: Option<SocketAddr>,
+    /// URL to tendermint instance
+    #[arg(long)]
+    pub rpc_addr: Option<tendermint::rpc::url::Url>,
     #[arg(short, long, action = ArgAction::Set, default_value_t = 1048576, help = "The default server read buffer size, in bytes, for each incoming client connection")]
     pub read_buf_size: usize,
     /// The logging level
@@ -44,6 +47,7 @@ impl<T: ApplicationInfo> From<CliRunCommand<T>> for RunCommand {
             log_level,
             min_gas_prices,
             grpc_listen_addr,
+            rpc_addr,
         }: CliRunCommand<T>,
     ) -> Self {
         Self {
@@ -54,6 +58,7 @@ impl<T: ApplicationInfo> From<CliRunCommand<T>> for RunCommand {
             read_buf_size,
             log_level,
             min_gas_prices,
+            tendermint_rpc_addr: rpc_addr,
         }
     }
 }
