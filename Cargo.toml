@@ -72,7 +72,7 @@ toml = { version = "0.8.8" }
 
 # hashing/encryption
 argon2 = { version = "0.5.2" }
-base64 = { version = "0.22.0" }
+base64 = { version = "0.22" }
 bech32 = { version = "0.9.1" }
 bip32 = { version = "0.5.1" }
 k256 = { version = "0.13.1" }
