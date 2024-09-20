@@ -225,7 +225,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
 
         let acct_num: u64 = match acct_num {
             None => 0, //initialize account numbers
-            Some(num) => u64::decode::<Bytes>(num.to_owned().into())
+            Some(num) => u64::decode(Bytes::copy_from_slice(&num))
                 .ok()
                 .unwrap_or_corrupt(),
         };

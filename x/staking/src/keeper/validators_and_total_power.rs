@@ -107,7 +107,7 @@ impl<
             let k = ValAddress::try_from_prefix_length_bytes(&k).unwrap_or_corrupt();
             last.insert(
                 k,
-                i64::decode::<Bytes>(v.to_vec().into())
+                i64::decode(Bytes::copy_from_slice(&v))
                     .unwrap_or_corrupt()
                     .try_into()
                     .unwrap_or_corrupt(),

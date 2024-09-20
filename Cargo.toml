@@ -40,7 +40,7 @@ resolver = "2"
 [workspace.dependencies]
 
 # important
-ibc-proto = { version = "=0.33.0", features = ["server", "proto-descriptor"] }
+ibc-proto = { branch = "v0.33",  git = "https://github.com/rumos-io/ibc-proto-rs", features = ["server", "proto-descriptor"] }
 
 # nutype
 bytes = { version = "1.2.1" }
@@ -62,7 +62,7 @@ serde = { version = "1.0", default-features = false }
 serde_json = { version = "1.0.93" }
 serde-aux = { version = "4.2.0" }
 serde_with = { version = "3.0.0" }
-prost = { version = "^0.11" }
+prost = { version = "0.13" }
 schemars = { version = "0.8.16" }
 hex = { version = "0.4.3" }
 data-encoding = { version = "2.4.0" }                 #replace hex with this crate
@@ -105,8 +105,8 @@ tracing-subscriber = { version = "0.3.18", default-features = true }
 # networking
 axum = { version = "0.7.4" }
 http = { version = "0.2.12" }
-tonic = { version = "0.9" }
-tonic-reflection = { version = "0.9" }
+tonic = { version = "0.12" }
+tonic-reflection = { version = "0.12" }
 tower-http = { version = "0.5.2", features = ["trace"] }
 tower-service = "0.3.2"
 tower-layer = "0.3.2"

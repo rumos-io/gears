@@ -90,7 +90,7 @@ pub struct Evidence {
 
 impl Evidence {
     pub fn kind(&self) -> EvidenceType {
-        EvidenceType::from_i32(self.r#type).unwrap_or(EvidenceType::Unknown)
+        EvidenceType::try_from(self.r#type).unwrap_or(EvidenceType::Unknown)
     }
 }
 
