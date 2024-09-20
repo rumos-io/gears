@@ -10,7 +10,7 @@ Gears uses the [tendermint-abci](https://crates.io/crates/tendermint-abci) crate
 
 **Rust compiler**
 
-The minimum supported Rust version is 1.67.1. Follow the [installation instructions](https://doc.rust-lang.org/book/ch01-01-installation.html).
+The minimum supported Rust version is `1.79`. Follow the [installation instructions](https://doc.rust-lang.org/book/ch01-01-installation.html).
 
 **Tendermint**
 
@@ -23,13 +23,13 @@ This is needed by the rocks db crate.
 Ubuntu
 
 ```bash
-sudo apt install llvm clang libclang-dev build-essential
+sudo apt install llvm clang libclang-dev build-essential libhidapi-dev
 ```
 
 OpenSUSE
 
 ```bash
-sudo zypper in libclang13 clang18 libLLVM18
+sudo zypper in libclang13 clang18 libLLVM18 libhidapi-devel
 ```
 
 ## Running a local chain
