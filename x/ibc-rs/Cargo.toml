@@ -14,7 +14,7 @@ bytes = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde-aux = { workspace = true }
 serde_json = { workspace = true }
-prost = { package = "prost", version = "0.12" }        # must match version used in ibc crate
+prost = { package = "prost", version = "0.13" }        # must match version used in ibc crate
 schemars = { workspace = true }
 
 #utils
@@ -29,4 +29,4 @@ nz = { workspace = true }
 axum = { workspace = true }
 
 #other
-ibc = { version = "=0.52.0", features = ["serde"] }
+ibc = { version = "=0.54.0", features = ["serde"] }
