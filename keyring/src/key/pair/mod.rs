@@ -62,14 +62,15 @@ impl KeyPair {
 mod tests {
     use super::*;
     use bip32::Mnemonic;
+    use extensions::testing::UnwrapTesting;
 
     #[test]
     fn test_key_pair_serialization() {
         let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap_test();
         let key_pair = KeyPair::Secp256k1(Secp256k1KeyPair::from_mnemonic(&mnemonic));
 
-        let serialized = serde_json::to_string(&key_pair).unwrap();
+        let serialized = serde_json::to_string(&key_pair).unwrap_test();
 
         assert_eq!(
             serialized,

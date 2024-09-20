@@ -1,4 +1,4 @@
-use crate::consts::keeper::{HISTORICAL_INFO_KEY, UNBONDING_QUEUE_KEY, VALIDATOR_QUEUE_KEY};
+use crate::consts::keeper::{HISTORICAL_INFO_KEY, VALIDATOR_QUEUE_KEY};
 use gears::{
     tendermint::types::time::timestamp::Timestamp,
     types::address::{AccAddress, ValAddress},
@@ -54,11 +54,9 @@ pub(super) fn parse_validator_queue_key(key: &[u8]) -> anyhow::Result<(Timestamp
     Ok((time, height))
 }
 
+// This is the key for use in the unbonding queue sub store (UNBONDING_QUEUE_KEY prefix)
 pub(super) fn unbonding_delegation_time_key(time: &Timestamp) -> Vec<u8> {
-    let tbz = time.format_bytes_rounded();
-    let mut bz = UNBONDING_QUEUE_KEY.to_vec();
-    bz.extend(tbz.iter());
-    bz
+    time.format_bytes_rounded()
 }
 
 pub(super) fn redelegation_time_key(time: &Timestamp) -> Vec<u8> {

@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "extensions",
   # no local deps
   "database",
   "tendermint",
@@ -94,6 +95,7 @@ constcat = { version = "0.5.0" }                      # upgraded std::concat! wh
 derive_more = "0.99.17"
 former = "0.16.0"
 nz = "0.4.1"
+itertools = "0.13.0"
 
 # log
 log = { version = "0.4.21" }

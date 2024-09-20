@@ -75,7 +75,7 @@ pub fn to_rfc3339_nanos(t: OffsetDateTime) -> String {
     // yyyy-mm-ddThh:mm:ssZ
     let mut buf = String::with_capacity(20);
 
-    fmt_as_rfc3339_nanos(t, &mut buf).unwrap();
+    fmt_as_rfc3339_nanos(t, &mut buf).expect("writing to `String` infallible");
 
     buf
 }

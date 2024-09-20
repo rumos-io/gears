@@ -79,7 +79,7 @@ pub fn write_keys_and_genesis(
             version: None,
         },
         validators: vec![],
-        app_hash: vec![].try_into().unwrap(),
+        app_hash: vec![].try_into().expect("infallible"),
         app_state,
     };
 

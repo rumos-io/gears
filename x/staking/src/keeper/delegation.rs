@@ -2,7 +2,7 @@ use super::*;
 use anyhow::anyhow;
 use gears::{
     core::Protobuf,
-    store::database::ext::UnwrapCorrupt,
+    extensions::corruption::UnwrapCorrupt,
     types::{base::coins::UnsignedCoins, store::gas::errors::GasStoreErrors},
     x::types::validator::BondStatus,
 };

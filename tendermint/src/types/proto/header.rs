@@ -3,7 +3,7 @@ use crate::types::{chain_id::ChainId, time::timestamp::Timestamp};
 use super::{block::BlockId, consensus::Consensus};
 
 /// Header defines the structure of a Tendermint block header.
-#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug, Default)]
 pub struct Header {
     /// basic block info
     pub version: Consensus,

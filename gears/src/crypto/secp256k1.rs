@@ -137,11 +137,11 @@ mod tests {
             "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
         }"#,
         )
-        .unwrap();
+        .expect("hardcoded is valid");
     }
 
     #[test]
-    fn verify_signature_works() {
+    fn verify_signature_works() -> Result<(), SigningError> {
         let key: Secp256k1PubKey = serde_json::from_str(
             r#"{
             "key": "A7Jg0Wg+RHwI7CAkSbCjpfWFROGtYYkUlaBVxCT6UXJ4"
@@ -191,6 +191,6 @@ mod tests {
             109, 86, 11, 164, 83, 9, 12, 79,
         ];
 
-        key.verify_signature(message, signature).unwrap();
+        key.verify_signature(message, signature)
     }
 }

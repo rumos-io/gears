@@ -3,11 +3,9 @@ use crate::types::keys;
 use crate::{
     length_prefixed_val_del_addrs_key, redelegation_time_key, DvvTriplets, RedelegationEntry,
 };
+use gears::context::{InfallibleContext, InfallibleContextMut};
 use gears::core::Protobuf;
-use gears::{
-    context::{InfallibleContext, InfallibleContextMut},
-    store::database::ext::UnwrapCorrupt,
-};
+use gears::extensions::corruption::UnwrapCorrupt;
 use prost::bytes::Bytes;
 
 impl<
@@ -171,13 +169,10 @@ impl<
         val_dst_addr: &ValAddress,
     ) -> Result<Option<Redelegation>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
-        let store = store.prefix_store(REDELEGATION_KEY);
-        let mut key = del_addr.to_string().as_bytes().to_vec();
-        key.put(val_src_addr.to_string().as_bytes());
-        key.put(val_dst_addr.to_string().as_bytes());
+        let key = keys::redelegation_key(&del_addr, &val_src_addr, &val_dst_addr);
         Ok(store
             .get(&key)?
-            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt()))
+            .map(|bytes| Redelegation::decode::<Bytes>(bytes.into()).unwrap_or_corrupt()))
     }
 
     pub fn set_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -219,12 +214,24 @@ impl<
         ctx: &mut CTX,
         delegation: &Redelegation,
     ) -> Option<Vec<u8>> {
-        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
-        let mut delegations_store = store.prefix_store_mut(REDELEGATION_KEY);
-        let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
-        key.put(delegation.validator_src_address.to_string().as_bytes());
-        key.put(delegation.validator_dst_address.to_string().as_bytes());
-        delegations_store.delete(&key)
+        let mut store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
+        store.delete(&keys::redelegation_key(
+            &delegation.delegator_address,
+            &delegation.validator_src_address,
+            &delegation.validator_dst_address,
+        ));
+
+        store.delete(&keys::redelegation_by_val_src_index_key(
+            &delegation.delegator_address,
+            &delegation.validator_src_address,
+            &delegation.validator_dst_address,
+        ));
+
+        store.delete(&keys::redelegation_by_val_dst_index_key(
+            &delegation.delegator_address,
+            &delegation.validator_src_address,
+            &delegation.validator_dst_address,
+        ))
     }
 
     pub fn complete_redelegation<DB: Database>(

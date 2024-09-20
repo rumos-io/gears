@@ -191,7 +191,9 @@ impl<
                 EventAttribute {
                     key: "amount".into(),
                     // TODO: stringify coins structs
-                    value: serde_json::to_string(&final_rewards).unwrap().into(),
+                    value: serde_json::to_string(&final_rewards)
+                        .expect("serde can't fail")
+                        .into(),
                     index: false,
                 },
                 EventAttribute {

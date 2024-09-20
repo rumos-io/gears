@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use gears::context::InfallibleContext;
 use gears::context::InfallibleContextMut;
 use gears::core::serializers::serialize_number_to_string;
+use gears::extensions::corruption::UnwrapCorrupt;
 use gears::params::infallible_subspace;
 use gears::params::infallible_subspace_mut;
 use gears::params::ParamKind;
@@ -57,9 +58,13 @@ impl ParamsDeserialize for ConnectionParams {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
             max_expected_time_per_block: ParamKind::U64
-                .parse_param(fields.remove(KEY_MAX_EXPECTED_TIME_PER_BLOCK).unwrap())
+                .parse_param(
+                    fields
+                        .remove(KEY_MAX_EXPECTED_TIME_PER_BLOCK)
+                        .unwrap_or_corrupt(),
+                )
                 .unsigned_64()
-                .unwrap(),
+                .unwrap_or_corrupt(),
         }
     }
 }
@@ -76,7 +81,7 @@ impl<PSK: ParamsSubspaceKey> ConnectionParamsKeeper<PSK> {
     ) -> ConnectionParams {
         let store = infallible_subspace(ctx, &self.params_subspace_key);
 
-        store.params().unwrap() // TODO: Add default
+        store.params().unwrap_or_default()
     }
 
     pub fn set<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(

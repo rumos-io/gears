@@ -1,6 +1,7 @@
+use crate::crypto::public::PublicKey;
 use crate::types::pagination::response::PaginationResponse;
-use crate::{crypto::public::PublicKey, ext::PaginationKey};
 use core_types::any::google::Any;
+use extensions::pagination::PaginationKey;
 use serde::{Deserialize, Serialize};
 use tendermint::informal::validator::Info;
 

@@ -119,6 +119,7 @@ mod tests {
     use crate::types::{base::coin::UnsignedCoin, rendering::screen::Content};
     use anyhow::Ok;
     use cosmwasm_std::Uint256;
+    use extensions::testing::UnwrapTesting;
 
     #[test]
     fn coin_formatting() -> anyhow::Result<()> {
@@ -127,12 +128,12 @@ mod tests {
             amount: Uint256::from(10000000_u64),
         };
 
-        let expected_content = Content::try_new("10 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("10 ATOM".to_string()).unwrap_test();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
 
-        assert_eq!(expected_content, actual_content.unwrap());
+        assert_eq!(expected_content, actual_content.unwrap_test());
 
         Ok(())
     }
@@ -144,12 +145,12 @@ mod tests {
             amount: Uint256::from(1u8),
         };
 
-        let expected_content = Content::try_new("0.000001 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0.000001 ATOM".to_string()).unwrap_test();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
 
-        assert_eq!(expected_content, actual_content.unwrap());
+        assert_eq!(expected_content, actual_content.unwrap_test());
 
         Ok(())
     }
@@ -161,12 +162,12 @@ mod tests {
             amount: Uint256::from(0u8),
         };
 
-        let expected_content = Content::try_new("0 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0 ATOM".to_string()).unwrap_test();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
 
-        assert_eq!(expected_content, actual_content.unwrap());
+        assert_eq!(expected_content, actual_content.unwrap_test());
 
         Ok(())
     }
@@ -178,12 +179,12 @@ mod tests {
             amount: Uint256::from(10_000u16),
         };
 
-        let expected_content = Content::try_new("10'000 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("10'000 ATOM".to_string()).unwrap_test();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
 
-        assert_eq!(expected_content, actual_content.unwrap());
+        assert_eq!(expected_content, actual_content.unwrap_test());
 
         Ok(())
     }

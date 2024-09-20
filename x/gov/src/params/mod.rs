@@ -6,6 +6,7 @@ use std::{
 use gears::{
     application::keepers::params::ParamsKeeper,
     core::{errors::CoreError, Protobuf},
+    error::ProtobufError,
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     tendermint::types::time::duration::Duration,
     types::{
@@ -238,7 +239,7 @@ impl From<TallyParams> for inner::TallyParams {
 impl Protobuf<inner::TallyParams> for TallyParams {}
 
 impl TryFrom<inner::VotingParams> for VotingParams {
-    type Error = CoreError;
+    type Error = ProtobufError;
 
     fn try_from(
         inner::VotingParams { voting_period }: inner::VotingParams,
@@ -249,7 +250,8 @@ impl TryFrom<inner::VotingParams> for VotingParams {
                     "VotingParams: field `voting_period`".to_owned(),
                 ))?;
 
-                Duration::try_new(duration.seconds, duration.nanos).unwrap() // TODO:NOW
+                Duration::try_new(duration.seconds, duration.nanos)
+                    .map_err(|err| anyhow::anyhow!("failed to map duration: {err}"))?
             },
         })
     }

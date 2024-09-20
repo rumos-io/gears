@@ -8,7 +8,6 @@ pub mod context;
 pub mod crypto;
 pub mod defaults;
 pub mod error;
-pub mod ext;
 pub mod grpc;
 pub mod params;
 pub mod rest;
@@ -19,6 +18,10 @@ pub mod types;
 pub mod utils;
 #[cfg(feature = "xmods")]
 pub mod x;
+
+pub mod extensions {
+    pub use extensions::*;
+}
 
 pub mod keyring {
     pub use keyring::*;

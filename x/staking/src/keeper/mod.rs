@@ -5,6 +5,7 @@ use crate::{
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use anyhow::anyhow;
+use gears::extensions::gas::GasResultExt;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
@@ -24,7 +25,7 @@ use gears::{
         address::{AccAddress, ValAddress},
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
         decimal256::Decimal256,
-        store::gas::{errors::GasStoreErrors, ext::GasResultExt},
+        store::gas::errors::GasStoreErrors,
         uint::Uint256,
     },
     x::{
@@ -33,7 +34,6 @@ use gears::{
         types::validator::BondStatus,
     },
 };
-use prost::bytes::BufMut;
 use std::{cmp::Ordering, collections::HashMap};
 
 // Each module contains methods of keeper with logic related to its name. It can be delegation and

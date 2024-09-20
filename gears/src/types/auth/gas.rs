@@ -173,11 +173,13 @@ pub enum GasError {
 
 #[cfg(test)]
 mod tests {
+    use extensions::testing::UnwrapTesting;
+
     use super::*;
 
     #[test]
     fn gas_try_from_into_u64() {
-        let gas = Gas::try_from(100_u64).unwrap();
+        let gas = Gas::try_from(100_u64).unwrap_test();
         assert_eq!(u64::from(gas), 100);
     }
 
@@ -192,13 +194,13 @@ mod tests {
     #[test]
     fn test_gas_try_from_limit_ok() {
         let raw_gas: u64 = u63::MAX.into();
-        let gas = Gas::try_from(raw_gas).expect("should not error");
+        let gas = Gas::try_from(raw_gas).unwrap_test();
         assert_eq!(gas, Gas::MAX);
     }
 
     #[test]
     fn test_gas_from_str() {
-        let gas = Gas::from_str("100").unwrap();
+        let gas = Gas::from_str("100").unwrap_test();
         assert_eq!(gas, u63::new(100).into());
     }
 

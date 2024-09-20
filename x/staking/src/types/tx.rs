@@ -1,7 +1,7 @@
 use crate::consts::proto::*;
 use gears::{
     core::{errors::CoreError, Protobuf},
-    derive::AppMessage,
+    derive::{AppMessage, Protobuf},
     signing::renderer::value_renderer::ValueRenderer,
     tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
     types::{
@@ -17,30 +17,15 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+mod inner {
+    pub use ibc_proto::cosmos::staking::v1beta1::Commission;
+    pub use ibc_proto::cosmos::staking::v1beta1::CommissionRates;
+    pub use ibc_proto::cosmos::staking::v1beta1::Description;
+    pub use ibc_proto::cosmos::staking::v1beta1::MsgCreateValidator;
+}
+
 // constant used in flags to indicate that description field should not be updated
 pub const DO_NOT_MODIFY_DESCRIPTION: &str = "[do-not-modify]";
-
-/// CommissionRates defines the initial commission rates to be used for creating
-/// a validator.
-#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
-pub struct CommissionRatesRaw {
-    #[prost(string)]
-    pub rate: String,
-    #[prost(string)]
-    pub max_rate: String,
-    #[prost(string)]
-    pub max_change_rate: String,
-}
-
-impl From<CommissionRates> for CommissionRatesRaw {
-    fn from(value: CommissionRates) -> Self {
-        Self {
-            rate: value.rate.to_cosmos_proto_string(),
-            max_rate: value.max_rate.to_cosmos_proto_string(),
-            max_change_rate: value.max_change_rate.to_cosmos_proto_string(),
-        }
-    }
-}
 
 /// CommissionRates defines the initial commission rates to be used for creating
 /// a validator.
@@ -101,45 +86,52 @@ impl CommissionRates {
     }
 }
 
-impl TryFrom<CommissionRatesRaw> for CommissionRates {
+impl From<CommissionRates> for inner::CommissionRates {
+    fn from(
+        CommissionRates {
+            rate,
+            max_rate,
+            max_change_rate,
+        }: CommissionRates,
+    ) -> Self {
+        Self {
+            rate: rate.to_cosmos_proto_string(),
+            max_rate: max_rate.to_cosmos_proto_string(),
+            max_change_rate: max_change_rate.to_cosmos_proto_string(),
+        }
+    }
+}
+
+impl TryFrom<inner::CommissionRates> for CommissionRates {
     type Error = StdError;
-    fn try_from(value: CommissionRatesRaw) -> Result<Self, Self::Error> {
+
+    fn try_from(
+        inner::CommissionRates {
+            rate,
+            max_change_rate,
+            max_rate,
+        }: inner::CommissionRates,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
-            rate: Decimal256::from_cosmos_proto_string(&value.rate)?,
-            max_rate: Decimal256::from_cosmos_proto_string(&value.max_rate)?,
-            max_change_rate: Decimal256::from_cosmos_proto_string(&value.max_change_rate)?,
+            rate: Decimal256::from_cosmos_proto_string(&rate)?,
+            max_rate: Decimal256::from_cosmos_proto_string(&max_rate)?,
+            max_change_rate: Decimal256::from_cosmos_proto_string(&max_change_rate)?,
         })
     }
 }
 
-impl Protobuf<CommissionRatesRaw> for CommissionRates {}
+impl Protobuf<inner::CommissionRates> for CommissionRates {}
 
 /// Commission defines commission parameters for a given validator.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Protobuf)]
+#[proto(raw = "inner::Commission")]
 pub struct Commission {
     /// commission_rates defines the initial commission rates to be used for creating a validator.
+    #[proto(optional)]
     commission_rates: CommissionRates,
     /// update_time is the last time the commission rate was changed.
+    #[proto(optional)]
     update_time: Timestamp,
-}
-
-impl TryFrom<CommissionRaw> for Commission {
-    type Error = CoreError;
-
-    fn try_from(value: CommissionRaw) -> Result<Self, Self::Error> {
-        Ok(Self {
-            commission_rates: value
-                .commission_rates
-                .ok_or(CoreError::MissingField(
-                    "Missing field 'commission_rates'.".into(),
-                ))?
-                .try_into()
-                .map_err(|e| CoreError::DecodeProtobuf(format!("{e}")))?,
-            update_time: value.update_time.ok_or(CoreError::MissingField(
-                "Missing field 'update_time'.".into(),
-            ))?,
-        })
-    }
 }
 
 impl Commission {
@@ -175,26 +167,6 @@ impl Commission {
         &self.update_time
     }
 }
-
-/// Commission defines commission parameters for a given validator.
-#[derive(Clone, PartialEq, Message)]
-pub struct CommissionRaw {
-    #[prost(message, optional)]
-    pub commission_rates: Option<CommissionRatesRaw>,
-    #[prost(message, optional)]
-    pub update_time: Option<Timestamp>,
-}
-
-impl From<Commission> for CommissionRaw {
-    fn from(value: Commission) -> Self {
-        Self {
-            commission_rates: Some(value.commission_rates.into()),
-            update_time: Some(value.update_time),
-        }
-    }
-}
-
-impl Protobuf<CommissionRaw> for Commission {}
 
 /// Description defines a validator description.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -370,12 +342,6 @@ impl Description {
     fn form_ensure_length_err(&self, name: &str, got: usize, max: usize) -> anyhow::Error {
         anyhow::anyhow!("invalid {name} length; got: {got}, max: {max}")
     }
-}
-
-mod inner {
-    pub use ibc_proto::cosmos::staking::v1beta1::CommissionRates;
-    pub use ibc_proto::cosmos::staking::v1beta1::Description;
-    pub use ibc_proto::cosmos::staking::v1beta1::MsgCreateValidator;
 }
 
 impl From<CreateValidator> for inner::MsgCreateValidator {
