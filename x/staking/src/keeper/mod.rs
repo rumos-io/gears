@@ -5,7 +5,6 @@ use crate::{
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use anyhow::anyhow;
-use gears::extensions::gas::GasResultExt;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
@@ -34,6 +33,7 @@ use gears::{
         types::validator::BondStatus,
     },
 };
+use gears::{extensions::gas::GasResultExt, types::address::ConsAddress};
 use std::{cmp::Ordering, collections::HashMap};
 
 // Each module contains methods of keeper with logic related to its name. It can be delegation and
@@ -416,11 +416,11 @@ impl<
         let mut amt_from_not_bonded_to_bonded = Uint256::zero();
 
         let mut last = self.last_validators_by_addr(ctx);
-        let validators_map = self.validators_power_store_vals_map(ctx)?;
+        let validators_map = self.validators_power_store_vals_vec(ctx)?;
 
         let mut updates = vec![];
 
-        for (_k, val_addr) in validators_map.iter().take(max_validators as usize) {
+        for val_addr in validators_map.iter().take(max_validators as usize).rev() {
             // everything that is iterated in this loop is becoming or already a
             // part of the bonded validator set
             let mut validator: Validator = self
