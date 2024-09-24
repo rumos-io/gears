@@ -27,6 +27,15 @@ impl From<inner::Event> for Event {
     }
 }
 
+impl From<Event> for inner::Event {
+    fn from(Event { r#type, attributes }: Event) -> Self {
+        Self {
+            r#type,
+            attributes: attributes.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
 impl From<inner::InformalEvent> for Event {
     fn from(inner::InformalEvent { kind, attributes }: inner::InformalEvent) -> Self {
         Self {
@@ -36,12 +45,18 @@ impl From<inner::InformalEvent> for Event {
     }
 }
 
-impl From<Event> for inner::Event {
-    fn from(Event { r#type, attributes }: Event) -> Self {
-        Self {
-            r#type,
-            attributes: attributes.into_iter().map(Into::into).collect(),
+impl TryFrom<Event> for inner::InformalEvent {
+    type Error = std::string::FromUtf8Error;
+
+    fn try_from(Event { r#type, attributes }: Event) -> Result<Self, Self::Error> {
+        let mut attributes_res = vec![];
+        for attr in attributes {
+            attributes_res.push(attr.try_into()?);
         }
+        Ok(Self {
+            kind: r#type,
+            attributes: attributes_res,
+        })
     }
 }
 
@@ -83,6 +98,18 @@ impl From<inner::InformalEventAttribute> for EventAttribute {
             value: value.into_bytes().into(),
             index,
         }
+    }
+}
+
+impl TryFrom<EventAttribute> for inner::InformalEventAttribute {
+    type Error = std::string::FromUtf8Error;
+
+    fn try_from(EventAttribute { key, value, index }: EventAttribute) -> Result<Self, Self::Error> {
+        Ok(Self {
+            key: String::from_utf8(key.to_vec())?,
+            value: String::from_utf8(value.to_vec())?,
+            index,
+        })
     }
 }
 

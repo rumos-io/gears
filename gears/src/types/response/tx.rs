@@ -1,7 +1,9 @@
 use super::any::AnyTx;
 use crate::{
     core::{errors::CoreError, Protobuf},
-    tendermint::{rpc::response::tx::Response, types::proto::event::Event},
+    tendermint::{
+        abci::Event as InformalEvent, rpc::response::tx::Response, types::proto::event::Event,
+    },
     types::tx::{Tx, TxMessage},
 };
 use core_types::any::google::Any;
@@ -45,7 +47,7 @@ pub struct TxResponse<M: TxMessage> {
     /// additional metadata, emitted only by processing the messages.
     ///
     /// Since: cosmos-sdk 0.42.11, 0.44.5, 0.45
-    pub events: Vec<Event>,
+    pub events: Vec<InformalEvent>,
 }
 
 impl<M: TxMessage> TxResponse<M> {
@@ -100,6 +102,14 @@ impl<M: TxMessage> TryFrom<TxResponseRaw> for TxResponse<M> {
             events,
         }: TxResponseRaw,
     ) -> Result<Self, Self::Error> {
+        let mut events_res = vec![];
+        for event in events {
+            events_res.push(
+                event
+                    .try_into()
+                    .map_err(|e| CoreError::DecodeProtobuf(format!("{e}")))?,
+            );
+        }
         Ok(Self {
             height,
             txhash,
@@ -115,7 +125,7 @@ impl<M: TxMessage> TryFrom<TxResponseRaw> for TxResponse<M> {
                 .ok_or(CoreError::MissingField("Missed field 'tx'".to_string()))?
                 .try_into()?,
             timestamp,
-            events,
+            events: events_res,
         })
     }
 }
@@ -184,7 +194,7 @@ impl<M: TxMessage> From<TxResponse<M>> for TxResponseRaw {
             gas_used,
             tx: Some(tx.into()),
             timestamp,
-            events,
+            events: events.into_iter().map(Into::into).collect(),
         }
     }
 }
