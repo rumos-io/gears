@@ -192,6 +192,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
         req: QueryAccountsRequest,
     ) -> QueryAccountsResponse {
         let auth_store = ctx.kv_store(&self.store_key);
+        let auth_store = auth_store.prefix_store(ACCOUNT_STORE_PREFIX);
         let (p_res, iter) = auth_store
             .into_range(..)
             .maybe_paginate(Some(Pagination::from(req.pagination)));
