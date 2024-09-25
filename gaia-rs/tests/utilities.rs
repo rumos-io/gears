@@ -100,6 +100,7 @@ pub fn run_gaia_and_tendermint(
             read_buf_size: 1048576,
             log_level: LogLevel::Off,
             min_gas_prices: Default::default(),
+            tendermint_rpc_addr: None,
         };
 
         let _ = node.execute::<GaiaApplication>(AppCommands::Run(cmd));

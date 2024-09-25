@@ -192,6 +192,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
         req: QueryAccountsRequest,
     ) -> QueryAccountsResponse {
         let auth_store = ctx.kv_store(&self.store_key);
+        let auth_store = auth_store.prefix_store(ACCOUNT_STORE_PREFIX);
         let (p_res, iter) = auth_store
             .into_range(..)
             .maybe_paginate(Some(Pagination::from(req.pagination)));
@@ -225,7 +226,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
 
         let acct_num: u64 = match acct_num {
             None => 0, //initialize account numbers
-            Some(num) => u64::decode::<Bytes>(num.to_owned().into())
+            Some(num) => u64::decode(Bytes::copy_from_slice(&num))
                 .ok()
                 .unwrap_or_corrupt(),
         };

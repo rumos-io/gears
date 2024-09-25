@@ -91,9 +91,15 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(VALIDATORS_BY_CONS_ADDR_KEY);
 
-        Ok(validators_store
-            .get(addr.to_string().as_bytes())?
-            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt()))
+        let val_address: Option<ValAddress> = validators_store
+            .get(&addr.prefix_len_bytes())?
+            .map(|bytes| bytes.try_into().unwrap_or_corrupt());
+
+        let Some(val_address) = val_address else {
+            return Ok(None);
+        };
+
+        self.validator(ctx, &val_address)
     }
 
     pub fn set_validator_by_cons_addr<DB: Database, CTX: TransactionalContext<DB, SK>>(

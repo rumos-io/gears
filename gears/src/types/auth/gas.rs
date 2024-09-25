@@ -1,5 +1,5 @@
 use cosmwasm_std::{Decimal256, Uint256};
-use derive_more::{Add, Deref, Display, From, Into, Mul, Sub};
+use derive_more::derive::{Add, Deref, Display, From, Into, Mul, Sub};
 use std::{num::ParseIntError, str::FromStr};
 use ux::u63;
 

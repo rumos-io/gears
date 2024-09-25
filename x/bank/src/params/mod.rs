@@ -14,6 +14,8 @@ mod inner {
     pub use ibc_proto::cosmos::bank::v1beta1::SendEnabled;
 }
 
+mod environment;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Protobuf)]
 #[proto(raw = "inner::SendEnabled")]
 pub struct SendEnabled {

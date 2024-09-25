@@ -181,7 +181,13 @@ impl TxHandler for GentxTxHandler {
 
         client_tx_context.memo = Some(format!(
             "{}@{ip}",
-            node_id.unwrap_or(pub_key.get_address().as_hex())
+            node_id.unwrap_or(
+                PublicKey::from(tendermint::node_pub_key(std::fs::File::open(
+                    client_tx_context.home.join("config/node_key.json")
+                )?)?)
+                .get_address()
+                .as_hex()
+            )
         ));
 
         let tx = Messages::from(CreateValidator {

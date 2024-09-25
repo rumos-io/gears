@@ -15,6 +15,8 @@ impl<
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
     /// Load the last total validator power.
+    // TODO: this isn't used
+    // TODO: implementation doesn't look right: it's decoding Uint256 from bytes, instead of Uint256Proto
     pub fn last_total_power<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &CTX,
@@ -46,6 +48,7 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATORS_BY_POWER_INDEX_KEY);
         let mut res = Vec::new();
+        // TODO: we're iterating over every validator here: this method should return an iterator
         for next in iterator.into_range(..) {
             let (_k, v) = next?;
             res.push(ValAddress::try_from(v.to_vec())?);
@@ -107,7 +110,7 @@ impl<
             let k = ValAddress::try_from_prefix_length_bytes(&k).unwrap_or_corrupt();
             last.insert(
                 k,
-                i64::decode::<Bytes>(v.to_vec().into())
+                i64::decode(Bytes::copy_from_slice(&v))
                     .unwrap_or_corrupt()
                     .try_into()
                     .unwrap_or_corrupt(),
