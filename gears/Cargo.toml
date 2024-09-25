@@ -56,7 +56,7 @@ ciborium = { workspace = true }
 dirs = { workspace = true }
 bip32 = { workspace = true }
 handlebars = { workspace = true }
-human-panic = "1.1.4"
+human-panic = { version = "2.0.1", optional = true } 
 strum = { workspace = true }
 text_io = "0.1.12"
 tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
@@ -90,7 +90,7 @@ rand = { workspace = true, optional = true }
 trybuild = { version = "1.0.99" }
 
 [features]
-default = ["cli", "xmods"]
+default = [ "cli", "xmods" ]
 xmods = []
 governance = []
 macros_test = []
@@ -99,3 +99,4 @@ mocks = [ "utils", "xmods" ]
 cli = ["dep:clap", "dep:clap_complete"]
 rocksdb = ["database/rocksdb"]
 sled = ["database/sled"]
+human-panic = ["dep:human-panic"]
