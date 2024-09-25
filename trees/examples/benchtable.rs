@@ -150,13 +150,14 @@ struct InputBenchResult {
 /// NOTE: This doesn't belong in the examples directory but I couldn't
 /// find a better place for it.
 fn main() {
-    let file = File::open("benchmark.json").unwrap();
+    let file = File::open("benchmark.json").expect("failed to open file");
     let reader = BufReader::new(file);
 
     let mut full_results = FullResults::default();
 
     for line in reader.lines() {
-        let bench: Result<InputBenchResult, _> = serde_json::from_str(&line.unwrap());
+        let bench: Result<InputBenchResult, _> =
+            serde_json::from_str(&line.expect("failed to read line"));
 
         if let Ok(bench) = bench {
             let time = bench.mean.into();
@@ -240,14 +241,18 @@ fn main() {
         .render("bench_large", &full_results.large)
         .expect("OutputResult will always work with the BENCH_TEMPLATE");
 
-    let mut file = std::fs::File::create("benchmark.md").unwrap();
-    file.write("# Benchmark\n".as_bytes()).unwrap();
-    file.write("## Small".as_bytes()).unwrap();
-    file.write_all(small_table.as_bytes()).unwrap();
-    file.write("## Medium".as_bytes()).unwrap();
-    file.write_all(medium_table.as_bytes()).unwrap();
-    file.write("## Large".as_bytes()).unwrap();
-    file.write_all(large_table.as_bytes()).unwrap();
+    let mut file = std::fs::File::create("benchmark.md").expect("failed to create a new file");
+    file.write("# Benchmark\n".as_bytes())
+        .expect("failed to write");
+    file.write("## Small".as_bytes()).expect("failed to write");
+    file.write_all(small_table.as_bytes())
+        .expect("failed to write");
+    file.write("## Medium".as_bytes()).expect("failed to write");
+    file.write_all(medium_table.as_bytes())
+        .expect("failed to write");
+    file.write("## Large".as_bytes()).expect("failed to write");
+    file.write_all(large_table.as_bytes())
+        .expect("failed to write");
 }
 
 #[derive(serde::Serialize, Default)]

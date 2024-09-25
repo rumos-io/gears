@@ -3,6 +3,8 @@ use bench::*;
 #[cfg(feature = "bench")]
 use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(feature = "bench")]
+use extensions::testing::UnwrapCorrupt;
+#[cfg(feature = "bench")]
 use pprof::criterion::{Output, PProfProfiler};
 
 #[cfg(feature = "bench")]
@@ -72,7 +74,7 @@ mod bench {
                 b.iter(|| {
                     let key: &Vec<u8> = keys
                         .get(rand::thread_rng().gen_range(0..params.init_size))
-                        .unwrap();
+                        .unwrap_test();
                     tree.get(black_box(key));
                 })
             });
@@ -90,7 +92,7 @@ mod bench {
                     for i in 0..iters {
                         let key: &Vec<u8> = keys
                             .get(rand::thread_rng().gen_range(0..params.init_size))
-                            .unwrap();
+                            .unwrap_test();
 
                         let data: Vec<u8> = rand::thread_rng()
                             .sample_iter(Standard)
@@ -135,7 +137,7 @@ mod bench {
                             // 50% insert, 50% update
                             let key = if i % 2 == 0 {
                                 keys.get(rand::thread_rng().gen_range(0..params.init_size))
-                                    .unwrap()
+                                    .unwrap_test()
                                     .clone()
                             } else {
                                 rand::thread_rng()
@@ -196,7 +198,7 @@ mod bench {
 
     /// Attempts to exactly replicate steps in go IAVL, see https://github.com/cosmos/iavl/blob/7f698ba3fa232c54109e5b4ea42562bbecdb1bf8/benchmarks/bench_test.go#L41-L57
     fn commit_tree(tree: &mut Tree<RocksDB>) {
-        let (_, _version) = tree.save_version().unwrap();
+        let (_, _version) = tree.save_version().unwrap_test();
 
         // TODO: need to implement this once delete_version has been implemented
         // if version > historySize {
@@ -209,11 +211,11 @@ mod bench {
 
     fn prepare_tree(params: &Params) -> (Tree<RocksDB>, Vec<Vec<u8>>) {
         // remove previous test DBs
-        fs::remove_dir_all(DB_DIR).unwrap();
-        fs::create_dir(DB_DIR).unwrap();
+        fs::remove_dir_all(DB_DIR).unwrap_test();
+        fs::create_dir(DB_DIR).unwrap_test();
 
-        let db = RocksDB::new(DB_DIR).unwrap();
-        let mut tree = Tree::new(db, None, params.init_size.try_into().unwrap()).unwrap();
+        let db = RocksDB::new(DB_DIR).unwrap_test();
+        let mut tree = Tree::new(db, None, params.init_size.try_into().unwrap_test()).unwrap_test();
         let mut keys = Vec::with_capacity(params.init_size);
 
         for _ in 0..params.init_size {
@@ -231,7 +233,7 @@ mod bench {
             keys.push(key);
         }
 
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
 
         (tree, keys)
     }

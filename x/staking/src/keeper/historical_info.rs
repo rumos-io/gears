@@ -1,7 +1,7 @@
 use super::*;
 use crate::{historical_info_key, HistoricalInfo};
 use gears::core::Protobuf;
-use gears::{store::database::ext::UnwrapCorrupt, types::store::gas::ext::GasResultExt};
+use gears::extensions::corruption::UnwrapCorrupt;
 use prost::bytes::Bytes;
 
 impl<

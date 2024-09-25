@@ -36,6 +36,7 @@ impl TryPrimitiveValueRendererWithMetadata<UnsignedCoins> for DefaultPrimitiveRe
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::Uint256;
+    use extensions::testing::UnwrapTesting;
 
     use crate::signing::renderer::test_functions::TestMetadataGetter;
     use crate::signing::renderer::value_renderer::{
@@ -53,14 +54,14 @@ mod tests {
             amount: Uint256::from(2000u32),
         };
 
-        let expected_content = Content::try_new("0.002 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0.002 ATOM".to_string()).unwrap_test();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            UnsignedCoins::new(vec![coin]).unwrap(),
+            UnsignedCoins::new(vec![coin]).unwrap_test(),
             &TestMetadataGetter,
         );
 
-        assert_eq!(expected_content, actual_content.unwrap());
+        assert_eq!(expected_content, actual_content.unwrap_test());
 
         Ok(())
     }
@@ -77,14 +78,15 @@ mod tests {
             amount: Uint256::from(2000u32),
         };
 
-        let expected_content = Content::try_new("0.002 AAUON, 0.002 ATOM".to_string()).unwrap();
+        let expected_content =
+            Content::try_new("0.002 AAUON, 0.002 ATOM".to_string()).unwrap_test();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            UnsignedCoins::new(vec![coin1, coin2]).unwrap(),
+            UnsignedCoins::new(vec![coin1, coin2]).unwrap_test(),
             &TestMetadataGetter,
         );
 
-        assert_eq!(expected_content, actual_content.unwrap());
+        assert_eq!(expected_content, actual_content.unwrap_test());
 
         Ok(())
     }
@@ -96,14 +98,14 @@ mod tests {
             amount: Uint256::from(2047u32),
         };
 
-        let expected_content = Content::try_new("0.002047 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0.002047 ATOM".to_string()).unwrap_test();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            UnsignedCoins::new(vec![coin]).unwrap(),
+            UnsignedCoins::new(vec![coin]).unwrap_test(),
             &TestMetadataGetter,
         );
 
-        assert_eq!(expected_content, actual_content.unwrap());
+        assert_eq!(expected_content, actual_content.unwrap_test());
 
         Ok(())
     }
@@ -115,14 +117,14 @@ mod tests {
             amount: Uint256::from(2_123_456u32),
         };
 
-        let expected_content = Content::try_new("2.123456 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("2.123456 ATOM".to_string()).unwrap_test();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            UnsignedCoins::new(vec![coin]).unwrap(),
+            UnsignedCoins::new(vec![coin]).unwrap_test(),
             &TestMetadataGetter,
         );
 
-        assert_eq!(expected_content, actual_content.unwrap());
+        assert_eq!(expected_content, actual_content.unwrap_test());
 
         Ok(())
     }

@@ -52,6 +52,8 @@ pub fn hash_store_infos(store_infos: Vec<StoreInfo>) -> [u8; 32] {
 #[cfg(test)]
 mod tests {
 
+    use extensions::testing::UnwrapTesting;
+
     use super::*;
 
     #[test]
@@ -59,9 +61,9 @@ mod tests {
         let store_infos = vec![StoreInfo {
             name: "bob".to_string(),
             hash: hex::decode("45aa73be3d99644509f273acc713717f7c49caacd64226216e6263fdd8a3296c")
-                .unwrap()
+                .unwrap_test()
                 .try_into()
-                .unwrap(),
+                .unwrap_test(),
         }];
         assert_eq!(
             hex::encode(hash_store_infos(store_infos)),
@@ -74,18 +76,18 @@ mod tests {
                 hash: hex::decode(
                     "45aa73be3d99644509f273acc713717f7c49caacd64226216e6263fdd8a3296c",
                 )
-                .unwrap()
+                .unwrap_test()
                 .try_into()
-                .unwrap(),
+                .unwrap_test(),
             },
             StoreInfo {
                 name: "alice".to_string(),
                 hash: hex::decode(
                     "c70e5a44aceeb02764ce49920ddd7c7abe0d2bb28be890764d6912c187144520",
                 )
-                .unwrap()
+                .unwrap_test()
                 .try_into()
-                .unwrap(),
+                .unwrap_test(),
             },
         ];
         assert_eq!(

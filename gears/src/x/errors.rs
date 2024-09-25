@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::{
     application::handlers::node::TxError,
-    signing::renderer::amino_renderer::RenderError,
+    signing::{errors::SigningErrors, renderer::amino_renderer::RenderError},
     types::{
         base::errors::CoinsError,
         denom::Denom,
@@ -104,6 +104,8 @@ pub(crate) enum AnteError {
     CoinsSend(#[from] BankKeeperError),
     #[error("legacy amino json encoding failed")]
     LegacyAminoJson(#[from] RenderError),
+    #[error("failed get sign bytes from tx: {0}")]
+    Signing(#[from] SigningErrors),
 }
 
 impl From<AnteError> for TxError {
@@ -127,6 +129,7 @@ impl From<AnteError> for TxError {
             AnteError::CoinsSend(_) => 9,
             AnteError::Gas(_) => 10,
             AnteError::LegacyAminoJson(_) => 11,
+            AnteError::Signing(_) => 12,
         };
 
         TxError {

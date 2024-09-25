@@ -7,7 +7,7 @@ use crate::{
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
     core::Protobuf,
-    store::database::ext::UnwrapCorrupt,
+    extensions::corruption::UnwrapCorrupt,
     tendermint::types::time::timestamp::Timestamp,
 };
 use prost::bytes::Bytes;

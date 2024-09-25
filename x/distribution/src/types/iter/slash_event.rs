@@ -3,8 +3,9 @@ use std::borrow::Cow;
 use gears::{
     context::QueryableContext,
     core::Protobuf,
+    extensions::corruption::UnwrapCorrupt,
     store::{
-        database::{ext::UnwrapCorrupt, prefix::PrefixDB, Database},
+        database::{prefix::PrefixDB, Database},
         StoreKey,
     },
     types::{

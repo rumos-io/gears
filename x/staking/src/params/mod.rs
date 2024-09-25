@@ -1,12 +1,15 @@
 use anyhow::anyhow;
 use gears::{
     application::keepers::params::ParamsKeeper,
+    extensions::corruption::UnwrapCorrupt,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     tendermint::types::time::duration::Duration,
     types::denom::Denom,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+
+mod environment;
 
 mod inner {
     pub use ibc_proto::cosmos::staking::v1beta1::Params;
@@ -113,7 +116,7 @@ impl From<StakingParams> for inner::Params {
 impl Default for StakingParams {
     fn default() -> Self {
         let bond_denom =
-            Denom::try_from("uatom".to_string()).expect("default denom should be valid");
+            Denom::try_from(environment::DEFAULT_DENOM).expect("default denom should be valid");
         StakingParams {
             // 3 weeks
             unbonding_time: 60_000_000_000 * 60 * 24 * 7 * 3,
@@ -164,31 +167,33 @@ impl ParamsSerialize for StakingParams {
 impl ParamsDeserialize for StakingParams {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         let unbonding_time = ParamKind::I64
-            .parse_param(fields.remove(KEY_UNBONDING_TIME).unwrap())
+            .parse_param(fields.remove(KEY_UNBONDING_TIME).unwrap_or_corrupt())
             .signed_64()
             .expect("param serialized as i64 should be deserialized without errors");
-        let max_validators = String::from_utf8(fields.remove(KEY_MAX_VALIDATORS).unwrap())
+        let max_validators =
+            String::from_utf8(fields.remove(KEY_MAX_VALIDATORS).unwrap_or_corrupt())
+                .expect("should be valid utf-8")
+                .parse::<u32>()
+                .expect("should be valid u32");
+        let max_entries = String::from_utf8(fields.remove(KEY_MAX_ENTRIES).unwrap_or_corrupt())
             .expect("should be valid utf-8")
             .parse::<u32>()
             .expect("should be valid u32");
-        let max_entries = String::from_utf8(fields.remove(KEY_MAX_ENTRIES).unwrap())
-            .expect("should be valid utf-8")
-            .parse::<u32>()
-            .expect("should be valid u32");
-        let historical_entries = String::from_utf8(fields.remove(KEY_HISTORICAL_ENTRIES).unwrap())
-            .expect("should be valid utf-8")
-            .parse::<u32>()
-            .expect("should be valid u32");
+        let historical_entries =
+            String::from_utf8(fields.remove(KEY_HISTORICAL_ENTRIES).unwrap_or_corrupt())
+                .expect("should be valid utf-8")
+                .parse::<u32>()
+                .expect("should be valid u32");
         let bond_denom = ParamKind::String
-            .parse_param(fields.remove(KEY_BOND_DENOM).unwrap())
+            .parse_param(fields.remove(KEY_BOND_DENOM).unwrap_or_corrupt())
             .string()
             .expect("param serialized as string should be deserialized without errors")
             .strip_prefix('\"')
-            .unwrap()
+            .unwrap_or_corrupt()
             .strip_suffix('\"')
-            .unwrap()
+            .unwrap_or_corrupt()
             .try_into()
-            .unwrap();
+            .unwrap_or_corrupt();
 
         // TODO: should we validate the params here?
 

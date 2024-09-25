@@ -109,22 +109,23 @@ impl<DB: Database> QueryTree<DB> {
 mod tests {
     use super::*;
     use database::MemDB;
+    use extensions::testing::UnwrapTesting;
 
     #[test]
     fn new_query_tree_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         tree.set(b"alice".to_vec(), b"123".to_vec());
 
-        let query_tree = QueryTree::new(&tree, 1).unwrap();
-        let result = query_tree.get(b"alice".as_slice()).unwrap();
+        let query_tree = QueryTree::new(&tree, 1).unwrap_test();
+        let result = query_tree.get(b"alice".as_slice()).unwrap_test();
 
         let expected = b"abc".to_vec();
         assert_eq!(expected, result);
 
-        let result = tree.get(b"alice".as_slice()).unwrap();
+        let result = tree.get(b"alice".as_slice()).unwrap_test();
         let expected = b"123".to_vec();
         assert_eq!(expected, result);
     }
@@ -132,10 +133,10 @@ mod tests {
     #[test]
     fn new_query_tree_works_empty_tree() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
-        tree.save_version().unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
+        tree.save_version().unwrap_test();
 
-        let query_tree = QueryTree::new(&tree, 1).unwrap();
+        let query_tree = QueryTree::new(&tree, 1).unwrap_test();
         let result = query_tree.get(b"alice".as_slice());
 
         let expected = None;

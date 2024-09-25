@@ -456,6 +456,209 @@ impl TryFrom<inner::Validator> for Validator {
 
 impl Protobuf<inner::Validator> for Validator {}
 
+// TODO: remove and update logic after update of ibc-proto dependency
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IbcV046Validator {
+    /// operator_address defines the address of the validator's operator; bech encoded in JSON.
+    pub operator_address: ValAddress,
+    /// delegator_shares defines total shares issued to a validator's delegators.
+    pub delegator_shares: Decimal256,
+    /// description defines the description terms for the validator.
+    pub description: Description,
+    /// consensus_pubkey is the consensus public key of the validator, as a Protobuf Any.
+    pub consensus_pubkey: gears::crypto::public::PublicKey,
+    /// jailed defined whether the validator has been jailed from bonded status or not.
+    pub jailed: bool,
+    /// tokens define the delegated tokens (incl. self-delegation).
+    pub tokens: Uint256,
+    /// unbonding_height defines, if unbonding, the height at which this validator has begun unbonding.
+    #[serde(serialize_with = "serialize_number_to_string")]
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub unbonding_height: u32,
+    /// unbonding_time defines, if unbonding, the min time for the validator to complete unbonding.
+    pub unbonding_time: Timestamp,
+    /// commission defines the commission parameters.
+    pub commission: Commission,
+    pub min_self_delegation: Uint256,
+    pub status: BondStatus,
+    /// list of unbonding ids, each uniquely identifing an unbonding of this validator
+    pub unbonding_ids: Vec<u64>,
+    pub unbonding_on_hold_ref_count: Uint256,
+    pub validator_bond_shares: Decimal256,
+    pub liquid_shares: Decimal256,
+}
+
+impl From<Validator> for IbcV046Validator {
+    fn from(
+        Validator {
+            operator_address,
+            delegator_shares,
+            description,
+            consensus_pubkey,
+            jailed,
+            tokens,
+            unbonding_height,
+            unbonding_time,
+            commission,
+            min_self_delegation,
+            status,
+        }: Validator,
+    ) -> Self {
+        Self {
+            operator_address,
+            delegator_shares,
+            description,
+            consensus_pubkey: consensus_pubkey.into(),
+            jailed,
+            tokens,
+            unbonding_height,
+            unbonding_time,
+            commission,
+            min_self_delegation,
+            status,
+            unbonding_ids: vec![],
+            unbonding_on_hold_ref_count: Uint256::default(),
+            validator_bond_shares: Decimal256::default(),
+            liquid_shares: Decimal256::default(),
+        }
+    }
+}
+
+impl From<IbcV046Validator> for inner::Validator {
+    fn from(value: IbcV046Validator) -> Self {
+        Self {
+            operator_address: value.operator_address.to_string(),
+            delegator_shares: value.delegator_shares.to_cosmos_proto_string(),
+            description: Some(inner::Description {
+                moniker: value.description.moniker,
+                identity: value.description.identity,
+                website: value.description.website,
+                security_contact: value.description.security_contact,
+                details: value.description.details,
+            }),
+            consensus_pubkey: Some(value.consensus_pubkey.into()),
+            jailed: value.jailed,
+            tokens: value.tokens.to_string(),
+            unbonding_height: value.unbonding_height as i64,
+            unbonding_time: Some(value.unbonding_time.into()),
+            commission: Some(ibc_proto::cosmos::staking::v1beta1::Commission {
+                commission_rates: Some(ibc_proto::cosmos::staking::v1beta1::CommissionRates {
+                    rate: value
+                        .commission
+                        .commission_rates()
+                        .rate()
+                        .to_cosmos_proto_string(),
+                    max_rate: value
+                        .commission
+                        .commission_rates()
+                        .max_rate()
+                        .to_cosmos_proto_string(),
+                    max_change_rate: value
+                        .commission
+                        .commission_rates()
+                        .max_change_rate()
+                        .to_cosmos_proto_string(),
+                }),
+                update_time: Some(value.commission.update_time().to_owned().into()),
+            }),
+            min_self_delegation: value.min_self_delegation.to_string(),
+            status: value.status.into(),
+        }
+    }
+}
+
+impl TryFrom<inner::Validator> for IbcV046Validator {
+    type Error = CoreError;
+    fn try_from(value: inner::Validator) -> Result<Self, Self::Error> {
+        let status = value.status();
+        let description = value.description.ok_or(CoreError::MissingField(
+            "Missing field 'description'.".into(),
+        ))?;
+        let consensus_pubkey = value.consensus_pubkey.ok_or(CoreError::MissingField(
+            "Missing field 'consensus_pubkey'.".into(),
+        ))?;
+        let consensus_pubkey = gears::crypto::public::PublicKey::try_from(consensus_pubkey)
+            .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
+
+        let commission = value.commission.ok_or(CoreError::MissingField(
+            "Missing field 'commission'.".into(),
+        ))?;
+
+        let commission_rates = commission.commission_rates.ok_or(CoreError::MissingField(
+            "Missing field 'commission_rates'.".into(),
+        ))?;
+
+        let commission_rates = CommissionRates::new(
+            Decimal256::from_cosmos_proto_string(&commission_rates.rate)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            Decimal256::from_cosmos_proto_string(&commission_rates.max_rate)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            Decimal256::from_cosmos_proto_string(&commission_rates.max_change_rate)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+        )
+        .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
+
+        let commission = Commission::new(
+            commission_rates,
+            commission
+                .update_time
+                .ok_or(CoreError::MissingField(
+                    "Missing field 'update_time'.".into(),
+                ))?
+                .try_into()
+                .map_err(|e: NewTimestampError| CoreError::DecodeGeneral(e.to_string()))?,
+        );
+        Ok(Self {
+            operator_address: ValAddress::from_bech32(&value.operator_address)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            delegator_shares: Decimal256::from_cosmos_proto_string(&value.delegator_shares)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            description: Description {
+                moniker: description.moniker,
+                identity: description.identity,
+                website: description.website,
+                security_contact: description.security_contact,
+                details: description.details,
+            },
+            consensus_pubkey,
+            jailed: value.jailed,
+            tokens: Uint256::from_str(&value.tokens)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            unbonding_height: u32::try_from(value.unbonding_height).map_err(|e| {
+                CoreError::DecodeGeneral(format!("Failed to convert unbonding_height: {}", e))
+            })?,
+            unbonding_time: value
+                .unbonding_time
+                .ok_or(CoreError::MissingField(
+                    "Missing field 'unbonding_time'.".into(),
+                ))?
+                .try_into()
+                .map_err(|e| {
+                    CoreError::DecodeGeneral(format!("Failed to convert unbonding_time: {}", e))
+                })?,
+            commission,
+            min_self_delegation: Uint256::from_str(&value.min_self_delegation)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            status: match status {
+                ibc_proto::cosmos::staking::v1beta1::BondStatus::Unspecified => {
+                    return Err(CoreError::DecodeGeneral(
+                        "Invalid bond status: Unspecified".into(),
+                    ))
+                }
+                ibc_proto::cosmos::staking::v1beta1::BondStatus::Unbonded => BondStatus::Unbonded,
+                ibc_proto::cosmos::staking::v1beta1::BondStatus::Unbonding => BondStatus::Unbonding,
+                ibc_proto::cosmos::staking::v1beta1::BondStatus::Bonded => BondStatus::Bonded,
+            },
+            unbonding_ids: vec![],
+            unbonding_on_hold_ref_count: Uint256::default(),
+            validator_bond_shares: Decimal256::default(),
+            liquid_shares: Decimal256::default(),
+        })
+    }
+}
+
+impl Protobuf<inner::Validator> for IbcV046Validator {}
+
 /// [`Validators`] is a collection of [`Validator`] with some guarantees:
 /// - the collection cannot have duplicated validators by public key
 /// - no validator can be bonded and jailed at the same time // TODO: should this be a property of the validator itself?
@@ -538,6 +741,7 @@ pub enum ValidatorsError {
 #[cfg(test)]
 mod tests {
     use data_encoding::HEXLOWER;
+    use gears::extensions::testing::UnwrapTesting;
 
     use super::*;
 
@@ -573,7 +777,7 @@ mod tests {
           "unbonding_time": "1970-01-01T00:00:00Z"
         }"#;
 
-        let val: Validator = serde_json::from_str(val_raw).unwrap();
+        let val: Validator = serde_json::from_str(val_raw).unwrap_test();
         let val_proto = val.encode_vec();
 
         assert_eq!(
@@ -630,7 +834,7 @@ mod tests {
 }
           "#;
 
-        let val: Validator = serde_json::from_str(val_raw).unwrap();
+        let val: Validator = serde_json::from_str(val_raw).unwrap_test();
 
         let res = HEXLOWER.encode(&val.key_by_power_index_key(1000000));
         let expected = "230000010000000000149c288ede7df62742fc3b7d0962045a8cef0f79f6";
@@ -672,7 +876,7 @@ mod tests {
 }
           "#;
 
-        let val: Validator = serde_json::from_str(val_raw).unwrap();
+        let val: Validator = serde_json::from_str(val_raw).unwrap_test();
         let res = val.tokens_to_consensus_power(1000000);
         assert_eq!(res, 1099511627776);
     }

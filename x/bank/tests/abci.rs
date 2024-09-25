@@ -4,6 +4,7 @@ use bank::{BankABCIHandler, GenesisState, Keeper, Message};
 use gears::{
     application::handlers::node::ModuleInfo,
     derive::{ParamsKeys, StoreKeys},
+    extensions::testing::UnwrapTesting,
     tendermint::types::time::timestamp::Timestamp,
     types::{
         address::AccAddress,
@@ -57,7 +58,7 @@ fn test_init_and_sending_tx() {
 
     genesis.add_genesis_account(
         acc_address(),
-        UnsignedCoins::new(vec![UnsignedCoin::from_str("30uatom").unwrap()]).unwrap(),
+        UnsignedCoins::new(vec![UnsignedCoin::from_str("30uatom").unwrap_test()]).unwrap_test(),
     );
 
     let opt: MockOptionsFormer<

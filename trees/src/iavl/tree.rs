@@ -5,7 +5,8 @@ use std::{
     ops::{Bound, RangeBounds},
 };
 
-use database::{ext::UnwrapCorrupt, Database};
+use database::Database;
+use extensions::corruption::UnwrapCorrupt;
 use integer_encoding::VarInt;
 use nutype::nutype;
 use sha2::{Digest, Sha256};
@@ -1079,6 +1080,7 @@ mod tests {
     use super::*;
     use cmp::max;
     use database::MemDB;
+    use extensions::testing::UnwrapTesting;
 
     #[test]
     fn remove_leaf_from_tree() -> anyhow::Result<()> {
@@ -1110,7 +1112,7 @@ mod tests {
         };
 
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
 
         tree.root = Some(Box::new(Node::Inner(root)));
 
@@ -1135,7 +1137,7 @@ mod tests {
     #[test]
     fn remove_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(vec![1], vec![4]);
         tree.set(vec![2], vec![5]);
         tree.set(vec![3], vec![6]);
@@ -1166,12 +1168,12 @@ mod tests {
     #[test]
     fn remove_leaf_after_save_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(vec![1], vec![4]);
         tree.set(vec![2], vec![5]);
         tree.set(vec![3], vec![6]);
 
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
 
         let val = tree.remove(&[2]);
 
@@ -1258,8 +1260,8 @@ mod tests {
         let mut z = Node::Inner(z);
 
         let db = MemDB::new();
-        z.right_rotate(0, &NodeDB::new(db, 100.try_into().unwrap()))
-            .unwrap();
+        z.right_rotate(0, &NodeDB::new(db, 100.try_into().unwrap_test()))
+            .unwrap_test();
 
         let hash = z.hash();
         let expected = [
@@ -1341,8 +1343,8 @@ mod tests {
         let mut z = Node::Inner(z);
 
         let db = MemDB::new();
-        z.left_rotate(0, &NodeDB::new(db, 100.try_into().unwrap()))
-            .unwrap();
+        z.left_rotate(0, &NodeDB::new(db, 100.try_into().unwrap_test()))
+            .unwrap_test();
 
         let hash = z.hash();
         let expected = [
@@ -1355,7 +1357,7 @@ mod tests {
     #[test]
     fn set_equal_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(vec![1], vec![2]);
         tree.set(vec![1], vec![3]);
 
@@ -1370,7 +1372,7 @@ mod tests {
     #[test]
     fn set_less_than_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(vec![3], vec![2]);
         tree.set(vec![1], vec![3]);
 
@@ -1385,7 +1387,7 @@ mod tests {
     #[test]
     fn set_greater_than_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(vec![1], vec![2]);
         tree.set(vec![3], vec![3]);
 
@@ -1400,7 +1402,7 @@ mod tests {
     #[test]
     fn repeated_set_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -1417,19 +1419,19 @@ mod tests {
     #[test]
     fn save_version_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
         tree.set(b"q".to_vec(), b"1".to_vec());
 
-        tree.save_version().unwrap();
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
+        tree.save_version().unwrap_test();
         tree.set(b"qwerty".to_vec(), b"312".to_vec());
         tree.set(b"-32".to_vec(), b"gamma".to_vec());
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         tree.set(b"alice".to_vec(), b"123".to_vec());
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
 
         let expected = [
             37, 155, 233, 229, 243, 173, 29, 241, 235, 234, 85, 10, 36, 129, 53, 79, 77, 11, 29,
@@ -1442,7 +1444,7 @@ mod tests {
     #[test]
     fn get_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -1458,7 +1460,7 @@ mod tests {
     #[test]
     fn scenario_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(vec![0, 117, 97, 116, 111, 109], vec![51, 52]);
         tree.set(
             vec![
@@ -1468,13 +1470,13 @@ mod tests {
             vec![10, 5, 117, 97, 116, 111, 109, 18, 2, 51, 52],
         );
 
-        tree.save_version().unwrap();
-        tree.save_version().unwrap();
-        tree.save_version().unwrap();
-        tree.save_version().unwrap();
-        tree.save_version().unwrap();
-        tree.save_version().unwrap();
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
+        tree.save_version().unwrap_test();
+        tree.save_version().unwrap_test();
+        tree.save_version().unwrap_test();
+        tree.save_version().unwrap_test();
+        tree.save_version().unwrap_test();
+        tree.save_version().unwrap_test();
 
         tree.set(
             vec![
@@ -1503,7 +1505,7 @@ mod tests {
             145, 99, 187, 82, 49, 149, 36, 196, 63, 37, 42, 171, 124,
         ];
 
-        let (hash, version) = tree.save_version().unwrap();
+        let (hash, version) = tree.save_version().unwrap_test();
 
         assert_eq!((expected, 8), (hash, version));
     }
@@ -1511,7 +1513,7 @@ mod tests {
     #[test]
     fn bounded_range_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(b"1".to_vec(), b"abc1".to_vec());
 
         tree.set(b"2".to_vec(), b"abc2".to_vec());
@@ -1575,7 +1577,7 @@ mod tests {
     #[test]
     fn full_range_unique_keys_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -1599,7 +1601,7 @@ mod tests {
     #[test]
     fn full_range_duplicate_keys_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
@@ -1616,7 +1618,7 @@ mod tests {
     #[test]
     fn empty_tree_range_works() {
         let db = MemDB::new();
-        let tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
 
         let expected_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
@@ -1657,7 +1659,7 @@ mod tests {
                 129, 85, 55, 190, 253, 226, 35, 230, 65, 214, 244, 35, 69, 39, 223, 90
             ]
         );
-        let deserialized_node = Node::deserialize(node_bytes).unwrap();
+        let deserialized_node = Node::deserialize(node_bytes).unwrap_test();
         assert_eq!(deserialized_node, orig_node);
     }
 
@@ -1671,7 +1673,7 @@ mod tests {
 
         let node_bytes = orig_node.serialize();
         assert_eq!(node_bytes, [0, 1, 0, 1, 19, 3, 1, 2, 3]);
-        let deserialized_node = Node::deserialize(node_bytes).unwrap();
+        let deserialized_node = Node::deserialize(node_bytes).unwrap_test();
         assert_eq!(deserialized_node, orig_node);
     }
 
@@ -1679,13 +1681,13 @@ mod tests {
     #[test]
     fn bug_scenario_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(vec![0], vec![8, 244, 162, 237, 1]);
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         tree.set(vec![0], vec![8, 133, 164, 237, 1]);
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         tree.set(vec![0], vec![8, 133, 164, 237, 1]);
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         tree.set(vec![0], vec![8, 135, 164, 237, 1]);
         tree.set(
             vec![
@@ -1703,7 +1705,7 @@ mod tests {
             vec![2, 173, 86, 59, 0, 0, 0, 0, 0, 1],
             vec![8, 173, 173, 237, 1, 16, 1],
         );
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         tree.set(vec![0], vec![8, 137, 164, 237, 1]);
         tree.set(
             vec![
@@ -1721,7 +1723,7 @@ mod tests {
             vec![2, 173, 86, 59, 0, 0, 0, 0, 0, 1],
             vec![8, 173, 173, 237, 1, 16, 1],
         );
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         tree.set(vec![0], vec![8, 138, 164, 237, 1]);
         tree.set(
             vec![
@@ -1739,9 +1741,9 @@ mod tests {
             vec![2, 174, 86, 59, 0, 0, 0, 0, 0, 1],
             vec![8, 174, 173, 237, 1, 16, 1],
         );
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         tree.set(vec![0], vec![8, 140, 164, 237, 1]);
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         tree.set(vec![0], vec![8, 142, 164, 237, 1]);
 
         tree.set(
@@ -1757,14 +1759,17 @@ mod tests {
             ],
         );
 
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
 
         let expected = [
             136, 164, 1, 21, 163, 66, 127, 238, 197, 107, 178, 152, 75, 8, 254, 220, 62, 141, 140,
             212, 4, 23, 213, 249, 34, 96, 132, 172, 166, 207, 48, 17,
         ];
 
-        assert!(is_consistent(tree.root.clone().unwrap(), &tree.node_db));
+        assert!(is_consistent(
+            tree.root.clone().unwrap_test(),
+            &tree.node_db
+        ));
         assert_eq!(expected, tree.root_hash());
     }
 
@@ -1772,7 +1777,7 @@ mod tests {
     #[test]
     fn bug_scenario_2_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(
             vec![
                 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 58,
@@ -1808,14 +1813,14 @@ mod tests {
             ],
         );
 
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
 
         let expected = [
             161, 141, 64, 164, 190, 244, 170, 230, 150, 211, 45, 54, 92, 136, 170, 253, 7, 176,
             179, 212, 27, 116, 84, 160, 78, 92, 155, 245, 98, 143, 221, 105,
         ];
 
-        let root = tree.root.as_ref().unwrap();
+        let root = tree.root.as_ref().unwrap_test();
 
         assert!(is_consistent(root, &tree.node_db));
         assert_eq!(expected, tree.root_hash());
@@ -1825,7 +1830,7 @@ mod tests {
     #[test]
     fn bug_scenario_3_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(
             vec![
                 17, 20, 129, 58, 194, 42, 97, 73, 22, 85, 226, 120, 106, 224, 209, 39, 214, 153,
@@ -1892,7 +1897,7 @@ mod tests {
                 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
             ],
         );
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         //hash: [127, 232, 174, 89, 120, 86, 81, 219, 254, 142, 241, 61, 88, 167, 95, 47, 46, 11, 185, 19, 254, 90, 230, 122, 169, 230, 66, 137, 113, 190, 112, 170]
         tree.set(
             vec![
@@ -1955,7 +1960,7 @@ mod tests {
             35, 35, 0, 0, 0, 0, 0, 0, 0, 0, 20, 95, 250, 64, 175, 205, 68, 27, 247, 205, 195, 84,
             17, 223, 86, 125, 125, 81, 47, 40, 54,
         ]);
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         //hash: [71, 62, 145, 220, 39, 77, 189, 142, 99, 132, 1, 149, 176, 46, 111, 122, 197, 109, 135, 202, 48, 4, 205, 181, 32, 126, 194, 131, 1, 107, 179, 202]
         tree.set(
             vec![
@@ -1978,7 +1983,7 @@ mod tests {
                 48, 18, 4, 8, 128, 163, 5, 90, 3, 50, 48, 48,
             ],
         );
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         //hash: [108, 218, 96, 64, 252, 252, 121, 101, 78, 92, 148, 82, 4, 236, 90, 170, 208, 15, 54, 39, 224, 114, 255, 233, 4, 228, 101, 43, 221, 201, 9, 69]
         tree.set(
             vec![
@@ -2031,7 +2036,7 @@ mod tests {
             35, 35, 0, 0, 0, 0, 0, 0, 0, 0, 20, 126, 197, 61, 213, 158, 182, 233, 170, 29, 135,
             149, 31, 46, 216, 41, 102, 244, 4, 4, 33,
         ]);
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         //hash: [125, 158, 16, 16, 23, 121, 241, 110, 38, 21, 149, 110, 110, 28, 0, 31, 45, 10, 190, 92, 130, 177, 142, 113, 193, 79, 74, 61, 131, 50, 119, 107]
         tree.set(
             vec![
@@ -2192,7 +2197,7 @@ mod tests {
             35, 35, 0, 0, 0, 0, 0, 0, 0, 0, 20, 126, 197, 61, 213, 158, 182, 233, 170, 29, 135,
             149, 31, 46, 216, 41, 102, 244, 4, 4, 33,
         ]);
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
         //hash: [95, 218, 225, 239, 104, 173, 61, 97, 77, 92, 43, 191, 247, 22, 215, 180, 45, 46, 115, 93, 67, 216, 246, 202, 62, 17, 176, 236, 211, 235, 156, 111]
         tree.set(
             vec![
@@ -2243,14 +2248,14 @@ mod tests {
             149, 31, 46, 216, 41, 102, 244, 4, 4, 33,
         ]);
 
-        tree.save_version().unwrap();
+        tree.save_version().unwrap_test();
 
         let expected = [
             51, 242, 234, 184, 99, 85, 249, 34, 67, 50, 97, 105, 141, 61, 225, 136, 3, 110, 208,
             136, 19, 245, 48, 65, 1, 140, 5, 82, 49, 108, 187, 67,
         ];
 
-        let root = tree.root.as_ref().unwrap();
+        let root = tree.root.as_ref().unwrap_test();
         assert!(is_consistent(root, &tree.node_db));
         assert_eq!(expected, tree.root_hash());
     }
@@ -3024,7 +3029,7 @@ mod tests {
     ) where
         N: AsRef<Node>,
     {
-        let mut f = File::create(filename.as_ref()).unwrap();
+        let mut f = File::create(filename.as_ref()).unwrap_test();
 
         fn recursive_draw<T: Database, N>(
             root: Option<N>,
@@ -3059,7 +3064,7 @@ mod tests {
                         self_size,
                         self_key,
                     );
-                    f.write_all(buf.as_bytes()).unwrap();
+                    f.write_all(buf.as_bytes()).unwrap_test();
 
                     match root.as_ref() {
                         Node::Inner(node) => {
@@ -3103,21 +3108,22 @@ mod tests {
                         )
                             };
 
-                            f.write_all(buf.as_bytes()).unwrap();
+                            f.write_all(buf.as_bytes()).unwrap_test();
                         }
                     }
                 }
                 None => {
                     let buf = format!("{} --> none[NONE];\n", parent.expect("for this to not have a parent it must be the root, but then it wouldn't be `None`"));
-                    f.write_all(buf.as_bytes()).unwrap();
+                    f.write_all(buf.as_bytes()).unwrap_test();
                 }
             }
         }
 
-        f.write_all("```mermaid\n  graph TD;".as_bytes()).unwrap();
+        f.write_all("```mermaid\n  graph TD;".as_bytes())
+            .unwrap_test();
 
         recursive_draw(Some(root), node_db, None, &mut f, highlight);
 
-        f.write_all("```".as_bytes()).unwrap();
+        f.write_all("```".as_bytes()).unwrap_test();
     }
 }

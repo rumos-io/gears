@@ -1,5 +1,6 @@
 use gears::application::keepers::params::ParamsKeeper;
 use gears::derive::Protobuf;
+use gears::extensions::corruption::UnwrapCorrupt;
 use gears::params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey};
 use gears::types::denom::Denom;
 use serde::{Deserialize, Serialize};
@@ -12,6 +13,8 @@ mod inner {
     pub use ibc_proto::cosmos::bank::v1beta1::Params;
     pub use ibc_proto::cosmos::bank::v1beta1::SendEnabled;
 }
+
+mod environment;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Protobuf)]
 #[proto(raw = "inner::SendEnabled")]
@@ -68,16 +71,16 @@ impl ParamsDeserialize for BankParams {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
             default_send_enabled: ParamKind::Bool
-                .parse_param(fields.remove(KEY_DEFAULT_SEND_ENABLED).unwrap())
+                .parse_param(fields.remove(KEY_DEFAULT_SEND_ENABLED).unwrap_or_corrupt())
                 .boolean()
-                .unwrap(),
+                .unwrap_or_corrupt(),
             send_enabled: serde_json::from_slice(
                 &ParamKind::Bytes
-                    .parse_param(fields.remove(KEY_SEND_ENABLED).unwrap())
+                    .parse_param(fields.remove(KEY_SEND_ENABLED).unwrap_or_corrupt())
                     .bytes()
-                    .unwrap(),
+                    .unwrap_or_corrupt(),
             )
-            .unwrap(),
+            .unwrap_or_corrupt(),
         }
     }
 }

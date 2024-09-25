@@ -1,0 +1,1 @@
+pub const DEFAULT_DENOM: &str = env!("XMOD_STAKING_PARAMS_BOND_DENOM");

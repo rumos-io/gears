@@ -3,11 +3,9 @@ use crate::types::keys;
 use crate::{
     length_prefixed_val_del_addrs_key, redelegation_time_key, DvvTriplets, RedelegationEntry,
 };
+use gears::context::{InfallibleContext, InfallibleContextMut};
 use gears::core::Protobuf;
-use gears::{
-    context::{InfallibleContext, InfallibleContextMut},
-    store::database::ext::UnwrapCorrupt,
-};
+use gears::extensions::corruption::UnwrapCorrupt;
 use prost::bytes::Bytes;
 
 impl<

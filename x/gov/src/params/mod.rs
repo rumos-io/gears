@@ -6,6 +6,7 @@ use std::{
 use gears::{
     application::keepers::params::ParamsKeeper,
     core::{errors::CoreError, Protobuf},
+    error::ProtobufError,
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     tendermint::types::time::duration::Duration,
     types::{
@@ -26,6 +27,8 @@ const KEY_TALLY_PARAMS: &str = "tallyparams";
 
 const DEFAULT_PERIOD: Duration = Duration::new_from_secs(172800); // 2 days
 
+mod environment;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DepositParams {
     pub min_deposit: UnsignedCoins,
@@ -35,9 +38,10 @@ pub struct DepositParams {
 impl Default for DepositParams {
     fn default() -> Self {
         Self {
-            min_deposit: UnsignedCoins::new(vec![
-                UnsignedCoin::from_str("10000000uatom").expect("default is valid")
-            ])
+            min_deposit: UnsignedCoins::new(vec![UnsignedCoin::from_str(
+                environment::DEFAULT_MIN_DEPOSIT,
+            )
+            .expect("default is valid")])
             .expect("default is valid"),
             max_deposit_period: DEFAULT_PERIOD,
         }
@@ -235,7 +239,7 @@ impl From<TallyParams> for inner::TallyParams {
 impl Protobuf<inner::TallyParams> for TallyParams {}
 
 impl TryFrom<inner::VotingParams> for VotingParams {
-    type Error = CoreError;
+    type Error = ProtobufError;
 
     fn try_from(
         inner::VotingParams { voting_period }: inner::VotingParams,
@@ -246,7 +250,8 @@ impl TryFrom<inner::VotingParams> for VotingParams {
                     "VotingParams: field `voting_period`".to_owned(),
                 ))?;
 
-                Duration::try_new(duration.seconds, duration.nanos).unwrap() // TODO:NOW
+                Duration::try_new(duration.seconds, duration.nanos)
+                    .map_err(|err| anyhow::anyhow!("failed to map duration: {err}"))?
             },
         })
     }

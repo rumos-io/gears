@@ -3,11 +3,9 @@ use std::{net::SocketAddr, path::PathBuf};
 
 use clap::{ArgAction, Args, ValueHint};
 use gears::application::ApplicationInfo;
+use gears::extensions::socket_addr;
 use gears::tendermint::types::proto::crypto::PublicKey as TendermintPublicKey;
-use gears::{
-    socket_addr,
-    types::{base::coin::UnsignedCoin, decimal256::Decimal256, uint::Uint256},
-};
+use gears::types::{base::coin::UnsignedCoin, decimal256::Decimal256, uint::Uint256};
 
 use crate::gentx::GentxCmd;
 
@@ -37,15 +35,15 @@ pub struct GentxCli<AI: ApplicationInfo> {
     pub details: Option<String>,
     /// The initial commission rate percentage
     /* 0.1 */
-    #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 1).unwrap())]
+    #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 1).expect("default is valid"))]
     pub commission_rate: Decimal256,
     /// The maximum commission rate percentage
     /* 0.2 */
-    #[arg(long, default_value_t = Decimal256::from_atomics(2u64, 1).unwrap())]
+    #[arg(long, default_value_t = Decimal256::from_atomics(2u64, 1).expect("default is valid"))]
     pub commission_max_rate: Decimal256,
     /// The maximum commission change rate percentage (per day)
     /* 0.01 */
-    #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 2).unwrap())]
+    #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 2).expect("default is valid"))]
     pub commission_max_change_rate: Decimal256,
     /// The minimum self delegation required on the validator
     #[arg(long, default_value_t = Uint256::zero())]

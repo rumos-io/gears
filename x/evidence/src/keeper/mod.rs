@@ -1,18 +1,18 @@
 use crate::{errors::EvidenceAlreadyExistsError, types::Evidence, GenesisState};
+use gears::extensions::gas::GasResultExt;
 use gears::{
     context::{init::InitContext, QueryableContext, TransactionalContext},
     core::any::google::Any,
-    store::{
-        database::{ext::UnwrapCorrupt, Database},
-        StoreKey,
-    },
+    extensions::corruption::UnwrapCorrupt,
+    store::{database::Database, StoreKey},
     tendermint::informal::Hash,
-    types::store::gas::{errors::GasStoreErrors, ext::GasResultExt},
+    types::store::gas::errors::GasStoreErrors,
     x::{
         keepers::{slashing::EvidenceSlashingKeeper, staking::SlashingStakingKeeper},
         module::Module,
     },
 };
+
 use std::marker::PhantomData;
 
 mod infraction;

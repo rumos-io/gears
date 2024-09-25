@@ -86,6 +86,8 @@ impl StdSignDoc {
 
 #[cfg(test)]
 mod test {
+    use extensions::testing::UnwrapTesting;
+
     use crate::crypto::secp256k1::Secp256k1PubKey;
 
     use super::*;
@@ -100,9 +102,9 @@ mod test {
         "key":"AtTjh9XR+GbfnqBXHb1Gcj2a6i3oWlTiqT0SDIDWGYFR"
         }"#,
         )
-        .unwrap();
+        .unwrap_test();
 
-        let bytes = serde_json::to_vec(&std_sign_doc).unwrap();
+        let bytes = serde_json::to_vec(&std_sign_doc).unwrap_test();
         let exp = vec![
             123, 34, 97, 99, 99, 111, 117, 110, 116, 95, 110, 117, 109, 98, 101, 114, 34, 58, 34,
             53, 34, 44, 34, 99, 104, 97, 105, 110, 95, 105, 100, 34, 58, 34, 116, 101, 115, 116,
