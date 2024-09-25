@@ -1,8 +1,10 @@
 use database::Database;
+use kv_store::query::QueryMultiStore;
 use serde::Serialize;
 
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
+    context::query::QueryContext,
     error::POISONED_LOCK,
     params::ParamsSubspaceKey,
 };
@@ -34,8 +36,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let request = request.into();
         let version = request.height();
 
-        let ctx = self.state.read().expect(POISONED_LOCK).query_ctx(version)?;
-
+        let store = self.multi_store.read().expect(POISONED_LOCK);
+        let ctx = QueryContext::new(QueryMultiStore::new(&*store, version)?, version)?;
         Ok(self.abci_handler.typed_query(&ctx, request))
     }
 }

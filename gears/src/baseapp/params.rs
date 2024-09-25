@@ -278,6 +278,8 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
 #[cfg(test)]
 mod tests {
 
+    use std::sync::Arc;
+
     use crate::context::init::InitContext;
 
     use super::*;
@@ -321,7 +323,7 @@ mod tests {
         };
 
         let mut multi_store =
-            ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new()).unwrap_test();
+            ApplicationMultiBank::<_, SubspaceKey>::new(Arc::new(MemDB::new())).unwrap_test();
 
         let before_hash = multi_store.head_commit_hash();
 
@@ -355,7 +357,7 @@ mod tests {
         };
 
         let mut multi_store =
-            ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new()).unwrap_test();
+            ApplicationMultiBank::<_, SubspaceKey>::new(Arc::new(MemDB::new())).unwrap_test();
 
         let mut ctx = InitContext::new(
             &mut multi_store,
