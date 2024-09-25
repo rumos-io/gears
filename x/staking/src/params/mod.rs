@@ -26,12 +26,39 @@ const KEY_BOND_DENOM: &str = "BondDenom";
 /// - max_validators is positive
 /// - max_entries is positive
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(try_from = "RawStakingParams")]
 pub struct StakingParams {
     pub unbonding_time: Duration,
     pub max_validators: u32,
     pub max_entries: u32,
     pub historical_entries: u32,
     pub bond_denom: Denom,
+}
+
+/// [`RawParams`] exists to allow us to validate params when deserializing them
+#[derive(Deserialize)]
+struct RawStakingParams {
+    unbonding_time: Duration,
+    max_validators: u32,
+    max_entries: u32,
+    historical_entries: u32,
+    bond_denom: Denom,
+}
+
+impl TryFrom<RawStakingParams> for StakingParams {
+    type Error = anyhow::Error;
+
+    fn try_from(params: RawStakingParams) -> Result<Self, Self::Error> {
+        StakingParams::new(
+            i128::from(params.unbonding_time.duration_nanoseconds())
+                .try_into()
+                .map_err(|_| anyhow!("cannot convert google duration"))?,
+            params.max_validators,
+            params.max_entries,
+            params.historical_entries,
+            params.bond_denom,
+        )
+    }
 }
 
 impl TryFrom<inner::Params> for StakingParams {
@@ -52,11 +79,11 @@ impl TryFrom<inner::Params> for StakingParams {
                 Duration::try_from(
                     unbonding_time.ok_or(anyhow!("missing field 'unbonding_time'"))?,
                 )
-                .map_err(|_| anyhow!("cannot conver google duration"))?
+                .map_err(|_| anyhow!("cannot convert google duration"))?
                 .duration_nanoseconds(),
             )
             .try_into()
-            .map_err(|_| anyhow!("cannot conver google duration"))?,
+            .map_err(|_| anyhow!("cannot convert google duration"))?,
             max_validators,
             max_entries,
             historical_entries,
@@ -194,8 +221,8 @@ impl StakingParams {
     ) -> Result<Self, anyhow::Error> {
         if unbonding_time < 0 {
             return Err(anyhow::anyhow!(format!(
-                "unbonding time must be non negative: {}",
-                unbonding_time
+                "unbonding time must be non negative: {}s",
+                unbonding_time.saturating_div(1_000_000_000)
             )));
         }
 

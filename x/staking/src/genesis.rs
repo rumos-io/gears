@@ -194,5 +194,59 @@ mod tests {
                 .to_string(),
             "invalid type: integer `-1`, expected a string at line 3 column 36".to_string()
         );
+
+        let genesis = r#"{
+            "params": {
+                "unbonding_time": "-1s",
+                "max_validators": 100,
+                "max_entries": 7,
+                "historical_entries": 10000,
+                "bond_denom": "stake"
+            },
+            "validators": [
+                {
+    "operator_address": "cosmosvaloper1sp6zygg2wch",
+    "delegator_shares": "1",
+    "description": {
+        "moniker": "validator1",
+        "identity": "",
+        "website": "",
+        "security_contact": "",
+        "details": ""
+    },
+    "consensus_pubkey": {
+        "type": "tendermint/PubKeyEd25519",
+        "value": "cVp6"
+    },
+    "jailed": true,
+    "tokens": "1",
+    "unbonding_height": "0",
+    "unbonding_time": "1970-01-01T00:00:10.0000001Z",
+    "commission": {
+        "commission_rates": {
+            "rate": "1",
+            "max_rate": "1",
+            "max_change_rate": "1"
+        },
+        "update_time": "1970-01-01T00:00:10.0000001Z"
+    },
+    "min_self_delegation": "1",
+    "status": "BOND_STATUS_BONDED"
+}
+            ],
+            "last_total_power": "0",
+            "exported": false,
+            "last_validator_powers": [],
+            "delegations": [],
+            "unbonding_delegations": [],
+            "redelegations": []
+        }"#;
+
+        assert_eq!(
+            serde_json::from_str::<GenesisState>(genesis)
+                .unwrap_err()
+                .to_string(),
+            "unbonding time must be non negative: -1s at line 8 column 13".to_string()
+        );
     }
 }
