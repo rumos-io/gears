@@ -50,9 +50,7 @@ impl TryFrom<RawStakingParams> for StakingParams {
 
     fn try_from(params: RawStakingParams) -> Result<Self, Self::Error> {
         StakingParams::new(
-            i128::from(params.unbonding_time.duration_nanoseconds())
-                .try_into()
-                .map_err(|_| anyhow!("cannot convert google duration"))?,
+            params.unbonding_time,
             params.max_validators,
             params.max_entries,
             params.historical_entries,
@@ -75,15 +73,9 @@ impl TryFrom<inner::Params> for StakingParams {
         }: inner::Params,
     ) -> Result<Self, Self::Error> {
         StakingParams::new(
-            i128::from(
-                Duration::try_from(
-                    unbonding_time.ok_or(anyhow!("missing field 'unbonding_time'"))?,
-                )
-                .map_err(|_| anyhow!("cannot convert google duration"))?
-                .duration_nanoseconds(),
-            )
-            .try_into()
-            .map_err(|_| anyhow!("cannot convert google duration"))?,
+            unbonding_time
+                .ok_or(anyhow!("missing field 'unbonding_time'"))?
+                .try_into()?,
             max_validators,
             max_entries,
             historical_entries,
@@ -213,16 +205,16 @@ impl ParamsDeserialize for StakingParams {
 
 impl StakingParams {
     pub fn new(
-        unbonding_time: i64,
+        unbonding_time: Duration,
         max_validators: u32,
         max_entries: u32,
         historical_entries: u32,
         bond_denom: Denom,
     ) -> Result<Self, anyhow::Error> {
-        if unbonding_time < 0 {
+        if unbonding_time < Duration::ZERO {
             return Err(anyhow::anyhow!(format!(
-                "unbonding time must be non negative: {}s",
-                unbonding_time.saturating_div(1_000_000_000)
+                "unbonding time must be non negative: {}",
+                serde_json::to_string(&unbonding_time).expect("will always serialize"),
             )));
         }
 
@@ -241,7 +233,7 @@ impl StakingParams {
         }
 
         Ok(StakingParams {
-            unbonding_time: Duration::new_from_nanos(unbonding_time),
+            unbonding_time,
             max_validators,
             max_entries,
             bond_denom,

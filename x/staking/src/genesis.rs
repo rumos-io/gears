@@ -246,7 +246,7 @@ mod tests {
             serde_json::from_str::<GenesisState>(genesis)
                 .unwrap_err()
                 .to_string(),
-            "unbonding time must be non negative: -1s at line 8 column 13".to_string()
+            "unbonding time must be non negative: \"-1s\" at line 8 column 13".to_string()
         );
     }
 }
