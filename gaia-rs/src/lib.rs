@@ -336,7 +336,7 @@ impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
     ) -> tonic::transport::server::Router<Identity> {
         let reflection_service = tonic_reflection::server::Builder::configure()
             .register_encoded_file_descriptor_set(ibc_proto::FILE_DESCRIPTOR_SET)
-            .build()
+            .build_v1()
             .expect("ibc_proto::FILE_DESCRIPTOR_SET is a valid proto file descriptor set");
 
         Server::builder()

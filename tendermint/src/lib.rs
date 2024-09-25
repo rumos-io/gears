@@ -26,6 +26,12 @@ pub fn get_validator_pub_key(priv_validator_key_file: File) -> Result<PublicKey,
     Ok(pub_key)
 }
 
+pub fn node_pub_key(node_key_file: File) -> Result<PublicKey, Error> {
+    let priv_validator_key: NodeKey = serde_json::from_reader(node_key_file)?;
+    let pub_key = priv_validator_key.public_key().try_into()?;
+    Ok(pub_key)
+}
+
 pub fn write_keys_and_genesis(
     mut node_key_file: File,
     mut priv_validator_key_file: File,

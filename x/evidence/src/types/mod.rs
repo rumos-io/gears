@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use gears::{
     context::TransactionalContext,
     core::{any::google::Any, errors::CoreError},
@@ -101,7 +102,7 @@ impl TryFrom<Any> for RawEquivocation {
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         match value.type_url.as_str() {
             // TODO: url?
-            "equivocation" => RawEquivocation::decode::<prost::bytes::Bytes>(value.value.into())
+            "equivocation" => RawEquivocation::decode(Bytes::from(value.value))
                 .map_err(|e| gears::core::errors::CoreError::DecodeGeneral(e.to_string())),
             _ => Err(gears::core::errors::CoreError::DecodeGeneral(
                 "message type not recognized".into(),

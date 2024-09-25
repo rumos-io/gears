@@ -3,7 +3,8 @@ use std::{collections::HashMap, sync::Arc};
 use database::{prefix::PrefixDB, Database};
 
 use crate::{
-    bank::kv::application::ApplicationKVBank, error::MultiStoreError, hash::StoreInfo, StoreKey,
+    bank::kv::application::ApplicationKVBank, build_prefixed_stores, error::MultiStoreError,
+    hash::StoreInfo, StoreKey,
 };
 
 use super::*;
@@ -24,34 +25,28 @@ impl<SK, DB> MultiBankBackend<DB, SK> for ApplicationStore<DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
-    pub fn new(db: DB) -> Result<Self, MultiStoreError<SK>> {
-        let db = Arc::new(db);
-
+    pub fn new(db: Arc<DB>) -> Result<Self, MultiStoreError<SK>> {
         let mut store_infos = Vec::new();
-        let mut stores = HashMap::new();
         let mut head_version = 0;
 
-        for store in SK::iter() {
-            let prefix = store.name().as_bytes().to_vec(); // TODO:NOW check that store names are not prefixes
-            let kv_store = ApplicationKVBank::new(
-                PrefixDB::new(Arc::clone(&db), prefix),
-                None,
-                Some(store.name().to_owned()),
-            )
-            .map_err(|err| MultiStoreError {
-                sk: store.clone(),
+        let map = build_prefixed_stores::<_, SK>(db);
+        let mut stores = HashMap::with_capacity(map.len());
+        for (store_key, store) in map {
+            let kv_store = ApplicationKVBank::new(store, None, Some(store_key.name().to_owned()))
+                .map_err(|err| MultiStoreError {
+                sk: store_key.clone(),
                 err,
             })?;
 
             let store_info = StoreInfo {
-                name: store.name().into(),
+                name: store_key.name().into(),
                 hash: kv_store.persistent().root_hash(),
             };
 
+            store_infos.push(store_info);
             head_version = kv_store.persistent().loaded_version();
 
-            stores.insert(store, kv_store);
-            store_infos.push(store_info)
+            stores.insert(store_key, kv_store);
         }
 
         Ok(MultiBank {
