@@ -5,13 +5,13 @@ use crate::{
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use anyhow::anyhow;
-use gears::extensions::gas::GasResultExt;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
         block::BlockContext, init::InitContext, InfallibleContext, QueryableContext,
         TransactionalContext,
     },
+    extensions::gas::GasResultExt,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -414,12 +414,11 @@ impl<
         let mut amt_from_not_bonded_to_bonded = Uint256::zero();
 
         let mut last = self.last_validators_by_addr(ctx);
-        let validators_map = self.validators_power_store_vals_map(ctx)?;
+        let validators_map = self.validators_power_store_vals_vec(ctx)?;
 
         let mut updates = vec![];
 
-        //TODO: iterating over a map is not deterministic, we should use a BTreeMap
-        for (_k, val_addr) in validators_map.iter().take(max_validators as usize) {
+        for val_addr in validators_map.iter().rev().take(max_validators as usize) {
             // everything that is iterated in this loop is becoming or already a
             // part of the bonded validator set
             let mut validator: Validator = self
