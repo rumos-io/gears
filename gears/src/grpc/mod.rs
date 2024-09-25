@@ -1,12 +1,7 @@
-use std::{convert::Infallible, net::SocketAddr};
+use std::net::SocketAddr;
 
-use tonic::{
-    body::BoxBody,
-    server::NamedService,
-    transport::{server::Router, Body},
-};
+use tonic::transport::server::Router;
 use tower_layer::Identity;
-use tower_service::Service;
 
 use crate::runtime::runtime;
 
@@ -23,19 +18,19 @@ pub fn run_grpc_server(router: Router<Identity>, listen_addr: SocketAddr) {
     });
 }
 
-#[allow(dead_code)]
-trait GService:
-    Service<
-        http::Request<Body>,
-        Response = http::Response<BoxBody>,
-        Error = Infallible,
-        Future = dyn Send + 'static,
-    > + NamedService
-    + Clone
-    + Send
-    + 'static
-{
-}
+// #[allow(dead_code)]
+// trait GService:
+//     Service<
+//         http::Request<Body>,
+//         Response = http::Response<BoxBody>,
+//         Error = Infallible,
+//         Future = dyn Send + 'static,
+//     > + NamedService
+//     + Clone
+//     + Send
+//     + 'static
+// {
+// }
 
 async fn launch(
     router: Router<Identity>,
