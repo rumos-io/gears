@@ -64,7 +64,7 @@ where
         executor: impl FnOnce(CliAppCommands<T, CliAppAUX>) -> anyhow::Result<()>,
     ) -> anyhow::Result<()> {
         #[cfg(feature = "human-panic")]
-        human_panic::setup_panic!();
+        human_panic::setup_panic!(human_panic::Metadata::new(T::APP_NAME, T::APP_VERSION));
 
         match self.command {
             CliCommands::Cli(command) => match command {

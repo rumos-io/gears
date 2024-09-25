@@ -90,7 +90,7 @@ rand = { workspace = true, optional = true }
 trybuild = { version = "1.0.99" }
 
 [features]
-default = ["cli", "xmods"]
+default = [ "cli", "xmods" ]
 xmods = []
 governance = []
 macros_test = []
