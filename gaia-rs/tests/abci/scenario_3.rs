@@ -1,11 +1,17 @@
 use std::path::Path;
 
+use gears::core::Protobuf;
 use gears::{
-    tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
+    tendermint::types::{
+        proto::crypto::PublicKey, request::query::RequestQuery, time::timestamp::Timestamp,
+    },
     types::uint::Uint256,
     utils::node::generate_txs,
+    x::types::validator::BondStatus,
 };
-use staking::{CommissionRates, CreateValidator, Description};
+use staking::{
+    CommissionRates, CreateValidator, Description, QueryValidatorsRequest, QueryValidatorsResponse,
+};
 
 use crate::{setup_mock_node, USER_0, USER_1};
 
@@ -20,7 +26,7 @@ fn scenario_3() {
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
     assert_eq!(
         hex::encode(app_hash),
-        "47cea41289131655a4843a77f02b551d1f91e155d73826aecb8062de80ec8b75"
+        "de9ac6bd42e68571b724fe738e59d0ce1670e2e4720ad81be22cd75adcc30b54"
     );
 
     //----------------------------------------
@@ -61,6 +67,22 @@ fn scenario_3() {
     let app_hash = node.step(txs, Timestamp::try_new(0, 0).unwrap());
     assert_eq!(
         hex::encode(app_hash),
-        "2995841393ec593fd0b0a691a9f55b3090872497aa6746215c6792cd92fe412a"
+        "2b52579b7599ffac4bccef19e6cb2ab3b039ab3bc8c3ce072f12f60ec924132b"
     );
+
+    // query the validator list
+    let query = QueryValidatorsRequest {
+        status: BondStatus::Bonded,
+        pagination: None,
+    };
+
+    let res = node.query(RequestQuery {
+        data: query.encode_vec().into(),
+        path: "/cosmos.staking.v1beta1.Query/Validators".to_string(),
+        height: 0,
+        prove: false,
+    });
+
+    let res = QueryValidatorsResponse::decode(res.value).unwrap();
+    assert_eq!(res.validators.len(), 1);
 }

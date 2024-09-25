@@ -417,6 +417,7 @@ impl<
 
         let mut updates = vec![];
 
+        //TODO: iterating over a map is not deterministic, we should use a BTreeMap
         for (_k, val_addr) in validators_map.iter().take(max_validators as usize) {
             // everything that is iterated in this loop is becoming or already a
             // part of the bonded validator set
