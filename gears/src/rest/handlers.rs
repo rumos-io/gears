@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use crate::application::ApplicationInfo;
 use crate::baseapp::NodeQueryHandler;
@@ -34,10 +35,7 @@ use tendermint::rpc::url::Url;
 use tendermint::rpc::Order;
 use tendermint::types::proto::block::Height;
 
-use super::{parse_pagination, Pagination, RestState};
-
-// TODO:
-// 1. handle multiple events in /cosmos/tx/v1beta1/txs request
+use super::{parse_pagination, tendermint_events_handler::StrEventsHandler, Pagination, RestState};
 
 pub async fn node_info<QReq, QRes, App: NodeQueryHandler<QReq, QRes> + ApplicationInfo>(
     State(state): State<RestState<QReq, QRes, App>>,
@@ -155,13 +153,12 @@ pub async fn txs<M: TxMessage>(
 ) -> Result<Json<GetTxsEventResponse<M>>, HTTPError> {
     let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
 
-    let query: Query = events
-        .0
-        .events
-        .parse()
-        .map_err(|e: tendermint::rpc::error::Error| {
-            HTTPError::bad_request(e.detail().to_string())
-        })?;
+    let queries = StrEventsHandler::new(&events.0.events)
+        .try_parse_tendermint_events_vec()
+        .map_err(|e| HTTPError::bad_request(e.to_string()))?;
+
+    let query = Query::from_str(&queries.join(" AND "))
+        .map_err(|e| HTTPError::bad_request(e.to_string()))?;
     let (page, limit) = parse_pagination(&pagination.0);
 
     let res_tx = client

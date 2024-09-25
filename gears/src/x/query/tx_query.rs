@@ -3,6 +3,7 @@ use crate::{
     baseapp::{Query, QueryResponse},
     cli::query_txs::{TxQueryCli, TxQueryType, TxsQueryCli},
     core::{errors::CoreError, Protobuf},
+    rest::tendermint_events_handler::StrEventsHandler,
     tendermint::{
         informal::Hash,
         rpc::{
@@ -187,37 +188,6 @@ impl<M: TxMessage> QueryHandler for TxQueryHandler<M> {
                 Ok(Self::QueryResponse::Txs(QueryTxsResponse { txs }))
             }
         }
-    }
-}
-
-struct StrEventsHandler<'a> {
-    events_str: &'a str,
-}
-
-impl<'a> StrEventsHandler<'a> {
-    pub fn new(events_str: &'a str) -> Self {
-        let events_str = events_str.trim_start_matches('\'').trim_end_matches('\'');
-        Self { events_str }
-    }
-
-    pub fn try_parse_tendermint_events_vec(&self) -> anyhow::Result<Vec<String>> {
-        let events = self.events_str.split('&');
-
-        let mut tm_events = Vec::with_capacity(self.events_str.matches('&').count() + 1);
-        for event in events {
-            if !event.contains('=') {
-                return Err(anyhow!("invalid event; event {event} should be of the format: {{eventType}}.{{eventAttribute}}={{value}}"));
-            }
-            let tokens = event
-                .split_once('=')
-                .expect("the condition is checked above");
-            if tokens.0 == "tx.height" {
-                tm_events.push(format!("{}={}", tokens.0, tokens.1));
-            } else {
-                tm_events.push(format!("{}='{}'", tokens.0, tokens.1));
-            }
-        }
-        Ok(tm_events)
     }
 }
 
