@@ -47,7 +47,7 @@ pub async fn const_community_pool() -> Result<Json<QueryCommunityPoolResponse>, 
             gears::types::base::coin::DecimalCoin {
                 denom: "uatom".try_into().expect("hardcoded value cannot fail"),
                 amount: gears::types::decimal256::Decimal256::from_atomics(10_000_000_000u64, 1)
-                    .unwrap(),
+                    .expect("Default is valid"),
             },
         ])
         .ok(),

@@ -96,7 +96,7 @@ impl<
     ) -> Self::QRes {
         match query {
             BankNodeQueryRequest::Balance(req) => {
-                let res = self.keeper.query_balance(ctx, req);
+                let res = self.query_balance(ctx, req);
                 BankNodeQueryResponse::Balance(res)
             }
             BankNodeQueryRequest::AllBalances(req) => {
@@ -198,7 +198,7 @@ impl<
             "/cosmos.bank.v1beta1.Query/Balance" => {
                 let req = QueryBalanceRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_balance(ctx, req).encode_vec())
+                Ok(self.query_balance(ctx, req).encode_vec())
             }
             QueryDenomsMetadataRequest::QUERY_URL => {
                 let req = QueryDenomsMetadataRequest::decode(query.data)?;
@@ -293,5 +293,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
     ) -> QuerySupplyOfResponse {
         let supply = self.keeper.supply(ctx, &denom).unwrap_gas();
         QuerySupplyOfResponse { amount: supply }
+    }
+
+    pub fn query_balance<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryBalanceRequest { address, denom }: QueryBalanceRequest,
+    ) -> QueryBalanceResponse {
+        let balance = self.keeper.balance(ctx, &address, &denom).unwrap_gas();
+
+        QueryBalanceResponse { balance }
     }
 }

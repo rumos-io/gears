@@ -19,6 +19,14 @@ impl GovTxError {
     }
 }
 
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum TallyError {
+    #[error("{0}")]
+    Gas(#[from] GasStoreErrors),
+    #[error("{0}")]
+    Math(String),
+}
+
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum GovKeeperError {
     #[error("gov: no handler exists for proposal type")]
@@ -33,4 +41,6 @@ pub enum GovKeeperError {
     ProposalUnknown(u64),
     #[error("{0}")]
     Gas(#[from] GasStoreErrors),
+    #[error("{0}")]
+    Time(String),
 }
