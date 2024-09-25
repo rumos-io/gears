@@ -36,7 +36,7 @@ mod tests {
     fn test_deserialize_genesis() {
         let genesis = r#"{
             "params": {
-                "unbonding_time": 1814400,
+                "unbonding_time": "1814400s",
                 "max_validators": 100,
                 "max_entries": 7,
                 "historical_entries": 10000,
@@ -89,7 +89,7 @@ mod tests {
     fn test_deserialize_genesis_fail() {
         let genesis = r#"{
             "params": {
-                "unbonding_time": 1814400,
+                "unbonding_time": "1814400s",
                 "max_validators": 100,
                 "max_entries": 7,
                 "historical_entries": 10000,
@@ -192,7 +192,7 @@ mod tests {
             serde_json::from_str::<GenesisState>(genesis)
                 .unwrap_err()
                 .to_string(),
-            "unbonding time must be non negative: -1 at line 8 column 13".to_string()
+            "invalid type: integer `-1`, expected a string at line 3 column 36".to_string()
         );
     }
 }
