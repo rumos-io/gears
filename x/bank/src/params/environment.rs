@@ -1,0 +1,1 @@
+pub const _DEFAULT_SEND_ENABLED: &str = env!("XMOD_BANK_PARAMS_SEND_ENABLED");

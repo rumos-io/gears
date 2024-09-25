@@ -1,0 +1,1 @@
+pub const DEFAULT_MIN_DEPOSIT: &str = env!("XMOD_GOV_PARAMS_MIN_DEPOSIT");

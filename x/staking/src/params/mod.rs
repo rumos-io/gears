@@ -9,6 +9,8 @@ use gears::{
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
+mod environment;
+
 mod inner {
     pub use ibc_proto::cosmos::staking::v1beta1::Params;
 }
@@ -114,7 +116,7 @@ impl From<StakingParams> for inner::Params {
 impl Default for StakingParams {
     fn default() -> Self {
         let bond_denom =
-            Denom::try_from("uatom".to_string()).expect("default denom should be valid");
+            Denom::try_from(environment::DEFAULT_DENOM).expect("default denom should be valid");
         StakingParams {
             // 3 weeks
             unbonding_time: 60_000_000_000 * 60 * 24 * 7 * 3,
