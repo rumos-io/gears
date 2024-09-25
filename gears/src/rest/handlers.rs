@@ -28,6 +28,15 @@ use tendermint::rpc::Order;
 
 use super::{parse_pagination, Pagination, RestState};
 
+pub async fn health(State(tendermint_rpc_address): State<HttpClientUrl>) -> Result<(), HTTPError> {
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+
+    client.health().await.map_err(|e| {
+        tracing::error!("Error connecting to Tendermint: {e}");
+        HTTPError::bad_gateway()
+    })
+}
+
 // TODO:
 // 1. handle multiple events in /cosmos/tx/v1beta1/txs request
 // 3. get block in /cosmos/tx/v1beta1/txs so that the timestamp can be added to TxResponse
