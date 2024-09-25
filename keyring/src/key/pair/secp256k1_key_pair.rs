@@ -66,8 +66,9 @@ impl Secp256k1KeyPair {
         // TODO: remove unwraps
 
         // 14 = log_2(16384), 32 bytes = 256 bits
-        let scrypt_params = scrypt::Params::new(14, 8, 1, 32).unwrap();
-        let pbes2_params = pbes2::Parameters::scrypt_aes256cbc(scrypt_params, &salt, &iv).unwrap();
+        let scrypt_params = scrypt::Params::new(14, 8, 1, 32).expect("Default params is valid");
+        let pbes2_params = pbes2::Parameters::scrypt_aes256cbc(scrypt_params, &salt, &iv)
+            .expect("Default params is valid: r & p < u16::MAX");
 
         let plain_text_der = self.0.to_pkcs8_der().unwrap();
         let private_key_info = PrivateKeyInfo::try_from(plain_text_der.as_bytes()).unwrap();
