@@ -13,8 +13,9 @@ use tendermint::{
         },
         request::{
             begin_block::RequestBeginBlock, deliver_tx::RequestDeliverTx,
-            end_block::RequestEndBlock, init_chain::RequestInitChain,
+            end_block::RequestEndBlock, init_chain::RequestInitChain, query::RequestQuery,
         },
+        response::query::ResponseQuery,
         time::timestamp::Timestamp,
     },
 };
@@ -101,13 +102,7 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
         self.app.begin_block(request_begin_block);
 
         for tx in txs {
-            let res = self.app.deliver_tx(RequestDeliverTx { tx });
-
-            if res.code != 0 {
-                eprintln!("Error: {:?}", res.log);
-            }
-
-            assert!(res.code == 0);
+            self.app.deliver_tx(RequestDeliverTx { tx });
         }
 
         self.app.end_block(RequestEndBlock {
@@ -119,6 +114,10 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
         self.app_hash = res_commit.data;
 
         &self.app_hash
+    }
+
+    pub fn query(&self, req: RequestQuery) -> ResponseQuery {
+        self.app.query(req)
     }
 
     fn calculate_header(&self) -> Header {

@@ -1,4 +1,10 @@
-use kv_store::bank::multi::{ApplicationMultiBank, TransactionMultiBank};
+use std::sync::Arc;
+
+use database::MemDB;
+use kv_store::{
+    bank::multi::{ApplicationMultiBank, TransactionMultiBank},
+    StoreKey,
+};
 use tendermint::types::proto::header::Header;
 
 use crate::{
@@ -9,6 +15,10 @@ use crate::{
         GasMeter,
     },
 };
+
+pub fn build_store<SK: StoreKey>() -> ApplicationMultiBank<MemDB, SK> {
+    ApplicationMultiBank::new(Arc::new(MemDB::new())).expect("Failed to build store")
+}
 
 pub struct ContextOptions {
     height: u32,

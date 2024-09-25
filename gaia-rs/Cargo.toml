@@ -18,6 +18,7 @@ gears = { path = "../gears", features = [
     "cli",
     "xmods",
     "governance",
+    "human-panic"
 ] }
 slashing = { path = "../x/slashing" }
 staking = { path = "../x/staking" }

@@ -47,7 +47,6 @@ mod hooks;
 mod mock_hook_keeper;
 mod query;
 mod redelegation;
-mod store_iter;
 mod tx;
 mod unbonded;
 mod unbonding;
@@ -55,7 +54,6 @@ mod validator;
 mod validators_and_total_power;
 
 pub use mock_hook_keeper::*;
-use store_iter::*;
 
 #[derive(Debug, Clone)]
 pub struct Keeper<
@@ -420,6 +418,7 @@ impl<
 
         let mut updates = vec![];
 
+        //TODO: iterating over a map is not deterministic, we should use a BTreeMap
         for (_k, val_addr) in validators_map.iter().take(max_validators as usize) {
             // everything that is iterated in this loop is becoming or already a
             // part of the bonded validator set

@@ -37,6 +37,15 @@ use tendermint::types::proto::block::Height;
 
 use super::{parse_pagination, tendermint_events_handler::StrEventsHandler, Pagination, RestState};
 
+pub async fn health(State(tendermint_rpc_address): State<HttpClientUrl>) -> Result<(), HTTPError> {
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+
+    client.health().await.map_err(|e| {
+        tracing::error!("Error connecting to Tendermint: {e}");
+        HTTPError::bad_gateway()
+    })
+}
+
 pub async fn node_info<QReq, QRes, App: NodeQueryHandler<QReq, QRes> + ApplicationInfo>(
     State(state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<GetNodeInfoResponse>, HTTPError> {

@@ -40,7 +40,7 @@ resolver = "2"
 [workspace.dependencies]
 
 # important
-ibc-proto = { version = "=0.33.0", features = ["server", "proto-descriptor"] }
+ibc-proto = { branch = "v0.33",  git = "https://github.com/rumos-io/ibc-proto-rs", features = ["server", "proto-descriptor"] }
 
 # nutype
 bytes = { version = "1.2.1" }
@@ -52,7 +52,7 @@ secp256k1 = { version = "0.28.1" }
 integer-encoding = { version = "4.0.0" }
 nutype = { version = "0.4.0" }
 url = { version = "2.5.0" }
-time = "0.3.34"
+time = "0.3"
 ux = "0.1.6"
 chrono = "0.4.38"
 vec1 = { version = "1.12.0" }
@@ -62,7 +62,7 @@ serde = { version = "1.0", default-features = false }
 serde_json = { version = "1.0.93" }
 serde-aux = { version = "4.2.0" }
 serde_with = { version = "3.0.0" }
-prost = { version = "^0.11" }
+prost = { version = "0.13" }
 schemars = { version = "0.8.16" }
 hex = { version = "0.4.3" }
 data-encoding = { version = "2.4.0" }                 #replace hex with this crate
@@ -72,7 +72,7 @@ toml = { version = "0.8.8" }
 
 # hashing/encryption
 argon2 = { version = "0.5.2" }
-base64 = { version = "0.22.0" }
+base64 = { version = "0.22" }
 bech32 = { version = "0.9.1" }
 bip32 = { version = "0.5.1" }
 k256 = { version = "0.13.1" }
@@ -92,7 +92,7 @@ regex = { version = "1.10.2" }
 dirs = { version = "5.0.1" }
 dircpy = { version = "0.3.15" }
 constcat = { version = "0.5.0" }                      # upgraded std::concat! which accepts const
-derive_more = "0.99.17"
+derive_more = "1.0"
 former = "0.16.0"
 nz = "0.4.1"
 itertools = "0.13.0"
@@ -105,8 +105,8 @@ tracing-subscriber = { version = "0.3.18", default-features = true }
 # networking
 axum = { version = "0.7.4" }
 http = { version = "0.2.12" }
-tonic = { version = "0.9" }
-tonic-reflection = { version = "0.9" }
+tonic = { version = "0.12" }
+tonic-reflection = { version = "0.12" }
 tower-http = { version = "0.5.2", features = ["trace"] }
 tower-service = "0.3.2"
 tower-layer = "0.3.2"

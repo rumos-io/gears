@@ -23,6 +23,7 @@ pub struct RunCommand {
     pub address: Option<SocketAddr>,
     pub grpc_listen_addr: Option<SocketAddr>,
     pub rest_listen_addr: Option<SocketAddr>,
+    pub tendermint_rpc_addr: Option<tendermint::rpc::url::Url>,
     pub read_buf_size: usize,
     pub log_level: LogLevel,
     pub min_gas_prices: Option<MinGasPrices>,
@@ -103,6 +104,7 @@ pub fn run<
         read_buf_size,
         log_level,
         min_gas_prices,
+        tendermint_rpc_addr: tendermint_addr,
     } = cmd;
 
     tracing_subscriber::fmt()
@@ -136,7 +138,9 @@ pub fn run<
         app.clone(),
         rest_listen_addr.unwrap_or(config.rest_listen_addr),
         router_builder.build_router::<BaseApp<DB, PSK, H, AI>>(),
-        config.tendermint_rpc_address.try_into()?,
+        tendermint_addr
+            .unwrap_or(config.tendermint_rpc_address)
+            .try_into()?,
     );
 
     run_grpc_server(
