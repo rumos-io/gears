@@ -1,6 +1,6 @@
 use crate::{
     consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, IbcV046Validator, Pool, Redelegation,
-    RedelegationEntry, StakingParams, UnbondingDelegation, Validator,
+    RedelegationEntry, StakingParams, UnbondingDelegation,
 };
 use gears::{
     core::{
