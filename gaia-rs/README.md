@@ -124,7 +124,7 @@ Which returns:
   "balances": [
     {
       "denom": "uatom",
-      "amount": "23"
+      "amount": "989999999989"
     }
   ],
   "pagination": null
