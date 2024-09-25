@@ -1,6 +1,10 @@
+use std::collections::HashMap;
+use std::str::FromStr;
+
 use crate::application::ApplicationInfo;
 use crate::baseapp::NodeQueryHandler;
 use crate::rest::error::HTTPError;
+use crate::types::pagination::request::PaginationRequest;
 use crate::types::pagination::response::PaginationResponse;
 use crate::types::request::tx::BroadcastTxRequest;
 use crate::types::response::any::AnyTx;
@@ -16,17 +20,22 @@ use axum::extract::{Path, Query as AxumQuery, State};
 use axum::Json;
 use bytes::Bytes;
 use core_types::Protobuf;
-use extensions::pagination::{IteratorPaginateByOffset, PaginationByOffset};
+use extensions::pagination::{
+    IteratorPaginate, IteratorPaginateByOffset, PaginationByOffset, PaginationKey,
+};
 use ibc_proto::cosmos::tx::v1beta1::BroadcastMode;
 use serde::Deserialize;
 use tendermint::informal::Hash;
 use tendermint::rpc::client::{Client, HttpClient, HttpClientUrl};
 use tendermint::rpc::query::Query;
+use tendermint::rpc::response::block::Response as BlockResponse;
 use tendermint::rpc::response::tx::search::Response;
+use tendermint::rpc::response::tx::Response as TxResponseRaw;
 use tendermint::rpc::url::Url;
 use tendermint::rpc::Order;
+use tendermint::types::proto::block::Height;
 
-use super::{parse_pagination, Pagination, RestState};
+use super::{parse_pagination, tendermint_events_handler::StrEventsHandler, Pagination, RestState};
 
 pub async fn health(State(tendermint_rpc_address): State<HttpClientUrl>) -> Result<(), HTTPError> {
     let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
@@ -36,10 +45,6 @@ pub async fn health(State(tendermint_rpc_address): State<HttpClientUrl>) -> Resu
         HTTPError::bad_gateway()
     })
 }
-
-// TODO:
-// 1. handle multiple events in /cosmos/tx/v1beta1/txs request
-// 3. get block in /cosmos/tx/v1beta1/txs so that the timestamp can be added to TxResponse
 
 pub async fn node_info<QReq, QRes, App: NodeQueryHandler<QReq, QRes> + ApplicationInfo>(
     State(state): State<RestState<QReq, QRes, App>>,
@@ -157,13 +162,12 @@ pub async fn txs<M: TxMessage>(
 ) -> Result<Json<GetTxsEventResponse<M>>, HTTPError> {
     let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
 
-    let query: Query = events
-        .0
-        .events
-        .parse()
-        .map_err(|e: tendermint::rpc::error::Error| {
-            HTTPError::bad_request(e.detail().to_string())
-        })?;
+    let queries = StrEventsHandler::new(&events.0.events)
+        .try_parse_tendermint_events_vec()
+        .map_err(|e| HTTPError::bad_request(e.to_string()))?;
+
+    let query = Query::from_str(&queries.join(" AND "))
+        .map_err(|e| HTTPError::bad_request(e.to_string()))?;
     let (page, limit) = parse_pagination(&pagination.0);
 
     let res_tx = client
@@ -174,7 +178,19 @@ pub async fn txs<M: TxMessage>(
             HTTPError::gateway_timeout()
         })?;
 
-    let res = map_responses(res_tx)?;
+    let mut blocks: HashMap<Height, BlockResponse> = HashMap::with_capacity(res_tx.txs.len());
+    for tx in &res_tx.txs {
+        blocks.insert(
+            tx.height,
+            client.block(tx.height).await.map_err(|e| {
+                tracing::error!("Error connecting to Tendermint: {e}");
+                HTTPError::gateway_timeout()
+            })?,
+        );
+    }
+
+    let pagination = PaginationRequest::from(pagination.0);
+    let res = map_responses(res_tx, blocks, pagination)?;
 
     Ok(Json(res))
 }
@@ -187,8 +203,13 @@ pub async fn tx<M: TxMessage>(
 
     let res = client.tx(hash, true).await.ok();
     let res = if let Some(r) = res {
+        let time = client
+            .block(r.height)
+            .await
+            .map(|block_res| block_res.block.header.time.to_string())
+            .unwrap_or("unable to fetch transaction timestamp".to_string());
         Some(
-            TxResponse::new_from_tx_response_and_string_time(r, "".to_string())
+            TxResponse::new_from_tx_response_and_string_time(r, time)
                 .map_err(|_| HTTPError::internal_server_error())?,
         )
     } else {
@@ -261,16 +282,39 @@ pub async fn send_tx(
     }))
 }
 
+// wrapper allows to paginate response properly
+// sorting of keys performs by height
+#[derive(Clone)]
+struct TxWrapper(TxResponseRaw);
+impl PaginationKey for TxWrapper {
+    fn iterator_key(&self) -> std::borrow::Cow<'_, [u8]> {
+        std::borrow::Cow::Owned(i64::from(self.0.height).to_be_bytes().to_vec())
+    }
+}
+
 // Maps a tendermint tx_search response to a Cosmos get txs by event response
-fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M>, HTTPError> {
+fn map_responses<M: TxMessage>(
+    res_tx: Response,
+    blocks: HashMap<Height, BlockResponse>,
+    pagination: PaginationRequest,
+) -> Result<GetTxsEventResponse<M>, HTTPError> {
     let mut tx_responses = Vec::with_capacity(res_tx.txs.len());
     let mut txs = Vec::with_capacity(res_tx.txs.len());
 
-    for tx in res_tx.txs {
+    let (pagination_result, txs_iterator) = res_tx
+        .txs
+        .into_iter()
+        .map(TxWrapper)
+        .paginate(crate::extensions::pagination::Pagination::from(pagination));
+
+    for tx in txs_iterator.map(|wrapped| wrapped.0) {
         let cosmos_tx = Tx::decode::<Bytes>(tx.tx.into()).map_err(|_| HTTPError::bad_gateway())?;
         txs.push(cosmos_tx.clone());
 
         let any_tx = AnyTx::Tx(cosmos_tx);
+        let block_res = blocks
+            .get(&tx.height)
+            .expect("block with transaction height exists");
 
         tx_responses.push(TxResponse {
             height: tx.height.into(),
@@ -284,7 +328,7 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
             gas_wanted: tx.tx_result.gas_wanted,
             gas_used: tx.tx_result.gas_used,
             tx: any_tx,
-            timestamp: "".into(), // TODO: need to get the blocks for this
+            timestamp: block_res.block.header.time.to_string(),
             events: tx.tx_result.events.into_iter().map(Into::into).collect(),
         });
     }
@@ -292,10 +336,7 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
     let total = txs.len().try_into().map_err(|_| HTTPError::bad_gateway())?;
 
     Ok(GetTxsEventResponse {
-        pagination: Some(PaginationResponse {
-            next_key: vec![],
-            total,
-        }),
+        pagination: Some(PaginationResponse::from(pagination_result)),
         total,
         txs,
         tx_responses,
