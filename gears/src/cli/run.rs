@@ -20,7 +20,7 @@ pub struct CliRunCommand<T: ApplicationInfo> {
     pub rest_listen_addr: Option<SocketAddr>,
     #[arg(long, action = ArgAction::Set, help = format!("Bind the GRPC server to this address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]", DEFAULT_GRPC_LISTEN_ADDR))]
     pub grpc_listen_addr: Option<SocketAddr>,
-    /// URL to tendermint instance
+    /// URL to tendermint instance. Overrides value from config. Check your `config.toml` to check default value.
     #[arg(long)]
     pub rpc_addr: Option<tendermint::rpc::url::Url>,
     #[arg(short, long, action = ArgAction::Set, default_value_t = 1048576, help = "The default server read buffer size, in bytes, for each incoming client connection")]
