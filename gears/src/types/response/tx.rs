@@ -72,12 +72,7 @@ impl<M: TxMessage> TxResponse<M> {
             gas_used: tx_response.tx_result.gas_used,
             tx: any_tx,
             timestamp,
-            events: tx_response
-                .tx_result
-                .events
-                .into_iter()
-                .map(Into::into)
-                .collect(),
+            events: tx_response.tx_result.events,
         })
     }
 }
