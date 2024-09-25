@@ -11,6 +11,7 @@ use gears::{
         block::BlockContext, init::InitContext, InfallibleContext, QueryableContext,
         TransactionalContext,
     },
+    extensions::gas::GasResultExt,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -33,7 +34,6 @@ use gears::{
         types::validator::BondStatus,
     },
 };
-use gears::{extensions::gas::GasResultExt, types::address::ConsAddress};
 use std::{cmp::Ordering, collections::HashMap};
 
 // Each module contains methods of keeper with logic related to its name. It can be delegation and
@@ -420,7 +420,7 @@ impl<
 
         let mut updates = vec![];
 
-        for val_addr in validators_map.iter().take(max_validators as usize).rev() {
+        for val_addr in validators_map.iter().rev().take(max_validators as usize) {
             // everything that is iterated in this loop is becoming or already a
             // part of the bonded validator set
             let mut validator: Validator = self
