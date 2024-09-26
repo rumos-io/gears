@@ -110,7 +110,7 @@ impl GaiaNode {
                 rest_listen_addr: Some(rest_addr),
                 grpc_listen_addr: Some(grpc_addr),
                 read_buf_size: 1048576,
-                log_level: gears::commands::node::run::LogLevel::Debug,
+                log_level: gears::commands::node::run::LogLevel::Off,
                 min_gas_prices: Default::default(),
                 tendermint_rpc_addr: Some(rpc_addr_moved.try_into().expect("invalid rpc addr")),
             };
@@ -118,6 +118,8 @@ impl GaiaNode {
             let _ = node
                 .execute::<gaia_rs::GaiaApplication>(gears::commands::node::AppCommands::Run(cmd));
         });
+
+        std::thread::sleep(std::time::Duration::from_secs(10));
 
         Ok(Self {
             tendermint,
@@ -131,8 +133,7 @@ impl GaiaNode {
 
     pub fn query(&self, cmd: GaiaQueryCommands) -> anyhow::Result<GaiaQueryResponse> {
         let cmd = QueryCommand {
-            node: url::Url::from_str(&format!("http://localhost:{}", self.tendermint.rpc_port))
-                .expect("valid url"),
+            node: self.rpc_addr.clone(),
             height: None,
             inner: WrappedGaiaQueryCommands(cmd),
         };

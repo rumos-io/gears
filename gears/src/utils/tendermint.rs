@@ -54,7 +54,7 @@ impl TendermintSubprocess {
             input_redirection: IoOptions::Inherit,
             output_redirection: IoOptions::Pipe,
             exit_on_error: false,
-            print_commands: true,
+            print_commands: false,
             env_vars: None,
         };
 
@@ -72,16 +72,10 @@ impl TendermintSubprocess {
         let copy_script =
             format!("cp -r {tm_path}/node {tm_path}/tendermint.tar.gz {tmp_dir_path}");
 
-        dbg!(&copy_script);
-
         let (_code, _output, _error) = run_script::run(&copy_script, &vec![], &options)?;
-
-        dbg!(_code, _output, _error);
 
         let (_code, _output, _error) =
             run_script::run(r#"tar -xf tendermint.tar.gz"#, &vec![], &options)?;
-
-        dbg!(_code, _output, _error);
 
         let script = format!(
             "./tendermint start --home {} --p2p.laddr=tcp://0.0.0.0:{p2p_port} --rpc.laddr=tcp://127.0.0.1:{rpc_port} --proxy_app=tcp://127.0.0.1:{proxy_port}",
@@ -91,8 +85,6 @@ impl TendermintSubprocess {
         );
 
         let child = run_script::spawn(&script, &vec![], &options)?;
-
-        std::thread::sleep(std::time::Duration::from_secs(10));
 
         Ok(Self {
             child,
