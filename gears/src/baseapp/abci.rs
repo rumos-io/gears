@@ -278,6 +278,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let consensus_params = self.baseapp_params_keeper.consensus_params(&ctx);
 
         state.replace_meter(Gas::from(max_gas));
+        state.take_block_cache(&mut multi_store);
 
         let mut ctx = BlockContext::new(
             &mut multi_store,

@@ -49,6 +49,21 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
             .append_block_cache(multi_store);
     }
 
+    pub fn take_block_cache(&mut self, multi_store: &mut ApplicationMultiBank<DB, AH::StoreKey>) {
+        let list = self.deliver_mode.multi_store.take_block_cache();
+
+        for (key, (insert_list, delete_list)) in list {
+            let kv_store = multi_store.kv_store_mut(&key);
+
+            delete_list.into_iter().for_each(|this| {
+                kv_store.delete(&this);
+            });
+            insert_list
+                .into_iter()
+                .for_each(|(key, value)| kv_store.set(key, value));
+        }
+    }
+
     pub fn commit(&mut self, multi_store: &mut ApplicationMultiBank<DB, AH::StoreKey>) -> [u8; 32] {
         self.check_mode.multi_store.tx_cache_clear();
         self.check_mode.multi_store.block_cache_clear();
