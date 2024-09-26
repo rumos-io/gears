@@ -133,62 +133,44 @@ fn send_tx() -> anyhow::Result<()> {
     Ok(())
 }
 
-// /// NOTE: This test doesn't check resulted hash and what events occured. It tries to check that our app works under *sign* some load
-// #[test]
-// #[ignore = "rust usually run test in || while this tests be started ony by one"]
-// fn send_tx_in_parallel() -> anyhow::Result<()> {
-//     let coin = default_coin(200_000_000_u32);
+/// NOTE: This test doesn't check resulted hash and what events occurred. It tries to check that our app works under *sign* some load
+#[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
+fn send_tx_in_parallel() -> anyhow::Result<()> {
+    let gaia = GaiaNode::run()?;
 
-//     let addresses = [
-//         (random_address(), coin.clone()),
-//         (random_address(), coin.clone()),
-//         (random_address(), coin.clone()),
-//         (random_address(), coin.clone()),
-//         (random_address(), coin.clone()),
-//         (random_address(), coin.clone()),
-//         (random_address(), coin.clone()),
-//         (random_address(), coin.clone()),
-//         (random_address(), coin.clone()),
-//         (random_address(), coin),
-//     ];
+    use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-//     let (tendermint, _server_thread) = run_gaia_and_tendermint(addresses.clone())?;
+    GaiaNode::accounts()
+        .into_par_iter()
+        .try_for_each(|(key_name, _)| {
+            let cmd = GaiaTxCommands::Bank(BankTxCli {
+                command: BankCommands::Send {
+                    to_address: AccAddress::from_bech32(
+                        "cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut",
+                    )?,
+                    amount: UnsignedCoin::from_str("10uatom")?,
+                },
+            });
 
-//     use rayon::iter::{IntoParallelIterator, ParallelIterator};
+            let responses = gaia
+                .tx(cmd, key_name)?
+                .broadcast()
+                .expect("broadcast tx inside");
 
-//     addresses.into_par_iter().try_for_each(|(_, _)| {
-//         let tx_cmd = BankCommands::Send {
-//             to_address: AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut")?,
-//             amount: UnsignedCoin::from_str("10uatom")?,
-//         };
+            assert_eq!(responses.len(), 1);
+            let Response {
+                check_tx,
+                deliver_tx,
+                hash: _,
+                height: _,
+            } = &responses[0];
 
-//         let responses = run_tx(
-//             TxCommand {
-//                 keyring: Keyring::Local(LocalInfo {
-//                     keyring_backend: KeyringBackend::Test,
-//                     from_key: KEY_NAME.to_owned(),
-//                     home: tendermint.1.to_path_buf(),
-//                 }),
-//                 node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-//                 chain_id: ChainId::from_str("test-chain")?,
-//                 fees: None,
-//                 inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
-//             },
-//             &GaiaCoreClient,
-//         )?;
-//         assert_eq!(responses.len(), 1);
-//         let Response {
-//             check_tx,
-//             deliver_tx,
-//             hash: _,
-//             height: _,
-//         } = &responses[0];
+            assert!(check_tx.code.is_ok());
+            assert!(deliver_tx.code.is_ok());
 
-//         assert!(check_tx.code.is_ok());
-//         assert!(deliver_tx.code.is_ok());
+            anyhow::Ok(())
+        })?;
 
-//         anyhow::Ok(())
-//     })?;
-
-//     Ok(())
-// }
+    Ok(())
+}
