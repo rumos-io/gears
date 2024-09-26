@@ -1,39 +1,51 @@
-use std::{path::Path, process::Child, str::FromStr};
-
-use crate::{
-    baseapp::genesis::Genesis,
-    commands::node::init::{init, InitCommand},
-    types::address::AccAddress,
+use std::{
+    path::{Path, PathBuf},
+    process::Child,
+    str::FromStr,
 };
+
 use anyhow::anyhow;
 pub use assert_fs::TempDir;
 
-use rand::{prelude::Distribution, rngs::ThreadRng};
 use run_script::{IoOptions, ScriptOptions};
 use tendermint::types::chain_id::ChainId;
 
+pub fn random_port() -> u16 {
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .expect("failed to bind to random addr")
+        .local_addr()
+        .expect("failed to get addr")
+        .port()
+}
+
 /// Struct for process which launched from tmp dir
 #[derive(Debug)]
-pub struct TendermintSubprocess(pub Child, pub TempDir);
-
-impl Drop for TendermintSubprocess {
-    fn drop(&mut self) {
-        // Stop child process before deletion of tmp dir
-        while let Err(_) = self.0.kill() {
-            std::thread::sleep(std::time::Duration::from_millis(100))
-        }
-    }
+pub struct TendermintSubprocess {
+    child: Child,
+    dir: TempDir,
+    pub rpc_port: u16,
+    pub p2p_port: u16,
+    pub proxy_port: u16,
+    pub chain_id: ChainId,
+    pub moniker: &'static str,
 }
 
 impl TendermintSubprocess {
-    pub fn run_tendermint<G: Genesis, AC: crate::config::ApplicationConfig>(
-        tmp_dir: TempDir,
-        path_to_tendermint: &(impl AsRef<Path> + ?Sized),
-        genesis: &G,
-    ) -> anyhow::Result<Self> {
-        dircpy::CopyBuilder::new(path_to_tendermint, &tmp_dir)
-            .overwrite(true)
-            .run()?;
+    pub fn home(&self) -> PathBuf {
+        self.dir.join("node")
+    }
+
+    pub fn run(path_to_assets: impl AsRef<Path>) -> anyhow::Result<Self> {
+        const MONIKER: &str = "test";
+        const CHAIN_ID: &str = "test-chain";
+
+        let chain_id = ChainId::from_str(CHAIN_ID)?;
+
+        let tmp_dir = TempDir::new()?;
+
+        // dircpy::CopyBuilder::new(path_to_assets, &tmp_dir)
+        //     .overwrite(true)
+        //     .run()?;
 
         let options = ScriptOptions {
             runner: None,
@@ -42,44 +54,63 @@ impl TendermintSubprocess {
             input_redirection: IoOptions::Inherit,
             output_redirection: IoOptions::Pipe,
             exit_on_error: false,
-            print_commands: false,
+            print_commands: true,
             env_vars: None,
         };
 
-        let opt: InitCommand = InitCommand::former()
-            .home(tmp_dir.to_path_buf())
-            .chain_id(ChainId::from_str("test-chain")?)
-            .moniker("test".to_owned())
-            .form();
+        let (p2p_port, rpc_port, proxy_port) = (random_port(), random_port(), random_port());
 
-        init::<_, AC>(opt, genesis)?;
+        let tm_path = path_to_assets
+            .as_ref()
+            .to_str()
+            .ok_or(anyhow!("failed to get path to tmp folder"))?;
+        let tmp_dir_path = tmp_dir
+            .path()
+            .to_str()
+            .ok_or(anyhow!("failed to get path to tmp folder"))?;
 
-        let (_code, _output, _error) = run_script::run(
-            r#"
-                tar -xf tendermint.tar.gz
-                "#,
-            &vec![],
-            &options,
-        )?; // TODO: make it work for windows too?
+        let copy_script =
+            format!("cp -r {tm_path}/node {tm_path}/tendermint.tar.gz {tmp_dir_path}");
+
+        dbg!(&copy_script);
+
+        let (_code, _output, _error) = run_script::run(&copy_script, &vec![], &options)?;
+
+        dbg!(_code, _output, _error);
+
+        let (_code, _output, _error) =
+            run_script::run(r#"tar -xf tendermint.tar.gz"#, &vec![], &options)?;
+
+        dbg!(_code, _output, _error);
 
         let script = format!(
-            "./tendermint start --home {}",
-            tmp_dir
+            "./tendermint start --home {} --p2p.laddr=tcp://0.0.0.0:{p2p_port} --rpc.laddr=tcp://127.0.0.1:{rpc_port} --proxy_app=tcp://127.0.0.1:{proxy_port}",
+            tmp_dir.join("node")
                 .to_str()
                 .ok_or(anyhow!("failed to get path to tmp folder"))?
         );
 
         let child = run_script::spawn(&script, &vec![], &options)?;
 
-        Ok(Self(child, tmp_dir))
+        std::thread::sleep(std::time::Duration::from_secs(10));
+
+        Ok(Self {
+            child,
+            dir: tmp_dir,
+            rpc_port,
+            p2p_port,
+            proxy_port,
+            chain_id,
+            moniker: MONIKER,
+        })
     }
 }
 
-pub fn random_address() -> AccAddress {
-    rand::distributions::Alphanumeric
-        .sample_iter(&mut ThreadRng::default())
-        .take(100)
-        .collect::<Vec<u8>>()
-        .try_into()
-        .expect("generated range is smaller than 255")
+impl Drop for TendermintSubprocess {
+    fn drop(&mut self) {
+        // Stop child process before deletion of tmp dir
+        while let Err(_) = self.child.kill() {
+            std::thread::sleep(std::time::Duration::from_millis(100))
+        }
+    }
 }

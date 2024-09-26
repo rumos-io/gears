@@ -1,0 +1,23 @@
+# This is a TOML config file.
+# For more information, see https://github.com/toml-lang/toml
+
+#######################################################################
+###                   Main Base Config Options                      ###
+#######################################################################
+
+# ABCI application TCP socket address
+address = "127.0.0.1:26658"
+
+# REST service TCP socket address
+rest_listen_addr = "127.0.0.1:1317"
+
+# GRPC service TCP socket address
+grpc_listen_addr = "127.0.0.1:8080"
+
+# Tendermint node RPC proxy address
+tendermint_rpc_address = "http://localhost:26657/"
+
+min_gas_prices = "0uatom"
+
+[app_config]
+example = 0
