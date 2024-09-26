@@ -1,6 +1,6 @@
 use crate::{
-    Delegation, IbcV046Validator, Pool, Redelegation, RedelegationEntry, StakingParams,
-    UnbondingDelegation,
+    Delegation, HistoricalInfo, IbcV046Validator, Pool, Redelegation, RedelegationEntry,
+    StakingParams, UnbondingDelegation,
 };
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
@@ -13,7 +13,6 @@ use gears::{
     },
     x::types::validator::BondStatus,
 };
-use prost::Message;
 use serde::{Deserialize, Serialize};
 
 mod inner {
@@ -28,6 +27,9 @@ mod inner {
     };
     pub use ibc_proto::cosmos::staking::v1beta1::{
         QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorUnbondingDelegationsResponse,
+    };
+    pub use ibc_proto::cosmos::staking::v1beta1::{
+        QueryHistoricalInfoRequest, QueryHistoricalInfoResponse,
     };
     pub use ibc_proto::cosmos::staking::v1beta1::{QueryParamsRequest, QueryParamsResponse};
     pub use ibc_proto::cosmos::staking::v1beta1::{QueryPoolRequest, QueryPoolResponse};
@@ -174,12 +176,19 @@ impl TryFrom<inner::QueryRedelegationsRequest> for QueryRedelegationsRequest {
     }
 }
 
-#[derive(Clone, PartialEq, Message, Query, Protobuf)]
+#[derive(Clone, PartialEq, Query, Protobuf)]
+#[query(url = "/cosmos.staking.v1beta1.Query/HistoricalInfo")]
+#[proto(raw = "inner::QueryHistoricalInfoRequest")]
+pub struct QueryHistoricalInfoRequest {
+    pub height: i64,
+}
+
+#[derive(Clone, PartialEq, Query, Protobuf)]
 #[query(url = "/cosmos.staking.v1beta1.Query/Pool")]
 #[proto(raw = "inner::QueryPoolRequest")]
 pub struct QueryPoolRequest {}
 
-#[derive(Clone, PartialEq, Message, Query, Protobuf)]
+#[derive(Clone, PartialEq, Query, Protobuf)]
 #[query(url = "/cosmos.staking.v1beta1.Query/Params")]
 #[proto(raw = "inner::QueryParamsRequest")]
 pub struct QueryParamsRequest {}
@@ -325,6 +334,14 @@ pub struct QueryRedelegationsResponse {
     pub redelegation_responses: Vec<RedelegationResponse>,
     #[proto(optional)]
     pub pagination: Option<PaginationResponse>,
+}
+
+/// QueryHistoricalInfoResponse is response type for the Query/HistoricalInfo RPC method.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryHistoricalInfoResponse")]
+pub struct QueryHistoricalInfoResponse {
+    #[proto(optional)]
+    pub hist: Option<HistoricalInfo>,
 }
 
 /// QueryPoolResponse is response type for the Query/Pool RPC method.

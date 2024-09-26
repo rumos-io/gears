@@ -13,17 +13,13 @@ pub struct HistoricalInfo {
     #[proto(optional)]
     pub header: Header,
     #[proto(repeated)]
-    pub validators: Vec<Validator>,
+    pub valset: Vec<Validator>,
 }
 
 impl HistoricalInfo {
     /// Method will create a historical information struct from header and valset
     /// it will first sort valset before inclusion into historical info
-    pub fn new(
-        header: Header,
-        mut validators: Vec<Validator>,
-        power_reduction: u64,
-    ) -> HistoricalInfo {
+    pub fn new(header: Header, mut valset: Vec<Validator>, power_reduction: u64) -> HistoricalInfo {
         fn less(v1: &Validator, v2: &Validator, power_reduction: u64) -> Ordering {
             let cons_power1 = v1.consensus_power(power_reduction);
             let cons_power2 = v2.consensus_power(power_reduction);
@@ -35,11 +31,11 @@ impl HistoricalInfo {
                 cons_power1.cmp(&cons_power2)
             }
         }
-        validators.sort_by(|v1, v2| less(v1, v2, power_reduction));
-        HistoricalInfo { header, validators }
+        valset.sort_by(|v1, v2| less(v1, v2, power_reduction));
+        HistoricalInfo { header, valset }
     }
 }
 
 mod inner {
-    pub use gears::tendermint::types::proto::header::HistoricalInfo;
+    pub use ibc_proto::cosmos::staking::v1beta1::HistoricalInfo;
 }

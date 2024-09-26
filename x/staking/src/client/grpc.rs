@@ -195,9 +195,20 @@ where
 
     async fn historical_info(
         &self,
-        _request: Request<QueryHistoricalInfoRequest>,
+        request: Request<QueryHistoricalInfoRequest>,
     ) -> Result<Response<QueryHistoricalInfoResponse>, Status> {
-        unimplemented!()
+        info!("Received a gRPC request staking::historical_info");
+        let req = StakingNodeQueryRequest::HistoricalInfo(request.into_inner().try_into()?);
+        let response = self.app.typed_query(req)?;
+        let response: StakingNodeQueryResponse = response.try_into()?;
+
+        if let StakingNodeQueryResponse::HistoricalInfo(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ))
+        }
     }
 
     async fn pool(

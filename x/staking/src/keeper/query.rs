@@ -3,7 +3,8 @@ use crate::{
     DelegationResponse, QueryDelegationRequest, QueryDelegationResponse,
     QueryDelegatorDelegationsRequest, QueryDelegatorDelegationsResponse,
     QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorUnbondingDelegationsResponse,
-    QueryParamsResponse, QueryUnbondingDelegationRequest, QueryUnbondingDelegationResponse,
+    QueryHistoricalInfoRequest, QueryHistoricalInfoResponse, QueryParamsResponse,
+    QueryPoolResponse, QueryUnbondingDelegationRequest, QueryUnbondingDelegationResponse,
     QueryValidatorRequest, QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use gears::{
@@ -226,6 +227,22 @@ impl<
         let (p_result, iter) = redelegations.into_iter().maybe_paginate(pagination);
 
         (p_result, iter.collect())
+    }
+
+    pub fn query_historical_info<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryHistoricalInfoRequest { height }: QueryHistoricalInfoRequest,
+    ) -> QueryHistoricalInfoResponse {
+        let historical_info = self.historical_info(ctx, height as u32).unwrap_gas();
+        QueryHistoricalInfoResponse {
+            hist: historical_info,
+        }
+    }
+
+    pub fn query_pool<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryPoolResponse {
+        let pool = self.pool(ctx).unwrap_gas();
+        QueryPoolResponse { pool: Some(pool) }
     }
 
     pub fn query_params<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryParamsResponse {

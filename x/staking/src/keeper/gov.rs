@@ -1,6 +1,6 @@
 use gears::x::keepers::{gov::GovernanceBankKeeper, staking::GovStakingKeeper};
 
-use crate::iter::{bounded::BondedValidatorsIterator, delegation::DelegationIterator};
+use crate::iter::{bonded::BondedValidatorsIterator, delegation::DelegationIterator};
 
 use super::*;
 

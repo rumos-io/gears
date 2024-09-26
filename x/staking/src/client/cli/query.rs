@@ -1,8 +1,9 @@
 use crate::{
     QueryDelegationRequest, QueryDelegationResponse, QueryDelegatorDelegationsRequest,
     QueryDelegatorDelegationsResponse, QueryDelegatorUnbondingDelegationsRequest,
-    QueryDelegatorUnbondingDelegationsResponse, QueryParamsRequest, QueryParamsResponse,
-    QueryPoolRequest, QueryPoolResponse, QueryRedelegationsRequest, QueryRedelegationsResponse,
+    QueryDelegatorUnbondingDelegationsResponse, QueryHistoricalInfoRequest,
+    QueryHistoricalInfoResponse, QueryParamsRequest, QueryParamsResponse, QueryPoolRequest,
+    QueryPoolResponse, QueryRedelegationsRequest, QueryRedelegationsResponse,
     QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
     QueryValidatorsRequest, QueryValidatorsResponse,
 };
@@ -37,6 +38,7 @@ pub enum StakingCommands {
     UnbondingDelegation(UnbondingDelegationCommand),
     UnbondingDelegations(UnbondingDelegationsCommand),
     Redelegation(RedelegationCommand),
+    HistoricalInfo(HistoricalInfoCommand),
     Pool,
     Params,
 }
@@ -100,6 +102,13 @@ pub struct RedelegationCommand {
     pub src_validator_address: ValAddress,
     /// Destination validator address which is addressed to delegation
     pub dst_validator_address: ValAddress,
+}
+
+/// Historical info query command
+#[derive(Args, Debug, Clone)]
+pub struct HistoricalInfoCommand {
+    /// Block height.
+    pub height: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -166,6 +175,9 @@ impl QueryHandler for StakingQueryHandler {
                 dst_validator_address: dst_validator_address.clone().into(),
                 pagination: None,
             }),
+            StakingCommands::HistoricalInfo(HistoricalInfoCommand { height }) => {
+                StakingQuery::HistoricalInfo(QueryHistoricalInfoRequest { height: *height })
+            }
             StakingCommands::Pool => StakingQuery::Pool(QueryPoolRequest {}),
             StakingCommands::Params => StakingQuery::Params(QueryParamsRequest {}),
         };
@@ -200,6 +212,9 @@ impl QueryHandler for StakingQueryHandler {
             StakingCommands::Redelegation(_) => StakingQueryResponse::Redelegation(
                 QueryRedelegationsResponse::decode_vec(&query_bytes)?,
             ),
+            StakingCommands::HistoricalInfo(_) => StakingQueryResponse::HistoricalInfo(
+                QueryHistoricalInfoResponse::decode_vec(&query_bytes)?,
+            ),
             StakingCommands::Pool => {
                 StakingQueryResponse::Pool(QueryPoolResponse::decode_vec(&query_bytes)?)
             }
@@ -222,6 +237,7 @@ pub enum StakingQuery {
     UnbondingDelegation(QueryDelegationRequest),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsRequest),
     Redelegation(QueryRedelegationsRequest),
+    HistoricalInfo(QueryHistoricalInfoRequest),
     Pool(QueryPoolRequest),
     Params(QueryParamsRequest),
 }
@@ -237,6 +253,7 @@ pub enum StakingQueryResponse {
     UnbondingDelegation(QueryUnbondingDelegationResponse),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsResponse),
     Redelegation(QueryRedelegationsResponse),
+    HistoricalInfo(QueryHistoricalInfoResponse),
     Pool(QueryPoolResponse),
     Params(QueryParamsResponse),
 }

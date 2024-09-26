@@ -8,6 +8,7 @@ use crate::{
     QueryValidatorsRequest, QueryValidatorsResponse, Redelegation, RedelegationEntryResponse,
     RedelegationResponse,
 };
+use crate::{QueryHistoricalInfoRequest, QueryHistoricalInfoResponse};
 use gears::extensions::gas::GasResultExt;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
@@ -59,6 +60,7 @@ pub enum StakingNodeQueryRequest {
     UnbondingDelegation(QueryUnbondingDelegationRequest),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsRequest),
     Redelegations(QueryRedelegationsRequest),
+    HistoricalInfo(QueryHistoricalInfoRequest),
     Pool(QueryPoolRequest),
     Params(QueryParamsRequest),
 }
@@ -80,6 +82,7 @@ pub enum StakingNodeQueryResponse {
     UnbondingDelegation(QueryUnbondingDelegationResponse),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsResponse),
     Redelegations(QueryRedelegationsResponse),
+    HistoricalInfo(QueryHistoricalInfoResponse),
     Pool(QueryPoolResponse),
     Params(QueryParamsResponse),
 }
@@ -140,8 +143,13 @@ impl<
             StakingNodeQueryRequest::Redelegations(req) => {
                 StakingNodeQueryResponse::Redelegations(self.query_redelegations(ctx, req))
             }
+            StakingNodeQueryRequest::HistoricalInfo(req) => {
+                StakingNodeQueryResponse::HistoricalInfo(
+                    self.keeper.query_historical_info(ctx, req),
+                )
+            }
             StakingNodeQueryRequest::Pool(_) => {
-                StakingNodeQueryResponse::Pool(self.query_pool(ctx))
+                StakingNodeQueryResponse::Pool(self.keeper.query_pool(ctx))
             }
             StakingNodeQueryRequest::Params(_) => {
                 StakingNodeQueryResponse::Params(self.keeper.query_params(ctx))
@@ -235,6 +243,12 @@ impl<
 
                 Ok(self.query_redelegations(ctx, req).into_bytes())
             }
+            "/cosmos.staking.v1beta1.Query/HistoricalInfo" => {
+                let req = QueryHistoricalInfoRequest::decode(query.data)?;
+
+                Ok(self.keeper.query_historical_info(ctx, req).into_bytes())
+            }
+            "/cosmos.staking.v1beta1.Query/Pool" => Ok(self.keeper.query_pool(ctx).into_bytes()),
             "/cosmos.staking.v1beta1.Query/Params" => {
                 Ok(self.keeper.query_params(ctx).into_bytes())
             }
@@ -314,11 +328,6 @@ impl<
             redelegation_responses,
             pagination: p_result.map(PaginationResponse::from),
         }
-    }
-
-    fn query_pool<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryPoolResponse {
-        let pool = self.keeper.pool(ctx).unwrap_gas();
-        QueryPoolResponse { pool: Some(pool) }
     }
 
     fn redelegations_to_redelegations_response<DB: Database>(

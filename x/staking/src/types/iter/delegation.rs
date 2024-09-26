@@ -1,5 +1,4 @@
-use std::borrow::Cow;
-
+use crate::{consts::keeper::DELEGATION_KEY, Delegation};
 use gears::{
     core::Protobuf,
     extensions::corruption::UnwrapCorrupt,
@@ -9,11 +8,7 @@ use gears::{
         store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
     },
 };
-
-use crate::{
-    consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::DELEGATION_KEY},
-    Delegation,
-};
+use std::borrow::Cow;
 
 #[derive(Debug)]
 pub struct DelegationIterator<'a, DB>(StoreRange<'a, DB>);
