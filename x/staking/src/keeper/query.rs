@@ -3,9 +3,10 @@ use crate::{
     DelegationResponse, QueryDelegationRequest, QueryDelegationResponse,
     QueryDelegatorDelegationsRequest, QueryDelegatorDelegationsResponse,
     QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorUnbondingDelegationsResponse,
-    QueryHistoricalInfoRequest, QueryHistoricalInfoResponse, QueryParamsResponse,
-    QueryPoolResponse, QueryUnbondingDelegationRequest, QueryUnbondingDelegationResponse,
-    QueryValidatorRequest, QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
+    QueryDelegatorValidatorsRequest, QueryDelegatorValidatorsResponse, QueryHistoricalInfoRequest,
+    QueryHistoricalInfoResponse, QueryParamsResponse, QueryPoolResponse,
+    QueryUnbondingDelegationRequest, QueryUnbondingDelegationResponse, QueryValidatorRequest,
+    QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use gears::{
     baseapp::errors::QueryError,
@@ -227,6 +228,55 @@ impl<
         let (p_result, iter) = redelegations.into_iter().maybe_paginate(pagination);
 
         (p_result, iter.collect())
+    }
+
+    /// query_delegator_validators queries all validators info for given delegator address
+    pub fn query_delegator_validators<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryDelegatorValidatorsRequest,
+    ) -> QueryDelegatorValidatorsResponse {
+        let delegator_addr = if let Ok(addr) = AccAddress::try_from(query.delegator_addr) {
+            addr
+        } else {
+            return QueryDelegatorValidatorsResponse::default();
+        };
+
+        let store = ctx.kv_store(&self.store_key);
+        let key = [
+            DELEGATION_KEY.as_slice(),
+            &delegator_addr.prefix_len_bytes(),
+        ]
+        .concat();
+        let delegator_store = store.prefix_store(key);
+
+        let pagination = query
+            .pagination
+            .map(gears::extensions::pagination::Pagination::from);
+        let (p_res, iter) = delegator_store.into_range(..).maybe_paginate(pagination);
+
+        let mut validators = vec![];
+        for (_k, v) in iter {
+            let delegation = if let Ok(del) = Delegation::decode_vec(&v) {
+                del
+            } else {
+                return QueryDelegatorValidatorsResponse::default();
+            };
+
+            if let Some(v) = self
+                .validator(ctx, &delegation.validator_address)
+                .unwrap_gas()
+            {
+                validators.push(v);
+            } else {
+                return QueryDelegatorValidatorsResponse::default();
+            }
+        }
+
+        QueryDelegatorValidatorsResponse {
+            validators,
+            pagination: p_res.map(PaginationResponse::from),
+        }
     }
 
     pub fn query_historical_info<DB: Database>(

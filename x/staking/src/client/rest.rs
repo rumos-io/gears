@@ -1,7 +1,8 @@
 use crate::{
     QueryDelegationRequest, QueryDelegatorDelegationsRequest,
-    QueryDelegatorUnbondingDelegationsRequest, QueryPoolRequest, QueryValidatorRequest,
-    QueryValidatorsRequest, StakingNodeQueryRequest, StakingNodeQueryResponse,
+    QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorValidatorsRequest, QueryPoolRequest,
+    QueryValidatorRequest, QueryValidatorsRequest, StakingNodeQueryRequest,
+    StakingNodeQueryResponse,
 };
 use axum::{
     extract::{Path, Query, State},
@@ -93,6 +94,23 @@ pub async fn delegator_delegations<
     Ok(Json(res))
 }
 
+pub async fn delegator_validators<
+    QReq: QueryRequest + From<StakingNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<StakingNodeQueryResponse>,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    Path(delegator_addr): Path<AccAddress>,
+    Query(pagination): Query<Pagination>,
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<QRes>, HTTPError> {
+    let req = StakingNodeQueryRequest::DelegatorValidators(QueryDelegatorValidatorsRequest {
+        delegator_addr,
+        pagination: Some(PaginationRequest::from(pagination)),
+    });
+    let res = rest_state.app.typed_query(req)?;
+    Ok(Json(res))
+}
+
 pub async fn unbonding_delegations<
     QReq: QueryRequest + From<StakingNodeQueryRequest>,
     QRes: QueryResponse + TryInto<StakingNodeQueryResponse>,
@@ -150,6 +168,10 @@ pub fn get_router<
         .route(
             "/v1beta1/delegations/:delegator_addr",
             get(delegator_delegations),
+        )
+        .route(
+            "/v1beta1/delegators/:delegator_addr/validators",
+            get(delegator_validators),
         )
         .route(
             "/v1beta1/delegators/:delegator_addr/unbonding_delegations",

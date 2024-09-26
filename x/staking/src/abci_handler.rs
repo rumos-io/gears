@@ -8,7 +8,10 @@ use crate::{
     QueryValidatorsRequest, QueryValidatorsResponse, Redelegation, RedelegationEntryResponse,
     RedelegationResponse,
 };
-use crate::{QueryHistoricalInfoRequest, QueryHistoricalInfoResponse};
+use crate::{
+    QueryDelegatorValidatorsRequest, QueryDelegatorValidatorsResponse, QueryHistoricalInfoRequest,
+    QueryHistoricalInfoResponse,
+};
 use gears::extensions::gas::GasResultExt;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
@@ -34,7 +37,6 @@ use gears::{
         module::Module,
     },
 };
-
 use serde::Serialize;
 
 #[derive(Debug, Clone)]
@@ -60,6 +62,7 @@ pub enum StakingNodeQueryRequest {
     UnbondingDelegation(QueryUnbondingDelegationRequest),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsRequest),
     Redelegations(QueryRedelegationsRequest),
+    DelegatorValidators(QueryDelegatorValidatorsRequest),
     HistoricalInfo(QueryHistoricalInfoRequest),
     Pool(QueryPoolRequest),
     Params(QueryParamsRequest),
@@ -82,6 +85,7 @@ pub enum StakingNodeQueryResponse {
     UnbondingDelegation(QueryUnbondingDelegationResponse),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsResponse),
     Redelegations(QueryRedelegationsResponse),
+    DelegatorValidators(QueryDelegatorValidatorsResponse),
     HistoricalInfo(QueryHistoricalInfoResponse),
     Pool(QueryPoolResponse),
     Params(QueryParamsResponse),
@@ -142,6 +146,11 @@ impl<
             }
             StakingNodeQueryRequest::Redelegations(req) => {
                 StakingNodeQueryResponse::Redelegations(self.query_redelegations(ctx, req))
+            }
+            StakingNodeQueryRequest::DelegatorValidators(req) => {
+                StakingNodeQueryResponse::DelegatorValidators(
+                    self.keeper.query_delegator_validators(ctx, req),
+                )
             }
             StakingNodeQueryRequest::HistoricalInfo(req) => {
                 StakingNodeQueryResponse::HistoricalInfo(

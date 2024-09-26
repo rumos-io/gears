@@ -1,6 +1,6 @@
 use crate::{
     Delegation, HistoricalInfo, IbcV046Validator, Pool, Redelegation, RedelegationEntry,
-    StakingParams, UnbondingDelegation,
+    StakingParams, UnbondingDelegation, Validator,
 };
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
@@ -27,6 +27,9 @@ mod inner {
     };
     pub use ibc_proto::cosmos::staking::v1beta1::{
         QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorUnbondingDelegationsResponse,
+    };
+    pub use ibc_proto::cosmos::staking::v1beta1::{
+        QueryDelegatorValidatorsRequest, QueryDelegatorValidatorsResponse,
     };
     pub use ibc_proto::cosmos::staking::v1beta1::{
         QueryHistoricalInfoRequest, QueryHistoricalInfoResponse,
@@ -174,6 +177,15 @@ impl TryFrom<inner::QueryRedelegationsRequest> for QueryRedelegationsRequest {
             pagination: pagination.map(Into::into),
         })
     }
+}
+
+#[derive(Clone, PartialEq, Query, Protobuf)]
+#[query(url = "/cosmos.staking.v1beta1.Query/DelegatorValidators")]
+#[proto(raw = "inner::QueryDelegatorValidatorsRequest")]
+pub struct QueryDelegatorValidatorsRequest {
+    pub delegator_addr: AccAddress,
+    #[proto(optional)]
+    pub pagination: Option<PaginationRequest>,
 }
 
 #[derive(Clone, PartialEq, Query, Protobuf)]
@@ -332,6 +344,16 @@ pub struct QueryRedelegationsResponse {
     /// Redelegation with balance
     #[proto(repeated)]
     pub redelegation_responses: Vec<RedelegationResponse>,
+    #[proto(optional)]
+    pub pagination: Option<PaginationResponse>,
+}
+
+/// QueryDelegatorValidatorsResponse is the response type for the Query/DelegatorValidators RPC method.
+#[derive(Clone, Default, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryDelegatorValidatorsResponse")]
+pub struct QueryDelegatorValidatorsResponse {
+    #[proto(repeated)]
+    pub validators: Vec<Validator>,
     #[proto(optional)]
     pub pagination: Option<PaginationResponse>,
 }
