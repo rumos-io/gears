@@ -178,9 +178,9 @@ impl<
         time: &Timestamp,
     ) -> Result<Option<Vec<DvPair>>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
-        let store = store.prefix_store(UNBONDING_QUEUE_KEY);
-        if let Some(bz) = store.get(&time.encode_vec())? {
-            Ok(serde_json::from_slice(&bz).unwrap_or_default())
+        if let Some(bz) = store.get(&get_unbonding_delegation_time_key(*time))? {
+            // TODO: check interface
+            Ok(DvPairs::decode_vec(&bz).ok().map(|dv| dv.pairs))
         } else {
             Ok(None)
         }
@@ -404,10 +404,8 @@ impl<
         unbonding_height: u32,
     ) -> Result<Vec<ValAddress>, GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let store = store.prefix_store(VALIDATOR_QUEUE_KEY);
-
         if let Some(bz) = store.get(&validator_queue_key(unbonding_time, unbonding_height))? {
-            let res: Vec<ValAddress> = serde_json::from_slice(&bz).unwrap_or_corrupt();
+            let res: Vec<ValAddress> = ValAddresses::decode_vec(&bz).unwrap_or_corrupt().addresses;
             Ok(res)
         } else {
             Ok(Vec::new())

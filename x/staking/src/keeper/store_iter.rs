@@ -59,6 +59,6 @@ impl<'a, DB: Database> Iterator for UnbondingValidatorsIterator<'a, DB> {
     fn next(&mut self) -> Option<Self::Item> {
         self.0
             .next()
-            .map(|r| r.map(|(k, v)| (k.to_vec(), serde_json::from_slice(&v).unwrap_or_corrupt())))
+            .map(|r| r.map(|(k, v)| (k.to_vec(), v.try_into().unwrap_or_corrupt())))
     }
 }

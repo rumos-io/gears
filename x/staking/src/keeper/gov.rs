@@ -1,6 +1,6 @@
 use gears::x::keepers::{gov::GovernanceBankKeeper, staking::GovStakingKeeper};
 
-use crate::iter::{bounded::BoundedValidatorsIterator, delegation::DelegationIterator};
+use crate::iter::{bounded::BondedValidatorsIterator, delegation::DelegationIterator};
 
 use super::*;
 
@@ -20,7 +20,7 @@ impl<
         &self,
         ctx: &CTX,
     ) -> Result<impl Iterator<Item = Result<Validator, GasStoreErrors>>, GasStoreErrors> {
-        Ok(BoundedValidatorsIterator::new(
+        Ok(BondedValidatorsIterator::new(
             ctx.kv_store(&self.store_key),
             self.staking_params_keeper.try_get(ctx)?.max_validators(),
         ))

@@ -305,7 +305,7 @@ impl<
 
         let key = completion_time.format_bytes_rounded(); //TODO: check if this is correct
         if let Some(bytes) = store.get(&key)? {
-            Ok(serde_json::from_slice(&bytes).unwrap_or_corrupt())
+            Ok(DvvTriplets::decode_vec(&bytes).unwrap_or_corrupt().triplets)
         } else {
             Ok(vec![])
         }

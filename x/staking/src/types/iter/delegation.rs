@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 
 use gears::{
+    core::Protobuf,
+    extensions::corruption::UnwrapCorrupt,
     store::database::Database,
     types::{
         address::AccAddress,
@@ -34,7 +36,7 @@ impl<'a, DB: Database> Iterator for DelegationIterator<'a, DB> {
             match var {
                 Ok((key, value)) => Some(Ok((
                     key,
-                    serde_json::from_slice(&value).expect(SERDE_ENCODING_DOMAIN_TYPE),
+                    Delegation::decode_vec(&value).unwrap_or_corrupt(),
                 ))),
                 Err(err) => Some(Err(err)),
             }

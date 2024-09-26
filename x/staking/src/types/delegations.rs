@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use gears::{
     core::{errors::CoreError, Protobuf},
     extensions::pagination::PaginationKey,
@@ -12,9 +10,8 @@ use gears::{
     x::types::delegation::StakingDelegation,
 };
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::str::FromStr;
-
-use crate::consts::error::SERDE_ENCODING_DOMAIN_TYPE;
 
 /// Delegation represents the bond with tokens held by an account. It is
 /// owned by one delegator, and is associated with the voting power of one
@@ -44,13 +41,13 @@ impl TryFrom<Vec<u8>> for Delegation {
     type Error = CoreError;
 
     fn try_from(raw: Vec<u8>) -> Result<Self, Self::Error> {
-        serde_json::from_slice(&raw).map_err(|e| CoreError::DecodeGeneral(e.to_string()))
+        Delegation::decode_vec(&raw).map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
 
 impl From<Delegation> for Vec<u8> {
     fn from(value: Delegation) -> Self {
-        serde_json::to_vec(&value).expect(SERDE_ENCODING_DOMAIN_TYPE)
+        value.encode_vec()
     }
 }
 
