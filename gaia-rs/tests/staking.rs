@@ -1,12 +1,60 @@
+use std::str::FromStr;
+
+use bank::cli::tx::{BankCommands, BankTxCli};
+use gaia_rs::client::GaiaTxCommands;
 use gears::{
+    commands::client::keys::{keys, AddKeyCommand, KeyCommand},
     extensions::testing::UnwrapTesting,
     tendermint::rpc::response::tx::broadcast::Response,
-    types::{base::coin::UnsignedCoin, uint::Uint256},
+    types::{
+        address::{AccAddress, ValAddress},
+        base::coin::UnsignedCoin,
+        uint::Uint256,
+    },
 };
+use staking::cli::tx::{StakingCommands, StakingTxCli};
 use utilities::GaiaNode;
 
 #[path = "./utilities.rs"]
 mod utilities;
+
+#[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
+fn create_validator() -> anyhow::Result<()> {
+    let gaia = GaiaNode::run()?;
+
+    let cmd = helpers::create_validator_tx()?;
+
+    let Response {
+        check_tx,
+        deliver_tx,
+        hash: _,
+        height: _,
+    } = gaia
+        .tx(cmd, GaiaNode::validator_key())?
+        .broadcast()
+        .unwrap_test()
+        .pop()
+        .unwrap_test();
+
+    if deliver_tx.code.is_err() || check_tx.code.is_err() {
+        println!("{:#?}", check_tx);
+        println!("{:#?}", deliver_tx);
+    }
+
+    assert!(check_tx.code.is_ok());
+    assert_eq!(check_tx.events.len(), 0);
+    assert!(deliver_tx.code.is_ok());
+    assert_eq!(deliver_tx.events.len(), 4);
+    assert!(deliver_tx
+        .events
+        .iter()
+        .any(|e| e.kind == "create_validator"));
+    assert!(deliver_tx.events.iter().any(|e| e.kind == "coin_spent"));
+    assert!(deliver_tx.events.iter().any(|e| e.kind == "coin_received"));
+
+    Ok(())
+}
 
 #[test]
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
@@ -42,6 +90,11 @@ fn delegate() -> anyhow::Result<()> {
         .pop()
         .unwrap_test();
 
+    if deliver_tx.code.is_err() || check_tx.code.is_err() {
+        println!("{:#?}", check_tx);
+        println!("{:#?}", deliver_tx);
+    }
+
     assert!(check_tx.code.is_ok());
     assert_eq!(check_tx.events.len(), 0);
     assert!(deliver_tx.code.is_ok());
@@ -49,6 +102,136 @@ fn delegate() -> anyhow::Result<()> {
     assert!(deliver_tx.events.iter().any(|e| e.kind == "delegate"));
     assert!(deliver_tx.events.iter().any(|e| e.kind == "coin_spent"));
     assert!(deliver_tx.events.iter().any(|e| e.kind == "coin_received"));
+
+    Ok(())
+}
+
+#[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
+fn redelegate() -> anyhow::Result<()> {
+    let gaia = GaiaNode::run()?;
+
+    let cmd = helpers::redelegate_tx(&gaia)?;
+
+    let Response {
+        check_tx,
+        deliver_tx,
+        hash: _,
+        height: _,
+    } = gaia
+        .tx(cmd, GaiaNode::validator_key())?
+        .broadcast()
+        .unwrap_test()
+        .pop()
+        .unwrap_test();
+
+    if deliver_tx.code.is_err() || check_tx.code.is_err() {
+        println!("{:#?}", check_tx);
+        println!("{:#?}", deliver_tx);
+    }
+
+    assert!(check_tx.code.is_ok());
+    assert_eq!(check_tx.events.len(), 0);
+    assert!(deliver_tx.code.is_ok());
+    assert_eq!(deliver_tx.events.len(), 2);
+    assert!(deliver_tx.events.iter().any(|e| e.kind == "redelegate"));
+    assert_eq!(
+        deliver_tx
+            .events
+            .iter()
+            .find(|e| e.kind == "redelegate")
+            .expect("should exists")
+            .attributes
+            .len(),
+        4
+    );
+
+    Ok(())
+}
+
+#[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
+fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
+    let gaia = GaiaNode::run()?;
+
+    // create source validator
+    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
+    let amount = UnsignedCoin {
+        denom: "uatom".try_into()?,
+        amount: Uint256::from(100u64),
+    };
+    let cmd = helpers::new_validator(pubkey, amount, "test")?;
+    gaia.tx(cmd, GaiaNode::validator_key())?;
+
+    // send coins to another account to register it in the chain
+    let tx_cmd = BankCommands::Send {
+        to_address: AccAddress::from_bech32("cosmos15jlqmacda2pzerhw48gvvxskweg8sz2saadn99")?,
+        amount: UnsignedCoin::from_str("30uatom")?,
+    };
+    let cmd = GaiaTxCommands::Bank(BankTxCli { command: tx_cmd });
+    gaia.tx(cmd, GaiaNode::validator_key())?;
+
+    // create local keypair for second account
+    let mnemonic = "utility radio trust maid picture hold palace heart craft fruit recycle void embrace gospel write what soccer resemble yellow decade rug knock control celery";
+    let name = "foo";
+    keys(KeyCommand::Add(AddKeyCommand {
+        name: name.to_owned(),
+        recover: true,
+        home: gaia.home(),
+        keyring_backend: gears::commands::client::keys::KeyringBackend::Test,
+        bip39_mnemonic: Some(mnemonic.to_owned()),
+    }))?;
+
+    // create destination validator
+    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"AAAAC3NzaC1lZDI1NTE5AAAAIFFTUWrymqRbtqMGhZACRrr7sWUnqGB8DR+6ob9d0Fhz\"}";
+    let amount = UnsignedCoin {
+        denom: "uatom".try_into()?,
+        amount: Uint256::from(10u64),
+    };
+    let cmd = helpers::new_validator(pubkey, amount, "test")?;
+    gaia.tx(cmd, GaiaNode::validator_key())?;
+
+    // create delegation to source validator
+    let amount = UnsignedCoin {
+        denom: "uatom".try_into()?,
+        amount: Uint256::from(10u64),
+    };
+    let cmd = helpers::new_delegation(
+        "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
+        amount,
+    )?;
+    gaia.tx(cmd, GaiaNode::validator_key())?;
+
+    /* test */
+    let amount = UnsignedCoin {
+        denom: "uatom".try_into()?,
+        amount: Uint256::from(11u64),
+    };
+    let tx_cmd = StakingCommands::Redelegate {
+        src_validator_address: ValAddress::from_bech32(
+            "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
+        )?,
+        dst_validator_address: ValAddress::from_bech32(
+            "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
+        )?,
+        amount,
+    };
+    let cmd = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
+    let Response {
+        check_tx,
+        deliver_tx,
+        hash: _,
+        height: _,
+    } = gaia
+        .tx(cmd, GaiaNode::validator_key())?
+        .broadcast()
+        .unwrap_test()
+        .pop()
+        .unwrap_test();
+
+    assert!(check_tx.code.is_ok());
+    assert!(deliver_tx.code.is_err());
+    assert!(deliver_tx.log.contains("invalid shares amount"));
 
     Ok(())
 }
@@ -90,41 +273,6 @@ fn delegate() -> anyhow::Result<()> {
 //     )
 // }
 
-// #[test]
-// #[ignore = "rust usually run test in || while this tests be started ony by one"]
-// fn create_validator() -> anyhow::Result<()> {
-//     let gaia = GaiaNode::run()?;
-
-//     let cmd = create_validator_tx()?;
-
-//     let Response {
-//         check_tx,
-//         deliver_tx,
-//         hash: _,
-//         height: _,
-//     } = gaia
-//         .tx(cmd, GaiaNode::validator_key())?
-//         .broadcast()
-//         .unwrap_test()
-//         .pop()
-//         .unwrap_test();
-
-//     dbg!(&deliver_tx);
-
-//     assert!(check_tx.code.is_ok());
-//     assert_eq!(check_tx.events.len(), 0);
-//     assert!(deliver_tx.code.is_ok());
-//     assert_eq!(deliver_tx.events.len(), 4);
-//     assert!(deliver_tx
-//         .events
-//         .iter()
-//         .any(|e| e.kind == "create_validator"));
-//     assert!(deliver_tx.events.iter().any(|e| e.kind == "coin_spent"));
-//     assert!(deliver_tx.events.iter().any(|e| e.kind == "coin_received"));
-
-//     Ok(())
-// }
-
 // fn delegate_tx(home: PathBuf) -> anyhow::Result<Response> {
 //     create_validator_tx(home.clone())?;
 
@@ -141,174 +289,6 @@ fn delegate() -> anyhow::Result<()> {
 //         "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
 //         amount,
 //     )
-// }
-
-// fn redelegate_tx(home: PathBuf) -> anyhow::Result<Response> {
-//     // create source validator
-//     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
-//     let amount = UnsignedCoin {
-//         denom: "uatom".try_into()?,
-//         amount: Uint256::from(100u64),
-//     };
-//     new_validator(KEY_NAME, home.clone(), pubkey, amount, "test")?;
-
-//     // send coins to another account to register it in the chain
-//     let tx_cmd = BankCommands::Send {
-//         to_address: AccAddress::from_bech32("cosmos15jlqmacda2pzerhw48gvvxskweg8sz2saadn99")?,
-//         amount: UnsignedCoin::from_str("30uatom")?,
-//     };
-//     let command = GaiaTxCommands::Bank(BankTxCli { command: tx_cmd });
-//     run_tx_local(KEY_NAME, home.clone(), command)?;
-
-//     // create local keypair for second account
-//     let mnemonic = "utility radio trust maid picture hold palace heart craft fruit recycle void embrace gospel write what soccer resemble yellow decade rug knock control celery";
-//     let name = "foo";
-//     key_add(home.clone(), name, mnemonic)?;
-
-//     // create destination validator
-//     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"AAAAC3NzaC1lZDI1NTE5AAAAIFFTUWrymqRbtqMGhZACRrr7sWUnqGB8DR+6ob9d0Fhz\"}";
-//     let amount = UnsignedCoin {
-//         denom: "uatom".try_into()?,
-//         amount: Uint256::from(10u64),
-//     };
-//     new_validator(name, home.clone(), pubkey, amount, name)?;
-
-//     // create delegation to source validator
-//     let amount = UnsignedCoin {
-//         denom: "uatom".try_into()?,
-//         amount: Uint256::from(10u64),
-//     };
-//     new_delegation(
-//         KEY_NAME,
-//         home.clone(),
-//         "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
-//         amount,
-//     )?;
-
-//     /* test */
-//     let amount = UnsignedCoin {
-//         denom: "uatom".try_into()?,
-//         amount: Uint256::from(10u64),
-//     };
-//     let tx_cmd = StakingCommands::Redelegate {
-//         src_validator_address: ValAddress::from_bech32(
-//             "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
-//         )?,
-//         dst_validator_address: ValAddress::from_bech32(
-//             "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
-//         )?,
-//         amount,
-//     };
-
-//     let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
-//     run_tx_local(KEY_NAME, home, command)
-// }
-
-// #[test]
-// #[ignore = "rust usually run test in || while this tests be started ony by one"]
-// fn redelegate() -> anyhow::Result<()> {
-//     let (tendermint, _server_thread) =
-//         run_gaia_and_tendermint([(acc_address(), default_coin(200_000_000_u32))])?;
-
-//     let Response {
-//         check_tx,
-//         deliver_tx,
-//         hash: _,
-//         height: _,
-//     } = redelegate_tx(tendermint.1.to_path_buf())?;
-
-//     assert!(check_tx.code.is_ok());
-//     assert_eq!(check_tx.events.len(), 0);
-//     assert!(deliver_tx.code.is_ok());
-//     assert_eq!(deliver_tx.events.len(), 2);
-//     assert!(deliver_tx.events.iter().any(|e| e.kind == "redelegate"));
-//     assert_eq!(
-//         deliver_tx
-//             .events
-//             .iter()
-//             .find(|e| e.kind == "redelegate")
-//             .expect("should exists")
-//             .attributes
-//             .len(),
-//         4
-//     );
-
-//     Ok(())
-// }
-
-// #[test]
-// #[ignore = "rust usually run test in || while this tests be started ony by one"]
-// fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
-//     let (tendermint, _server_thread) =
-//         run_gaia_and_tendermint([(acc_address(), default_coin(200_000_000_u32))])?;
-
-//     // create source validator
-//     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
-//     let amount = UnsignedCoin {
-//         denom: "uatom".try_into()?,
-//         amount: Uint256::from(100u64),
-//     };
-//     new_validator(KEY_NAME, tendermint.1.to_path_buf(), pubkey, amount, "test")?;
-
-//     // send coins to another account to register it in the chain
-//     let tx_cmd = BankCommands::Send {
-//         to_address: AccAddress::from_bech32("cosmos15jlqmacda2pzerhw48gvvxskweg8sz2saadn99")?,
-//         amount: UnsignedCoin::from_str("30uatom")?,
-//     };
-//     let command = GaiaTxCommands::Bank(BankTxCli { command: tx_cmd });
-//     run_tx_local(KEY_NAME, tendermint.1.to_path_buf(), command)?;
-
-//     // create local keypair for second account
-//     let mnemonic = "utility radio trust maid picture hold palace heart craft fruit recycle void embrace gospel write what soccer resemble yellow decade rug knock control celery";
-//     let name = "foo";
-//     key_add(tendermint.1.to_path_buf(), name, mnemonic)?;
-
-//     // create destination validator
-//     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"AAAAC3NzaC1lZDI1NTE5AAAAIFFTUWrymqRbtqMGhZACRrr7sWUnqGB8DR+6ob9d0Fhz\"}";
-//     let amount = UnsignedCoin {
-//         denom: "uatom".try_into()?,
-//         amount: Uint256::from(10u64),
-//     };
-//     new_validator(name, tendermint.1.to_path_buf(), pubkey, amount, name)?;
-
-//     // create delegation to source validator
-//     let amount = UnsignedCoin {
-//         denom: "uatom".try_into()?,
-//         amount: Uint256::from(10u64),
-//     };
-//     new_delegation(
-//         KEY_NAME,
-//         tendermint.1.to_path_buf(),
-//         "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
-//         amount,
-//     )?;
-
-//     /* test */
-//     let amount = UnsignedCoin {
-//         denom: "uatom".try_into()?,
-//         amount: Uint256::from(11u64),
-//     };
-//     let tx_cmd = StakingCommands::Redelegate {
-//         src_validator_address: ValAddress::from_bech32(
-//             "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
-//         )?,
-//         dst_validator_address: ValAddress::from_bech32(
-//             "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
-//         )?,
-//         amount,
-//     };
-//     let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
-//     let Response {
-//         check_tx,
-//         deliver_tx,
-//         hash: _,
-//         height: _,
-//     } = run_tx_local(KEY_NAME, tendermint.1.to_path_buf(), command)?;
-
-//     assert!(check_tx.code.is_ok());
-//     assert!(deliver_tx.code.is_err());
-//     assert!(deliver_tx.log.contains("invalid shares amount"));
-//     Ok(())
 // }
 
 // #[test]
@@ -456,14 +436,25 @@ fn delegate() -> anyhow::Result<()> {
 // }
 
 mod helpers {
+    use std::str::FromStr;
+
+    use bank::cli::tx::{BankCommands, BankTxCli};
     use gaia_rs::client::GaiaTxCommands;
-    use gears::types::{
-        address::ValAddress, base::coin::UnsignedCoin, decimal256::Decimal256, uint::Uint256,
+    use gears::{
+        commands::client::keys::{keys, AddKeyCommand, KeyCommand},
+        types::{
+            address::{AccAddress, ValAddress},
+            base::coin::UnsignedCoin,
+            decimal256::Decimal256,
+            uint::Uint256,
+        },
     };
     use staking::cli::tx::{CreateValidatorCli, StakingCommands, StakingTxCli};
 
+    use crate::utilities::GaiaNode;
+
     pub fn create_validator_tx() -> anyhow::Result<GaiaTxCommands> {
-        let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
+        let pubkey = r#"{ "type": "tendermint/PubKeyEd25519", "value": "JVWozgDG2S0TOEE0oFWz/EnSxA0EtYhXQANVIZpePFs="} "#;
         let amount = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(100u64),
@@ -502,6 +493,78 @@ mod helpers {
             commission_max_change_rate: Decimal256::from_atomics(1u64, 2)?,
             min_self_delegation: Uint256::one(),
         });
+        Ok(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd }))
+    }
+
+    pub fn redelegate_tx(node: &GaiaNode) -> anyhow::Result<GaiaTxCommands> {
+        // create source validator
+        let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
+        let amount = UnsignedCoin {
+            denom: "uatom".try_into()?,
+            amount: Uint256::from(100u64),
+        };
+
+        node.tx(
+            new_validator(pubkey, amount, "test")?,
+            GaiaNode::validator_key(),
+        )?;
+
+        // send coins to another account to register it in the chain
+        let tx_cmd = BankCommands::Send {
+            to_address: AccAddress::from_bech32("cosmos15jlqmacda2pzerhw48gvvxskweg8sz2saadn99")?,
+            amount: UnsignedCoin::from_str("30uatom")?,
+        };
+        node.tx(
+            GaiaTxCommands::Bank(BankTxCli { command: tx_cmd }),
+            GaiaNode::validator_key(),
+        )?;
+
+        // create local keypair for second account
+        let mnemonic = "utility radio trust maid picture hold palace heart craft fruit recycle void embrace gospel write what soccer resemble yellow decade rug knock control celery";
+        let name = "foo";
+        keys(KeyCommand::Add(AddKeyCommand {
+            name: name.to_owned(),
+            recover: true,
+            home: node.home(),
+            keyring_backend: gears::commands::client::keys::KeyringBackend::Test,
+            bip39_mnemonic: Some(mnemonic.to_owned()),
+        }))?;
+
+        // create destination validator
+        let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"AAAAC3NzaC1lZDI1NTE5AAAAIFFTUWrymqRbtqMGhZACRrr7sWUnqGB8DR+6ob9d0Fhz\"}";
+        let amount = UnsignedCoin {
+            denom: "uatom".try_into()?,
+            amount: Uint256::from(10u64),
+        };
+        let cmd = new_validator(pubkey, amount, "test")?;
+        let _ = node.tx(cmd, GaiaNode::validator_key())?;
+
+        // create delegation to source validator
+        let amount = UnsignedCoin {
+            denom: "uatom".try_into()?,
+            amount: Uint256::from(10u64),
+        };
+        let cmd = new_delegation(
+            "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
+            amount,
+        )?;
+        let _ = node.tx(cmd, GaiaNode::validator_key())?;
+
+        /* test */
+        let amount = UnsignedCoin {
+            denom: "uatom".try_into()?,
+            amount: Uint256::from(10u64),
+        };
+        let tx_cmd = StakingCommands::Redelegate {
+            src_validator_address: ValAddress::from_bech32(
+                "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
+            )?,
+            dst_validator_address: ValAddress::from_bech32(
+                "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
+            )?,
+            amount,
+        };
+
         Ok(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd }))
     }
 }
