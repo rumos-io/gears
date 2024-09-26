@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    collections::HashMap,
+    collections::{BTreeMap, HashMap, HashSet},
     ops::RangeBounds,
     sync::{Arc, RwLock},
 };
@@ -59,6 +59,10 @@ impl<DB: Database> TransactionKVBank<DB> {
         for del in delete {
             self.block.delete(&del);
         }
+    }
+
+    pub fn take_block_cache(&mut self) -> (BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>) {
+        self.block.take()
     }
 
     /// Delete value from storage
