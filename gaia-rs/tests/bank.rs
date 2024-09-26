@@ -1,4 +1,4 @@
-#![cfg(feature = "it")]
+// #![cfg(feature = "it")]
 
 use std::str::FromStr;
 
@@ -12,55 +12,39 @@ use bank::{
     types::query::{QueryAllBalancesResponse, QueryDenomsMetadataResponse},
 };
 use gaia_rs::{
-    client::{GaiaQueryCommands, GaiaTxCommands, WrappedGaiaQueryCommands, WrappedGaiaTxCommands},
+    client::{GaiaQueryCommands, GaiaTxCommands},
     query::GaiaQueryResponse,
-    GaiaCoreClient, QueryNodeFetcher,
 };
 use gears::{
-    commands::client::{
-        query::{run_query, QueryCommand},
-        tx::{run_tx, ClientTxContext, TxCommand},
-    },
-    config::DEFAULT_TENDERMINT_RPC_ADDRESS,
     tendermint::{
         abci::{Event, EventAttribute},
         rpc::response::tx::broadcast::Response,
-        types::chain_id::ChainId,
     },
     types::{address::AccAddress, base::coin::UnsignedCoin, denom::Denom},
 };
-use utilities::tendermint;
-
-use crate::utilities::KEY_NAME;
+use utilities::GaiaNode;
 
 #[path = "./utilities.rs"]
 mod utilities;
 
 #[test]
 fn balances_query() -> anyhow::Result<()> {
-    let _tendermint = tendermint();
+    let gaia = GaiaNode::run()?;
 
-    let query = BalancesCommand {
-        address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")?,
-        pagination: None,
-    };
+    let cmd = GaiaQueryCommands::Bank(BankQueryCli {
+        command: BankQueryCommands::Balances(BalancesCommand {
+            address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")?,
+            pagination: None,
+        }),
+    });
 
-    let result = run_query(
-        QueryCommand {
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            height: None,
-            inner: WrappedGaiaQueryCommands(GaiaQueryCommands::Bank(BankQueryCli {
-                command: BankQueryCommands::Balances(query),
-            })),
-        },
-        &GaiaCoreClient,
-    )?;
+    let result = gaia.query(cmd)?;
 
     let expected = GaiaQueryResponse::Bank(bank::cli::query::BankQueryResponse::Balances(
         QueryAllBalancesResponse {
             balances: vec![UnsignedCoin {
                 denom: Denom::from_str("uatom")?,
-                amount: 200_000_000_u32.into(),
+                amount: 990_000_000_000_u64.into(),
             }],
             pagination: None,
         },
@@ -73,18 +57,13 @@ fn balances_query() -> anyhow::Result<()> {
 
 #[test]
 fn denom_query() -> anyhow::Result<()> {
-    let _tendermint = tendermint();
+    let gaia = GaiaNode::run()?;
 
-    let result = run_query(
-        QueryCommand {
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            height: None,
-            inner: WrappedGaiaQueryCommands(GaiaQueryCommands::Bank(BankQueryCli {
-                command: BankQueryCommands::DenomMetadata { pagination: None },
-            })),
-        },
-        &GaiaCoreClient,
-    )?;
+    let cmd = GaiaQueryCommands::Bank(BankQueryCli {
+        command: BankQueryCommands::DenomMetadata { pagination: None },
+    });
+
+    let result = gaia.query(cmd)?;
 
     let expected = GaiaQueryResponse::Bank(BankQueryResponse::DenomMetadata(
         QueryDenomsMetadataResponse {
@@ -100,29 +79,19 @@ fn denom_query() -> anyhow::Result<()> {
 
 #[test]
 fn send_tx() -> anyhow::Result<()> {
-    let tendermint = tendermint();
+    let gaia = GaiaNode::run()?;
 
-    let tx_cmd = BankCommands::Send {
-        to_address: AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut")?,
-        amount: UnsignedCoin::from_str("10uatom")?,
-    };
-
-    let responses = run_tx(
-        TxCommand {
-            ctx: ClientTxContext::new_online(
-                tendermint.1.to_path_buf(),
-                200_000_u32.try_into().expect("default gas is valid"),
-                DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-                ChainId::from_str("test-chain")?,
-                KEY_NAME,
-            ),
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
+    let cmd = GaiaTxCommands::Bank(BankTxCli {
+        command: BankCommands::Send {
+            to_address: AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut")?,
+            amount: UnsignedCoin::from_str("10uatom")?,
         },
-        &GaiaCoreClient,
-        &QueryNodeFetcher,
-    )?
-    .broadcast()
-    .expect("broadcast tx inside");
+    });
+
+    let responses = gaia
+        .tx(cmd, GaiaNode::validator_key())?
+        .broadcast()
+        .expect("broadcast tx inside");
 
     assert_eq!(responses.len(), 1);
     let Response {
@@ -133,7 +102,7 @@ fn send_tx() -> anyhow::Result<()> {
     } = &responses[0];
 
     let expected_hash = data_encoding::HEXUPPER
-        .decode("13BB2C6817D0EDA960EDB0C6D6D5CB752D341BB603EF4BCE990F4EA5A99500C1".as_bytes())?;
+        .decode("BC4739124707D9438CF490E6355B75E3038BD1D98BE787A950EB89B7A8A37CCA".as_bytes())?;
 
     assert_eq!(&expected_hash, hash.as_bytes());
     assert!(deliver_tx.code.is_ok());

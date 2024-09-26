@@ -57,6 +57,11 @@ impl GaiaNode {
         AccAddress::from_bech32(addr).unwrap_test()
     }
 
+    pub fn validator_key() -> &'static str {
+        let (key, _, _) = ACCOUNTS_LIST[0];
+        key
+    }
+
     pub fn accounts() -> Vec1<(&'static str, AccAddress)> {
         let mut result = Vec::with_capacity(11);
 
