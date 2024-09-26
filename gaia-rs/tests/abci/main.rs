@@ -24,7 +24,9 @@ mod scenario_3;
 #[cfg(test)]
 mod two_tx;
 
+// cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux
 const USER_0: &str = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
+// cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q
 const USER_1: &str = "unfair live spike near cushion blanket club salad poet cigar venue above north speak harbor salute curve tail appear obvious month end boss priority";
 
 // This is a helper function to create a user with a specific account number
