@@ -28,7 +28,7 @@ use staking::{
         },
         tx::{CreateValidatorCli, StakingCommands, StakingTxCli},
     },
-    DelegationResponse, Description, Validator,
+    DelegationResponse, Description, IbcV046Validator,
 };
 use std::{path::PathBuf, str::FromStr};
 use utilities::{acc_address, default_coin, ACC_ADDRESS};
@@ -370,7 +370,7 @@ fn query_validator() -> anyhow::Result<()> {
     let command = GaiaQueryCommands::Staking(StakingQueryCli {
         command: QueryStakingCommands::Validator(query),
     });
-    let Validator {
+    let IbcV046Validator {
         operator_address,
         delegator_shares,
         description,
@@ -382,6 +382,10 @@ fn query_validator() -> anyhow::Result<()> {
         commission,
         min_self_delegation,
         status,
+        unbonding_on_hold_ref_count: _,
+        unbonding_ids: _,
+        validator_bond_shares: _,
+        liquid_shares: _,
     } = match run_query_local(command)? {
         GaiaQueryResponse::Staking(staking::cli::query::StakingQueryResponse::Validator(
             staking::QueryValidatorResponse { validator: Some(v) },
