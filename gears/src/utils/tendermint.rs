@@ -10,6 +10,8 @@ pub use assert_fs::TempDir;
 use run_script::{IoOptions, ScriptOptions};
 use tendermint::types::chain_id::ChainId;
 
+use crate::commands::node::run::LogLevel;
+
 pub fn random_port() -> u16 {
     std::net::TcpListener::bind("127.0.0.1:0")
         .expect("failed to bind to random addr")
@@ -35,7 +37,7 @@ impl TendermintSubprocess {
         self.dir.join("node")
     }
 
-    pub fn run(path_to_assets: impl AsRef<Path>) -> anyhow::Result<Self> {
+    pub fn run(path_to_assets: impl AsRef<Path>, level: LogLevel) -> anyhow::Result<Self> {
         const MONIKER: &str = "test";
         const CHAIN_ID: &str = "test-chain";
 
@@ -43,15 +45,11 @@ impl TendermintSubprocess {
 
         let tmp_dir = TempDir::new()?;
 
-        // dircpy::CopyBuilder::new(path_to_assets, &tmp_dir)
-        //     .overwrite(true)
-        //     .run()?;
-
         let options = ScriptOptions {
             runner: None,
             runner_args: None,
             working_directory: Some(tmp_dir.to_path_buf()),
-            input_redirection: IoOptions::Inherit,
+            input_redirection: IoOptions::Null,
             output_redirection: IoOptions::Pipe,
             exit_on_error: false,
             print_commands: false,
@@ -77,8 +75,15 @@ impl TendermintSubprocess {
         let (_code, _output, _error) =
             run_script::run(r#"tar -xf tendermint.tar.gz"#, &vec![], &options)?;
 
+        let log_script = match level {
+            LogLevel::Debug => "debug",
+            LogLevel::Info => "info",
+            LogLevel::Error | LogLevel::Warn => "error",
+            LogLevel::Off => "none",
+        };
+
         let script = format!(
-            "./tendermint start --home {} --p2p.laddr=tcp://0.0.0.0:{p2p_port} --rpc.laddr=tcp://127.0.0.1:{rpc_port} --proxy_app=tcp://127.0.0.1:{proxy_port}",
+            "./tendermint start --home {} --p2p.laddr=tcp://0.0.0.0:{p2p_port} --rpc.laddr=tcp://127.0.0.1:{rpc_port} --proxy_app=tcp://127.0.0.1:{proxy_port} --log_level={log_script}",
             tmp_dir.join("node")
                 .to_str()
                 .ok_or(anyhow!("failed to get path to tmp folder"))?

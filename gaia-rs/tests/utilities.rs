@@ -18,7 +18,7 @@ use gears::{
             query::QueryCommand,
             tx::{ClientTxContext, RuntxResult, TxCommand},
         },
-        node::run::RunCommand,
+        node::run::{LogLevel, RunCommand},
     },
     extensions::testing::UnwrapTesting,
     types::address::AccAddress,
@@ -74,8 +74,9 @@ impl GaiaNode {
 
     pub fn run() -> anyhow::Result<Self> {
         const TENDERMINT_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/assets");
+        const LOG_LEVEL : LogLevel= LogLevel::Info;
 
-        let tendermint = TendermintSubprocess::run(TENDERMINT_PATH)?;
+        let tendermint = TendermintSubprocess::run(TENDERMINT_PATH, LOG_LEVEL)?;
         let tmp_path = tendermint.home();
 
         let proxy_addr = SocketAddr::new(
@@ -115,7 +116,7 @@ impl GaiaNode {
                 rest_listen_addr: Some(rest_addr),
                 grpc_listen_addr: Some(grpc_addr),
                 read_buf_size: 1048576,
-                log_level: gears::commands::node::run::LogLevel::Off,
+                log_level: LOG_LEVEL,
                 min_gas_prices: Default::default(),
                 tendermint_rpc_addr: Some(rpc_addr_moved.try_into().expect("invalid rpc addr")),
             };
