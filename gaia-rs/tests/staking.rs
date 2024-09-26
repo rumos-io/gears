@@ -1,40 +1,57 @@
-// use crate::utilities::{key_add, run_gaia_and_tendermint, KEY_NAME};
-// use bank::cli::tx::{BankCommands, BankTxCli};
-// use gaia_rs::{
-//     client::{GaiaQueryCommands, GaiaTxCommands, WrappedGaiaQueryCommands, WrappedGaiaTxCommands},
-//     query::GaiaQueryResponse,
-//     GaiaCoreClient, QueryNodeFetcher,
-// };
-// use gears::{
-//     commands::client::{
-//         query::{run_query, QueryCommand},
-//         tx::{run_tx, ClientTxContext, TxCommand},
-//     },
-//     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
-//     tendermint::{rpc::response::tx::broadcast::Response, types::chain_id::ChainId},
-//     types::{
-//         address::{AccAddress, ValAddress},
-//         base::coin::UnsignedCoin,
-//         decimal256::Decimal256,
-//         uint::Uint256,
-//     },
-//     x::types::validator::BondStatus,
-// };
-// use staking::{
-//     cli::{
-//         query::{
-//             DelegationCommand, RedelegationCommand, StakingCommands as QueryStakingCommands,
-//             StakingQueryCli, ValidatorCommand,
-//         },
-//         tx::{CreateValidatorCli, StakingCommands, StakingTxCli},
-//     },
-//     DelegationResponse, Description, Validator,
-// };
-// use std::{path::PathBuf, str::FromStr};
-// use utilities::{acc_address, default_coin, ACC_ADDRESS};
+use gears::{
+    extensions::testing::UnwrapTesting,
+    tendermint::rpc::response::tx::broadcast::Response,
+    types::{base::coin::UnsignedCoin, uint::Uint256},
+};
+use utilities::GaiaNode;
 
-// #[path = "./utilities.rs"]
-// mod utilities;
+#[path = "./utilities.rs"]
+mod utilities;
+
+#[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
+fn delegate() -> anyhow::Result<()> {
+    let gaia = GaiaNode::run()?;
+
+    let cmd = helpers::create_validator_tx()?;
+
+    let _ = gaia.tx(cmd, GaiaNode::validator_key())?;
+
+    let amount = UnsignedCoin {
+        denom: "uatom".try_into()?,
+        amount: Uint256::from(10u64),
+    };
+
+    // it's the self delegation because function `create_validator_tx` creates a validator with
+    // address `cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4` that is a validator address
+    // representation of ACC_ADDRESS account address
+    let cmd = helpers::new_delegation(
+        "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
+        amount,
+    )?;
+
+    let Response {
+        check_tx,
+        deliver_tx,
+        hash: _,
+        height: _,
+    } = gaia
+        .tx(cmd, GaiaNode::validator_key())?
+        .broadcast()
+        .unwrap_test()
+        .pop()
+        .unwrap_test();
+
+    assert!(check_tx.code.is_ok());
+    assert_eq!(check_tx.events.len(), 0);
+    assert!(deliver_tx.code.is_ok());
+    assert_eq!(deliver_tx.events.len(), 4);
+    assert!(deliver_tx.events.iter().any(|e| e.kind == "delegate"));
+    assert!(deliver_tx.events.iter().any(|e| e.kind == "coin_spent"));
+    assert!(deliver_tx.events.iter().any(|e| e.kind == "coin_received"));
+
+    Ok(())
+}
 
 // fn run_tx_local(
 //     from_key: &str,
@@ -73,66 +90,27 @@
 //     )
 // }
 
-// fn new_validator(
-//     from_key: &str,
-//     home: PathBuf,
-//     pubkey: &str,
-//     amount: UnsignedCoin,
-//     moniker: &str,
-// ) -> anyhow::Result<Response> {
-//     let pubkey = serde_json::from_str(pubkey)?;
-//     let tx_cmd = StakingCommands::CreateValidator(CreateValidatorCli {
-//         pubkey,
-//         amount,
-//         moniker: moniker.to_string(),
-//         identity: "".to_string(),
-//         website: "".to_string(),
-//         security_contact: "".to_string(),
-//         details: "".to_string(),
-//         commission_rate: Decimal256::from_atomics(1u64, 1)?,
-//         commission_max_rate: Decimal256::from_atomics(2u64, 1)?,
-//         commission_max_change_rate: Decimal256::from_atomics(1u64, 2)?,
-//         min_self_delegation: Uint256::one(),
-//     });
-//     let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
-//     run_tx_local(from_key, home, command)
-// }
-
-// fn new_delegation(
-//     from_key: &str,
-//     home: PathBuf,
-//     validator_address: &str,
-//     amount: UnsignedCoin,
-// ) -> anyhow::Result<Response> {
-//     let tx_cmd = StakingCommands::Delegate {
-//         validator_address: ValAddress::from_bech32(validator_address)?,
-//         amount,
-//     };
-//     let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
-//     run_tx_local(from_key, home, command)
-// }
-
-// fn create_validator_tx(home: PathBuf) -> anyhow::Result<Response> {
-//     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
-//     let amount = UnsignedCoin {
-//         denom: "uatom".try_into()?,
-//         amount: Uint256::from(100u64),
-//     };
-//     // creates a validator, transaction performs self delegation of 100 uatoms
-//     new_validator(KEY_NAME, home, pubkey, amount, "test")
-// }
-
 // #[test]
 // #[ignore = "rust usually run test in || while this tests be started ony by one"]
 // fn create_validator() -> anyhow::Result<()> {
-//     let (tendermint, _server_thread) =
-//         run_gaia_and_tendermint([(acc_address(), default_coin(200_000_000_u32))])?;
+//     let gaia = GaiaNode::run()?;
+
+//     let cmd = create_validator_tx()?;
+
 //     let Response {
 //         check_tx,
 //         deliver_tx,
 //         hash: _,
 //         height: _,
-//     } = create_validator_tx(tendermint.1.to_path_buf())?;
+//     } = gaia
+//         .tx(cmd, GaiaNode::validator_key())?
+//         .broadcast()
+//         .unwrap_test()
+//         .pop()
+//         .unwrap_test();
+
+//     dbg!(&deliver_tx);
+
 //     assert!(check_tx.code.is_ok());
 //     assert_eq!(check_tx.events.len(), 0);
 //     assert!(deliver_tx.code.is_ok());
@@ -163,30 +141,6 @@
 //         "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
 //         amount,
 //     )
-// }
-
-// #[test]
-// #[ignore = "rust usually run test in || while this tests be started ony by one"]
-// fn delegate() -> anyhow::Result<()> {
-//     let (tendermint, _server_thread) =
-//         run_gaia_and_tendermint([(acc_address(), default_coin(200_000_000_u32))])?;
-
-//     let Response {
-//         check_tx,
-//         deliver_tx,
-//         hash: _,
-//         height: _,
-//     } = delegate_tx(tendermint.1.to_path_buf())?;
-
-//     assert!(check_tx.code.is_ok());
-//     assert_eq!(check_tx.events.len(), 0);
-//     assert!(deliver_tx.code.is_ok());
-//     assert_eq!(deliver_tx.events.len(), 4);
-//     assert!(deliver_tx.events.iter().any(|e| e.kind == "delegate"));
-//     assert!(deliver_tx.events.iter().any(|e| e.kind == "coin_spent"));
-//     assert!(deliver_tx.events.iter().any(|e| e.kind == "coin_received"));
-
-//     Ok(())
 // }
 
 // fn redelegate_tx(home: PathBuf) -> anyhow::Result<Response> {
@@ -500,3 +454,54 @@
 
 //     Ok(())
 // }
+
+mod helpers {
+    use gaia_rs::client::GaiaTxCommands;
+    use gears::types::{
+        address::ValAddress, base::coin::UnsignedCoin, decimal256::Decimal256, uint::Uint256,
+    };
+    use staking::cli::tx::{CreateValidatorCli, StakingCommands, StakingTxCli};
+
+    pub fn create_validator_tx() -> anyhow::Result<GaiaTxCommands> {
+        let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
+        let amount = UnsignedCoin {
+            denom: "uatom".try_into()?,
+            amount: Uint256::from(100u64),
+        };
+        // creates a validator, transaction performs self delegation of 100 uatoms
+        new_validator(pubkey, amount, "test")
+    }
+
+    pub fn new_delegation(
+        validator_address: &str,
+        amount: UnsignedCoin,
+    ) -> anyhow::Result<GaiaTxCommands> {
+        let tx_cmd = StakingCommands::Delegate {
+            validator_address: ValAddress::from_bech32(validator_address)?,
+            amount,
+        };
+        Ok(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd }))
+    }
+
+    pub fn new_validator(
+        pubkey: &str,
+        amount: UnsignedCoin,
+        moniker: &str,
+    ) -> anyhow::Result<GaiaTxCommands> {
+        let pubkey = serde_json::from_str(pubkey)?;
+        let tx_cmd = StakingCommands::CreateValidator(CreateValidatorCli {
+            pubkey,
+            amount,
+            moniker: moniker.to_string(),
+            identity: "".to_string(),
+            website: "".to_string(),
+            security_contact: "".to_string(),
+            details: "".to_string(),
+            commission_rate: Decimal256::from_atomics(1u64, 1)?,
+            commission_max_rate: Decimal256::from_atomics(2u64, 1)?,
+            commission_max_change_rate: Decimal256::from_atomics(1u64, 2)?,
+            min_self_delegation: Uint256::one(),
+        });
+        Ok(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd }))
+    }
+}
