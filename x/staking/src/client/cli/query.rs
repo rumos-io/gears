@@ -2,8 +2,9 @@ use crate::{
     QueryDelegationRequest, QueryDelegationResponse, QueryDelegatorDelegationsRequest,
     QueryDelegatorDelegationsResponse, QueryDelegatorUnbondingDelegationsRequest,
     QueryDelegatorUnbondingDelegationsResponse, QueryParamsRequest, QueryParamsResponse,
-    QueryRedelegationRequest, QueryRedelegationResponse, QueryUnbondingDelegationResponse,
-    QueryValidatorRequest, QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
+    QueryPoolRequest, QueryPoolResponse, QueryRedelegationsRequest, QueryRedelegationsResponse,
+    QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
+    QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use clap::{Args, Subcommand};
 use gears::{
@@ -36,6 +37,7 @@ pub enum StakingCommands {
     UnbondingDelegation(UnbondingDelegationCommand),
     UnbondingDelegations(UnbondingDelegationsCommand),
     Redelegation(RedelegationCommand),
+    Pool,
     Params,
 }
 
@@ -158,12 +160,13 @@ impl QueryHandler for StakingQueryHandler {
                 delegator_address,
                 src_validator_address,
                 dst_validator_address,
-            }) => StakingQuery::Redelegation(QueryRedelegationRequest {
+            }) => StakingQuery::Redelegation(QueryRedelegationsRequest {
                 delegator_address: delegator_address.clone().into(),
                 src_validator_address: src_validator_address.clone().into(),
                 dst_validator_address: dst_validator_address.clone().into(),
                 pagination: None,
             }),
+            StakingCommands::Pool => StakingQuery::Pool(QueryPoolRequest {}),
             StakingCommands::Params => StakingQuery::Params(QueryParamsRequest {}),
         };
 
@@ -195,8 +198,11 @@ impl QueryHandler for StakingQueryHandler {
                 QueryDelegatorUnbondingDelegationsResponse::decode_vec(&query_bytes)?,
             ),
             StakingCommands::Redelegation(_) => StakingQueryResponse::Redelegation(
-                QueryRedelegationResponse::decode_vec(&query_bytes)?,
+                QueryRedelegationsResponse::decode_vec(&query_bytes)?,
             ),
+            StakingCommands::Pool => {
+                StakingQueryResponse::Pool(QueryPoolResponse::decode_vec(&query_bytes)?)
+            }
             StakingCommands::Params => {
                 StakingQueryResponse::Params(QueryParamsResponse::decode_vec(&query_bytes)?)
             }
@@ -215,7 +221,8 @@ pub enum StakingQuery {
     Delegations(QueryDelegatorDelegationsRequest),
     UnbondingDelegation(QueryDelegationRequest),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsRequest),
-    Redelegation(QueryRedelegationRequest),
+    Redelegation(QueryRedelegationsRequest),
+    Pool(QueryPoolRequest),
     Params(QueryParamsRequest),
 }
 
@@ -229,6 +236,7 @@ pub enum StakingQueryResponse {
     Delegations(QueryDelegatorDelegationsResponse),
     UnbondingDelegation(QueryUnbondingDelegationResponse),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsResponse),
-    Redelegation(QueryRedelegationResponse),
+    Redelegation(QueryRedelegationsResponse),
+    Pool(QueryPoolResponse),
     Params(QueryParamsResponse),
 }

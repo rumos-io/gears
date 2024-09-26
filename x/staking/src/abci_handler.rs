@@ -3,7 +3,7 @@ use crate::{
     QueryDelegationResponse, QueryDelegatorDelegationsRequest, QueryDelegatorDelegationsResponse,
     QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorUnbondingDelegationsResponse,
     QueryParamsRequest, QueryParamsResponse, QueryPoolRequest, QueryPoolResponse,
-    QueryRedelegationRequest, QueryRedelegationResponse, QueryUnbondingDelegationRequest,
+    QueryRedelegationsRequest, QueryRedelegationsResponse, QueryUnbondingDelegationRequest,
     QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
     QueryValidatorsRequest, QueryValidatorsResponse, Redelegation, RedelegationEntryResponse,
     RedelegationResponse,
@@ -58,7 +58,7 @@ pub enum StakingNodeQueryRequest {
     Delegations(QueryDelegatorDelegationsRequest),
     UnbondingDelegation(QueryUnbondingDelegationRequest),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsRequest),
-    Redelegation(QueryRedelegationRequest),
+    Redelegations(QueryRedelegationsRequest),
     Pool(QueryPoolRequest),
     Params(QueryParamsRequest),
 }
@@ -79,7 +79,7 @@ pub enum StakingNodeQueryResponse {
     Delegations(QueryDelegatorDelegationsResponse),
     UnbondingDelegation(QueryUnbondingDelegationResponse),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsResponse),
-    Redelegation(QueryRedelegationResponse),
+    Redelegations(QueryRedelegationsResponse),
     Pool(QueryPoolResponse),
     Params(QueryParamsResponse),
 }
@@ -137,8 +137,8 @@ impl<
                     ),
                 )
             }
-            StakingNodeQueryRequest::Redelegation(req) => {
-                StakingNodeQueryResponse::Redelegation(self.query_redelegations(ctx, req))
+            StakingNodeQueryRequest::Redelegations(req) => {
+                StakingNodeQueryResponse::Redelegations(self.query_redelegations(ctx, req))
             }
             StakingNodeQueryRequest::Pool(_) => {
                 StakingNodeQueryResponse::Pool(self.query_pool(ctx))
@@ -230,8 +230,8 @@ impl<
                     .query_unbonding_delegations(ctx, req)?
                     .into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/Redelegation" => {
-                let req = QueryRedelegationRequest::decode(query.data)?;
+            "/cosmos.staking.v1beta1.Query/Redelegations" => {
+                let req = QueryRedelegationsRequest::decode(query.data)?;
 
                 Ok(self.query_redelegations(ctx, req).into_bytes())
             }
@@ -290,13 +290,13 @@ impl<
     fn query_redelegations<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-        QueryRedelegationRequest {
+        QueryRedelegationsRequest {
             delegator_address,
             src_validator_address,
             dst_validator_address,
             pagination,
-        }: QueryRedelegationRequest,
-    ) -> QueryRedelegationResponse {
+        }: QueryRedelegationsRequest,
+    ) -> QueryRedelegationsResponse {
         let (p_result, redelegations) = self.keeper.redelegations(
             ctx,
             &delegator_address,
@@ -310,7 +310,7 @@ impl<
             .ok()
             .unwrap_or_default();
 
-        QueryRedelegationResponse {
+        QueryRedelegationsResponse {
             redelegation_responses,
             pagination: p_result.map(PaginationResponse::from),
         }
