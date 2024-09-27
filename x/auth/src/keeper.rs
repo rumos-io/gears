@@ -92,7 +92,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
         let acct = BaseAccount {
             address: addr.clone(),
             pub_key: None,
-            account_number: self.get_next_account_number(ctx)?,
+            account_number: next_account_number(&self.store_key, ctx)?,
             sequence: 0,
         };
 
@@ -113,7 +113,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
                 base_account: BaseAccount {
                     address: addr,
                     pub_key: None,
-                    account_number: self.get_next_account_number(ctx)?,
+                    account_number: next_account_number(&self.store_key, ctx)?,
                     sequence: 0,
                 },
                 name: module.get_name(),
@@ -151,7 +151,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
         accounts.sort_by_key(|a| a.get_account_number());
 
         for mut acct in accounts {
-            acct.set_account_number(self.get_next_account_number(ctx)?);
+            acct.set_account_number(next_account_number(&self.store_key, ctx)?);
             self.set_account(ctx, acct)?;
         }
 
@@ -175,28 +175,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
         )
     }
 
-    fn get_next_account_number<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-    ) -> Result<u64, GasStoreErrors> {
-        let mut auth_store = ctx.kv_store_mut(&self.store_key);
-
-        // NOTE: The next available account number is what's stored in the KV store
-        let acct_num = auth_store.get(&GLOBAL_ACCOUNT_NUMBER_KEY)?;
-
-        let acct_num: u64 = match acct_num {
-            None => 0, //initialize account numbers
-            Some(num) => u64::decode(Bytes::copy_from_slice(&num))
-                .ok()
-                .unwrap_or_corrupt(),
-        };
-
-        let next_acct_num = acct_num + 1;
-        auth_store.set(GLOBAL_ACCOUNT_NUMBER_KEY, next_acct_num.encode_to_vec())?;
-
-        Ok(acct_num)
-    }
-
     pub fn set_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -213,4 +191,26 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
 
 fn create_auth_store_key(address: AccAddress) -> Vec<u8> {
     [ACCOUNT_STORE_PREFIX.to_vec(), Vec::<u8>::from(address)].concat()
+}
+
+fn next_account_number<SK: StoreKey, DB: Database, CTX: TransactionalContext<DB, SK>>(
+    sk: &SK,
+    ctx: &mut CTX,
+) -> Result<u64, GasStoreErrors> {
+    let mut auth_store = ctx.kv_store_mut(sk);
+
+    // NOTE: The next available account number is what's stored in the KV store
+    let acct_num = auth_store.get(&GLOBAL_ACCOUNT_NUMBER_KEY)?;
+
+    let acct_num: u64 = match acct_num {
+        None => 0, //initialize account numbers
+        Some(num) => u64::decode(Bytes::copy_from_slice(&num))
+            .ok()
+            .unwrap_or_corrupt(),
+    };
+
+    let next_acct_num = acct_num + 1;
+    auth_store.set(GLOBAL_ACCOUNT_NUMBER_KEY, next_acct_num.encode_to_vec())?;
+
+    Ok(acct_num)
 }
