@@ -5,7 +5,8 @@ use crate::{
     QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorUnbondingDelegationsResponse,
     QueryDelegatorValidatorsRequest, QueryDelegatorValidatorsResponse, QueryHistoricalInfoRequest,
     QueryHistoricalInfoResponse, QueryParamsResponse, QueryPoolResponse,
-    QueryUnbondingDelegationRequest, QueryUnbondingDelegationResponse, QueryValidatorRequest,
+    QueryUnbondingDelegationRequest, QueryUnbondingDelegationResponse,
+    QueryValidatorDelegationsRequest, QueryValidatorDelegationsResponse, QueryValidatorRequest,
     QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use gears::{
@@ -14,6 +15,7 @@ use gears::{
     core::Protobuf,
     extensions::pagination::{IteratorPaginate, Pagination, PaginationResult},
     types::pagination::response::PaginationResponse,
+    x::types::delegation::StakingDelegation,
 };
 
 impl<
@@ -148,6 +150,42 @@ impl<
         QueryDelegatorDelegationsResponse {
             delegation_responses,
             pagination: p_result.map(PaginationResponse::from),
+        }
+    }
+
+    pub fn query_validator_delegations<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryValidatorDelegationsRequest,
+    ) -> QueryValidatorDelegationsResponse {
+        let store = ctx.kv_store(&self.store_key);
+        let store = store.prefix_store(DELEGATION_KEY);
+
+        // TODO: more complex logic with iterator and pagination
+        let (p_res, iterator) = store.into_range(..).maybe_paginate(
+            query
+                .pagination
+                .map(gears::extensions::pagination::Pagination::from),
+        );
+
+        let delegation_responses = iterator
+            .filter_map(|(_k, bytes)| {
+                if let Ok(del) = Delegation::decode_vec(&bytes) {
+                    if del.validator() == &query.validator_addr {
+                        Some(del)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .filter_map(|del| self.delegation_to_delegation_response(ctx, del).ok())
+            .collect();
+
+        QueryValidatorDelegationsResponse {
+            delegation_responses,
+            pagination: p_res.map(PaginationResponse::from),
         }
     }
 

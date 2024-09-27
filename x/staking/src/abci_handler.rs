@@ -10,7 +10,8 @@ use crate::{
 };
 use crate::{
     QueryDelegatorValidatorsRequest, QueryDelegatorValidatorsResponse, QueryHistoricalInfoRequest,
-    QueryHistoricalInfoResponse,
+    QueryHistoricalInfoResponse, QueryValidatorDelegationsRequest,
+    QueryValidatorDelegationsResponse,
 };
 use gears::extensions::gas::GasResultExt;
 use gears::{
@@ -57,6 +58,7 @@ pub struct StakingABCIHandler<
 pub enum StakingNodeQueryRequest {
     Validator(QueryValidatorRequest),
     Validators(QueryValidatorsRequest),
+    ValidatorDelegations(QueryValidatorDelegationsRequest),
     Delegation(QueryDelegationRequest),
     Delegations(QueryDelegatorDelegationsRequest),
     UnbondingDelegation(QueryUnbondingDelegationRequest),
@@ -80,6 +82,7 @@ impl QueryRequest for StakingNodeQueryRequest {
 pub enum StakingNodeQueryResponse {
     Validator(QueryValidatorResponse),
     Validators(QueryValidatorsResponse),
+    ValidatorDelegations(QueryValidatorDelegationsResponse),
     Delegation(QueryDelegationResponse),
     Delegations(QueryDelegatorDelegationsResponse),
     UnbondingDelegation(QueryUnbondingDelegationResponse),
@@ -122,6 +125,11 @@ impl<
             }
             StakingNodeQueryRequest::Validators(req) => {
                 StakingNodeQueryResponse::Validators(self.keeper.query_validators(ctx, req))
+            }
+            StakingNodeQueryRequest::ValidatorDelegations(req) => {
+                StakingNodeQueryResponse::ValidatorDelegations(
+                    self.keeper.query_validator_delegations(ctx, req),
+                )
             }
             StakingNodeQueryRequest::Delegation(req) => {
                 StakingNodeQueryResponse::Delegation(self.keeper.query_delegation(ctx, req))
@@ -217,6 +225,14 @@ impl<
                 let req = QueryValidatorsRequest::decode(query.data)?;
 
                 Ok(self.keeper.query_validators(ctx, req).into_bytes())
+            }
+            "/cosmos.staking.v1beta1.Query/ValidatorDelegations" => {
+                let req = QueryValidatorDelegationsRequest::decode(query.data)?;
+
+                Ok(self
+                    .keeper
+                    .query_validator_delegations(ctx, req)
+                    .into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/Delegation" => {
                 let req = QueryDelegationRequest::decode(query.data)?;

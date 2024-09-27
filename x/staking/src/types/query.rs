@@ -42,6 +42,9 @@ mod inner {
     pub use ibc_proto::cosmos::staking::v1beta1::{
         QueryUnbondingDelegationRequest, QueryUnbondingDelegationResponse,
     };
+    pub use ibc_proto::cosmos::staking::v1beta1::{
+        QueryValidatorDelegationsRequest, QueryValidatorDelegationsResponse,
+    };
     pub use ibc_proto::cosmos::staking::v1beta1::{QueryValidatorRequest, QueryValidatorResponse};
     pub use ibc_proto::cosmos::staking::v1beta1::{
         QueryValidatorsRequest, QueryValidatorsResponse,
@@ -68,6 +71,18 @@ pub struct QueryValidatorRequest {
 pub struct QueryValidatorsRequest {
     /// status enables to query for validators matching a given status.
     pub status: BondStatus,
+    /// pagination defines an optional pagination for the request.
+    #[proto(optional)]
+    pub pagination: Option<PaginationRequest>,
+}
+
+/// QueryValidatorDelegationsRequest is request type for the Query/ValidatorDelegations RPC method
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
+#[query(url = "/cosmos.staking.v1beta1.Query/ValidatorDelegations")]
+#[proto(raw = "inner::QueryValidatorDelegationsRequest")]
+pub struct QueryValidatorDelegationsRequest {
+    /// validator_addr defines the validator address to query for.
+    pub validator_addr: ValAddress,
     /// pagination defines an optional pagination for the request.
     #[proto(optional)]
     pub pagination: Option<PaginationRequest>,
@@ -225,6 +240,17 @@ pub struct QueryValidatorsResponse {
     /// validators contains all the queried validators.
     #[proto(repeated)]
     pub validators: Vec<IbcV046Validator>,
+    /// pagination defines the pagination in the response.
+    #[proto(optional)]
+    pub pagination: Option<PaginationResponse>,
+}
+
+/// QueryValidatorDelegationsResponse is response type for the Query/ValidatorDelegations RPC method
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryValidatorDelegationsResponse")]
+pub struct QueryValidatorDelegationsResponse {
+    #[proto(repeated)]
+    pub delegation_responses: Vec<DelegationResponse>,
     /// pagination defines the pagination in the response.
     #[proto(optional)]
     pub pagination: Option<PaginationResponse>,
