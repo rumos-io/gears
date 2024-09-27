@@ -19,7 +19,7 @@ use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
 use serde::Serialize;
 
-use crate::query::{
+use crate::types::query::{
     QueryAccountRequest, QueryAccountResponse, QueryAccountsRequest, QueryAccountsResponse,
     QueryParamsRequest, QueryParamsResponse,
 };
