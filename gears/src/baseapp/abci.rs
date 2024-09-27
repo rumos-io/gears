@@ -278,7 +278,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let consensus_params = self.baseapp_params_keeper.consensus_params(&ctx);
 
         state.replace_meter(Gas::from(max_gas));
-        state.take_block_cache(&mut multi_store);
 
         let mut ctx = BlockContext::new(
             &mut multi_store,
@@ -301,6 +300,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
         let mut state = self.state.write().expect(POISONED_LOCK);
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+
+        state.take_block_cache(&mut multi_store);
 
         let header = self.get_block_header();
 
