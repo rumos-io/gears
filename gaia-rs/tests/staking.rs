@@ -59,7 +59,7 @@ fn create_validator() -> anyhow::Result<()> {
 }
 
 #[test]
-// #[ignore = "rust usually run test in || while this tests be started ony by one"]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn delegate() -> anyhow::Result<()> {
     let gaia = GaiaNode::run()?;
 
