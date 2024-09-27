@@ -174,19 +174,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
                 .collect(),
         )
     }
-
-    pub fn set_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        acct: Account,
-    ) -> Result<(), GasStoreErrors> {
-        let mut auth_store = ctx.kv_store_mut(&self.store_key);
-        let key = create_auth_store_key(acct.get_address().to_owned());
-
-        auth_store.set(key, acct.encode_vec())?;
-
-        Ok(())
-    }
 }
 
 fn create_auth_store_key(address: AccAddress) -> Vec<u8> {
