@@ -6,12 +6,16 @@ use gears::context::query::QueryContext;
 use gears::context::tx::TxContext;
 use gears::core::Protobuf as _;
 use gears::derive::Query;
+use gears::extensions::gas::GasResultExt;
+use gears::extensions::pagination::Pagination;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::tendermint::types::request::query::RequestQuery;
+use gears::types::pagination::response::PaginationResponse;
 use gears::types::tx::raw::TxWithRaw;
 use gears::types::tx::NullTxMsg;
+use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
 use serde::Serialize;
 
@@ -67,15 +71,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler for AuthABCIHa
     ) -> Self::QRes {
         match query {
             AuthNodeQueryRequest::Account(req) => {
-                let res = self.keeper.query_account(ctx, req);
+                let res = self.query_account(ctx, req);
                 AuthNodeQueryResponse::Account(res)
             }
             AuthNodeQueryRequest::Accounts(req) => {
-                let res = self.keeper.query_accounts(ctx, req);
+                let res = self.query_accounts(ctx, req);
                 AuthNodeQueryResponse::Accounts(res)
             }
             AuthNodeQueryRequest::Params(req) => {
-                let res = self.keeper.query_params(ctx, req);
+                let res = self.query_params(ctx, req);
                 AuthNodeQueryResponse::Params(res)
             }
         }
@@ -117,17 +121,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler for AuthABCIHa
             "/cosmos.auth.v1beta1.Query/Account" => {
                 let req = QueryAccountRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_account(ctx, req).encode_vec())
+                Ok(self.query_account(ctx, req).encode_vec())
             }
             "/cosmos.auth.v1beta1.Query/Accounts" => {
                 let req = QueryAccountsRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_accounts(ctx, req).encode_vec())
+                Ok(self.query_accounts(ctx, req).encode_vec())
             }
             "/cosmos.auth.v1beta1.Query/Params" => {
                 let req = QueryParamsRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_params(ctx, req).encode_vec())
+                Ok(self.query_params(ctx, req).encode_vec())
             }
             _ => Err(QueryError::PathNotFound),
         }
@@ -141,5 +145,38 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthABCIHandler<SK, PSK, M
 
     pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis)
+    }
+
+    pub fn query_account<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryAccountRequest { address }: QueryAccountRequest,
+    ) -> QueryAccountResponse {
+        let account = self.keeper.get_account(ctx, &address).unwrap_gas();
+
+        QueryAccountResponse { account: account }
+    }
+
+    pub fn query_accounts<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryAccountsRequest { pagination }: QueryAccountsRequest,
+    ) -> QueryAccountsResponse {
+        let (p_res, accounts) = self.keeper.accounts(ctx, pagination.map(Pagination::from));
+
+        QueryAccountsResponse {
+            accounts,
+            pagination: p_res.map(PaginationResponse::from),
+        }
+    }
+
+    pub fn query_params<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        _req: QueryParamsRequest,
+    ) -> QueryParamsResponse {
+        QueryParamsResponse {
+            params: self.keeper.get_auth_params(ctx).unwrap_gas(),
+        }
     }
 }

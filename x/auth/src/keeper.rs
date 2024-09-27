@@ -1,9 +1,8 @@
-use crate::query::{
-    QueryAccountRequest, QueryAccountResponse, QueryAccountsRequest, QueryAccountsResponse,
-    QueryParamsRequest, QueryParamsResponse,
-};
 use crate::{AuthParamsKeeper, AuthsParams, GenesisState};
+
 use bytes::Bytes;
+use prost::Message;
+
 use gears::application::keepers::params::ParamsKeeper;
 use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
@@ -11,17 +10,15 @@ use gears::context::{QueryableContext, TransactionalContext};
 use gears::core::Protobuf as _;
 use gears::extensions::corruption::UnwrapCorrupt;
 use gears::extensions::gas::GasResultExt;
-use gears::extensions::pagination::{IteratorPaginate, Pagination};
+use gears::extensions::pagination::{IteratorPaginate, Pagination, PaginationResult};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::types::account::{Account, BaseAccount, ModuleAccount};
 use gears::types::address::AccAddress;
-use gears::types::pagination::response::PaginationResponse;
 use gears::types::store::gas::errors::GasStoreErrors;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
-use prost::Message;
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
 const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
@@ -164,55 +161,20 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
             .unwrap_gas();
     }
 
-    pub fn query_account<DB: Database>(
+    pub fn accounts<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-        req: QueryAccountRequest,
-    ) -> QueryAccountResponse {
-        let auth_store = ctx.kv_store(&self.store_key);
-        let key = create_auth_store_key(req.address);
-        let account = auth_store.get(&key);
-
-        if let Some(buf) = account {
-            let account = Some(
-                Account::decode::<Bytes>(buf.to_owned().into())
-                    .ok()
-                    .unwrap_or_corrupt(),
-            );
-
-            QueryAccountResponse { account }
-        } else {
-            QueryAccountResponse { account: None }
-        }
-    }
-
-    pub fn query_accounts<DB: Database>(
-        &self,
-        ctx: &QueryContext<DB, SK>,
-        req: QueryAccountsRequest,
-    ) -> QueryAccountsResponse {
+        pagination: Option<Pagination>,
+    ) -> (Option<PaginationResult>, Vec<Account>) {
         let auth_store = ctx.kv_store(&self.store_key);
         let auth_store = auth_store.prefix_store(ACCOUNT_STORE_PREFIX);
-        let (p_res, iter) = auth_store
-            .into_range(..)
-            .maybe_paginate(Some(Pagination::from(req.pagination)));
+        let (p_res, iter) = auth_store.into_range(..).maybe_paginate(pagination);
 
-        QueryAccountsResponse {
-            accounts: iter
-                .map(|(_k, bytes)| Account::decode_vec(&bytes).unwrap_or_corrupt())
+        (
+            p_res,
+            iter.map(|(_k, bytes)| Account::decode_vec(&bytes).unwrap_or_corrupt())
                 .collect(),
-            pagination: p_res.map(PaginationResponse::from),
-        }
-    }
-
-    pub fn query_params<DB: Database>(
-        &self,
-        ctx: &QueryContext<DB, SK>,
-        _req: QueryParamsRequest,
-    ) -> QueryParamsResponse {
-        QueryParamsResponse {
-            params: self.auth_params_keeper.get(ctx),
-        }
+        )
     }
 
     fn get_next_account_number<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -252,10 +214,5 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
 }
 
 fn create_auth_store_key(address: AccAddress) -> Vec<u8> {
-    let mut auth_store_key: Vec<u8> = address.into();
-    let mut prefix = Vec::new();
-    prefix.extend(ACCOUNT_STORE_PREFIX);
-    prefix.append(&mut auth_store_key);
-
-    prefix
+    [ACCOUNT_STORE_PREFIX.to_vec(), Vec::<u8>::from(address)].concat()
 }

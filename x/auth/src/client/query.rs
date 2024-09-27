@@ -50,7 +50,7 @@ pub struct QueryAccountRequest {
 pub struct QueryAccountsRequest {
     /// pagination defines an optional pagination for the request.
     #[proto(optional)]
-    pub pagination: PaginationRequest,
+    pub pagination: Option<PaginationRequest>,
 }
 
 /// QueryAccountsResponse is the response type for the Query/Accounts RPC method.

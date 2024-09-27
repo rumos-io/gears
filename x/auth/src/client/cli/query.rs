@@ -6,6 +6,7 @@ use bytes::Bytes;
 use clap::{Args, Subcommand};
 use gears::core::Protobuf;
 use gears::derive::Query;
+use gears::extensions::try_map::FallibleMapExt;
 use gears::types::address::AccAddress;
 use gears::types::pagination::request::PaginationRequest;
 use gears::{application::handlers::client::QueryHandler, cli::pagination::CliPaginationRequest};
@@ -35,7 +36,7 @@ pub struct AccountCommand {
 #[derive(Args, Debug, Clone)]
 pub struct AccountsCommand {
     #[command(flatten)]
-    pub pagination: CliPaginationRequest,
+    pub pagination: Option<CliPaginationRequest>,
 }
 
 #[derive(Clone, PartialEq, Query)]
@@ -76,7 +77,10 @@ impl QueryHandler for AuthQueryHandler {
                 })
             }
             AuthCommands::Accounts(cmd) => {
-                let pagination = PaginationRequest::try_from(cmd.to_owned().pagination)?;
+                let pagination = cmd
+                    .pagination
+                    .to_owned()
+                    .try_map(|this| PaginationRequest::try_from(this))?;
                 AuthQuery::Accounts(QueryAccountsRequest { pagination })
             }
             AuthCommands::Params => AuthQuery::Params(QueryParamsRequest {}),
