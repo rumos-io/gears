@@ -1,15 +1,13 @@
-use crate::{AuthParamsKeeper, AuthsParams, GenesisState};
+use crate::{AuthParamsKeeper, AuthsParams};
 
 use bytes::Bytes;
 use prost::Message;
 
 use gears::application::keepers::params::ParamsKeeper;
-use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
 use gears::context::{QueryableContext, TransactionalContext};
 use gears::core::Protobuf as _;
 use gears::extensions::corruption::UnwrapCorrupt;
-use gears::extensions::gas::GasResultExt;
 use gears::extensions::pagination::{IteratorPaginate, Pagination, PaginationResult};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
@@ -141,24 +139,24 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(
+    pub fn init<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut InitContext<'_, DB, SK>,
-        mut genesis: GenesisState,
-    ) {
-        self.auth_params_keeper.set(ctx, genesis.params);
+        ctx: &mut CTX,
+        mut accounts: Vec<Account>,
+        params: AuthsParams,
+    ) -> Result<(), GasStoreErrors> {
+        self.auth_params_keeper.try_set(ctx, params)?;
 
         // sanitizing
-        genesis.accounts.sort_by_key(|a| a.get_account_number());
+        accounts.sort_by_key(|a| a.get_account_number());
 
-        for mut acct in genesis.accounts {
-            acct.set_account_number(self.get_next_account_number(ctx).unwrap_gas());
-            self.set_account(ctx, acct).unwrap_gas();
+        for mut acct in accounts {
+            acct.set_account_number(self.get_next_account_number(ctx)?);
+            self.set_account(ctx, acct)?;
         }
 
         // Create the fee collector account
         self.check_create_new_module_account(ctx, &self.fee_collector_module)
-            .unwrap_gas();
     }
 
     pub fn accounts<DB: Database>(

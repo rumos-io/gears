@@ -105,9 +105,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler for AuthABCIHa
     fn init_genesis<DB: Database>(
         &self,
         ctx: &mut InitContext<'_, DB, Self::StoreKey>,
-        genesis: Self::Genesis,
+        Self::Genesis { accounts, params }: Self::Genesis,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        self.keeper.init_genesis(ctx, genesis);
+        self.keeper.init(ctx, accounts, params).unwrap_gas();
 
         Vec::new()
     }
@@ -141,10 +141,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler for AuthABCIHa
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthABCIHandler<SK, PSK, M> {
     pub fn new(keeper: Keeper<SK, PSK, M>) -> Self {
         AuthABCIHandler { keeper }
-    }
-
-    pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
-        self.keeper.init_genesis(ctx, genesis)
     }
 
     pub fn query_account<DB: Database>(
