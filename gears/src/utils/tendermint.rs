@@ -44,13 +44,17 @@ impl TendermintSubprocess {
         let chain_id = ChainId::from_str(CHAIN_ID)?;
 
         let tmp_dir = TempDir::new()?;
+        // let tmp_dir = tmp_dir.into_persistent();
 
         let options = ScriptOptions {
             runner: None,
             runner_args: None,
             working_directory: Some(tmp_dir.to_path_buf()),
             input_redirection: IoOptions::Null,
-            output_redirection: IoOptions::Pipe,
+            output_redirection: match level {
+                LogLevel::Off => IoOptions::Pipe,
+                _ => IoOptions::Inherit,
+            },
             exit_on_error: false,
             print_commands: false,
             env_vars: None,
