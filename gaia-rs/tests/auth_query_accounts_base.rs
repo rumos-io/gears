@@ -1,4 +1,4 @@
-// #![cfg(feature = "it")]
+#![cfg(feature = "it")]
 
 use auth::cli::query::{AccountsCommand, AuthCommands, AuthQueryCli, AuthQueryResponse};
 use gaia_rs::{client::GaiaQueryCommands, query::GaiaQueryResponse};

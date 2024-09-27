@@ -1,3 +1,5 @@
+#![cfg(feature = "it")]
+
 use std::str::FromStr;
 
 use bank::cli::tx::{BankCommands, BankTxCli};

@@ -1,4 +1,4 @@
-// #![cfg(feature = "it")]
+#![cfg(feature = "it")]
 
 use bank::{
     cli::query::{BankCommands as BankQueryCommands, BankQueryCli, BankQueryResponse},
