@@ -74,7 +74,7 @@ impl GaiaNode {
 
     pub fn run() -> anyhow::Result<Self> {
         const TENDERMINT_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/assets");
-        const LOG_LEVEL : LogLevel= LogLevel::Info;
+        const LOG_LEVEL: LogLevel = LogLevel::Off;
 
         let tendermint = TendermintSubprocess::run(TENDERMINT_PATH, LOG_LEVEL)?;
         let tmp_path = tendermint.home();
