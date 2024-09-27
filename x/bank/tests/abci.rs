@@ -119,7 +119,7 @@ pub enum BankModules {
 }
 
 impl Module for BankModules {
-    fn get_name(&self) -> String {
+    fn name(&self) -> String {
         match self {
             BankModules::FeeCollector => "fee_collector".into(),
         }

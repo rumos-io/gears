@@ -46,7 +46,7 @@ pub enum AuthModules {
 }
 
 impl Module for AuthModules {
-    fn get_name(&self) -> String {
+    fn name(&self) -> String {
         match self {
             AuthModules::FeeCollector => "fee_collector".into(),
         }

@@ -193,7 +193,7 @@ impl ABCIHandler for GaiaABCIHandler {
         self.bank_abci_handler.genesis(ctx, genesis.bank);
         let staking_updates = self.staking_abci_handler.genesis(ctx, genesis.staking);
         self.ibc_abci_handler.genesis(ctx, genesis.ibc);
-        self.auth_abci_handler.genesis(ctx, genesis.auth);
+        self.auth_abci_handler.init_genesis(ctx, genesis.auth);
         let genutil_updates = self.genutil_handler.init_genesis(ctx, genesis.genutil);
 
         match (genutil_updates.is_empty(), staking_updates.is_empty()) {

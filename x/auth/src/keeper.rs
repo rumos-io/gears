@@ -116,7 +116,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
                     account_number: next_account_number(&self.store_key, ctx)?,
                     sequence: 0,
                 },
-                name: module.get_name(),
+                name: module.name(),
                 permissions: module.get_permissions(),
             };
 

@@ -728,7 +728,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         {
             return Err(BankKeeperError::Permission(format!(
                 "module account {} does not have permissions to receive delegated coins",
-                recepient_module.get_name()
+                recepient_module.name()
             )));
         }
         self.delegate_coins(ctx, sender_addr, recepient_module_addr, amount)
@@ -824,7 +824,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         {
             return Err(BankKeeperError::Permission(format!(
                 "module account {} does not have permissions to receive undelegate coins",
-                sender_module.get_name()
+                sender_module.name()
             )));
         }
         self.undelegate_coins(ctx, sender_module_addr, addr, amount)

@@ -75,7 +75,7 @@ pub enum StakingModules {
 }
 
 impl Module for StakingModules {
-    fn get_name(&self) -> String {
+    fn name(&self) -> String {
         match self {
             StakingModules::FeeCollector => "fee_collector".into(),
             StakingModules::BondedPool => staking::BONDED_POOL_NAME.into(),
