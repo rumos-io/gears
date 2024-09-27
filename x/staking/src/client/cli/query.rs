@@ -1,9 +1,9 @@
 use crate::{
     QueryDelegationRequest, QueryDelegationResponse, QueryDelegatorDelegationsRequest,
     QueryDelegatorDelegationsResponse, QueryDelegatorUnbondingDelegationsRequest,
-    QueryDelegatorUnbondingDelegationsResponse, QueryRedelegationRequest,
-    QueryRedelegationResponse, QueryUnbondingDelegationResponse, QueryValidatorRequest,
-    QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
+    QueryDelegatorUnbondingDelegationsResponse, QueryParamsRequest, QueryParamsResponse,
+    QueryRedelegationRequest, QueryRedelegationResponse, QueryUnbondingDelegationResponse,
+    QueryValidatorRequest, QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use clap::{Args, Subcommand};
 use gears::{
@@ -36,6 +36,7 @@ pub enum StakingCommands {
     UnbondingDelegation(UnbondingDelegationCommand),
     UnbondingDelegations(UnbondingDelegationsCommand),
     Redelegation(RedelegationCommand),
+    Params,
 }
 
 /// Query for validator account by address
@@ -163,6 +164,7 @@ impl QueryHandler for StakingQueryHandler {
                 dst_validator_address: dst_validator_address.clone().into(),
                 pagination: None,
             }),
+            StakingCommands::Params => StakingQuery::Params(QueryParamsRequest {}),
         };
 
         Ok(res)
@@ -195,6 +197,9 @@ impl QueryHandler for StakingQueryHandler {
             StakingCommands::Redelegation(_) => StakingQueryResponse::Redelegation(
                 QueryRedelegationResponse::decode_vec(&query_bytes)?,
             ),
+            StakingCommands::Params => {
+                StakingQueryResponse::Params(QueryParamsResponse::decode_vec(&query_bytes)?)
+            }
         };
 
         Ok(res)
@@ -211,6 +216,7 @@ pub enum StakingQuery {
     UnbondingDelegation(QueryDelegationRequest),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsRequest),
     Redelegation(QueryRedelegationRequest),
+    Params(QueryParamsRequest),
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
@@ -224,4 +230,5 @@ pub enum StakingQueryResponse {
     UnbondingDelegation(QueryUnbondingDelegationResponse),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsResponse),
     Redelegation(QueryRedelegationResponse),
+    Params(QueryParamsResponse),
 }

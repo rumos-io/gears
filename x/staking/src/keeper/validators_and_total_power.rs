@@ -41,17 +41,17 @@ impl<
     }
 
     /// get the last validator set
-    pub fn validators_power_store_vals_map<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn validators_power_store_vals_vec<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> anyhow::Result<HashMap<Vec<u8>, ValAddress>> {
+    ) -> anyhow::Result<Vec<ValAddress>> {
         let store = ctx.kv_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATORS_BY_POWER_INDEX_KEY);
-        let mut res = HashMap::new();
+        let mut res = Vec::new();
         // TODO: we're iterating over every validator here: this method should return an iterator
         for next in iterator.into_range(..) {
-            let (k, v) = next?;
-            res.insert(k.to_vec(), ValAddress::try_from(v.to_vec())?);
+            let (_k, v) = next?;
+            res.push(ValAddress::try_from(v.to_vec())?);
         }
         Ok(res)
     }
@@ -151,10 +151,10 @@ impl<
         validator: &LastValidatorPower,
     ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
-        let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
+        let mut store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
         let key = validator.address.prefix_len_bytes();
         let value = i64::encode_to_vec(&validator.power);
-        delegations_store.set(key, value)
+        store.set(key, value)
     }
 
     pub fn delete_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -163,7 +163,7 @@ impl<
         validator: &ValAddress,
     ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
-        let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
-        delegations_store.delete(&validator.prefix_len_bytes())
+        let mut store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
+        store.delete(&validator.prefix_len_bytes())
     }
 }

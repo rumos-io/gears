@@ -113,10 +113,7 @@ impl<
         }
 
         let params = self.staking_params_keeper.try_get(ctx)?;
-        let completion_time = ctx
-            .get_time()
-            .checked_add(Duration::new_from_nanos(params.unbonding_time()))
-            .unwrap();
+        let completion_time = ctx.get_time().checked_add(params.unbonding_time()).unwrap();
 
         let entry = UnbondingDelegationEntry {
             creation_height: ctx.height(),
