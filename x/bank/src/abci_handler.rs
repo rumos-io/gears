@@ -109,10 +109,7 @@ impl<
                 BankNodeQueryResponse::DenomsMetadata(self.query_denoms(ctx, req))
             }
             BankNodeQueryRequest::DenomMetadata(req) => {
-                let metadata = self
-                    .keeper
-                    .get_denom_metadata(ctx, &req.denom)
-                    .expect("Query ctx doesn't have any gas");
+                let metadata = self.keeper.get_denom_metadata(ctx, &req.denom).unwrap_gas();
                 BankNodeQueryResponse::DenomMetadata(QueryDenomMetadataResponse { metadata })
             }
             BankNodeQueryRequest::Params(_req) => {
@@ -123,23 +120,9 @@ impl<
             BankNodeQueryRequest::SupplyOf(req) => {
                 BankNodeQueryResponse::SupplyOf(self.query_supply_of(ctx, req))
             }
-            BankNodeQueryRequest::Spendable(QuerySpendableBalancesRequest {
-                address,
-                pagination,
-            }) => {
-                // TODO: edit error "handling"
-                let (spendable, pagination_result) = self
-                    .keeper
-                    .spendable_coins(ctx, &address, pagination.map(Pagination::from))
-                    .map(|(spendable, _, pag)| {
-                        (spendable.map(Vec::from), pag.map(PaginationResponse::from))
-                    })
-                    .unwrap_or_default();
-
-                BankNodeQueryResponse::Spendable(QuerySpendableBalancesResponse {
-                    balances: spendable.unwrap_or_default(),
-                    pagination: pagination_result,
-                })
+            BankNodeQueryRequest::Spendable(req) => {
+                let balance = self.spendable(ctx, req);
+                BankNodeQueryResponse::Spendable(balance)
             }
         }
     }
@@ -195,7 +178,7 @@ impl<
 
                 Ok(self.query_total_supply(ctx, req).encode_vec())
             }
-            "/cosmos.bank.v1beta1.Query/Balance" => {
+            QueryBalanceRequest::QUERY_URL => {
                 let req = QueryBalanceRequest::decode(query.data)?;
 
                 Ok(self.query_balance(ctx, req).encode_vec())
@@ -207,12 +190,12 @@ impl<
 
                 Ok(result)
             }
-            "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
+            QueryDenomMetadataRequest::QUERY_URL => {
                 let req = QueryDenomMetadataRequest::decode(query.data)?;
                 let metadata = self.keeper.get_denom_metadata(ctx, &req.denom).unwrap_gas();
                 Ok(QueryDenomMetadataResponse { metadata }.encode_vec())
             }
-            "/cosmos.bank.v1beta1.Query/Params" => {
+            QueryParamsRequest::QUERY_URL => {
                 // a kind of type check
                 let _req = QueryParamsRequest::decode(query.data)?;
                 let params = self.keeper.params(ctx);
@@ -235,6 +218,29 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
 
     pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis)
+    }
+
+    fn spendable<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QuerySpendableBalancesRequest {
+            address,
+            pagination,
+        }: QuerySpendableBalancesRequest,
+    ) -> QuerySpendableBalancesResponse {
+        // TODO: edit error "handling"
+        let (spendable, pagination_result) = self
+            .keeper
+            .spendable_coins(ctx, &address, pagination.map(Pagination::from))
+            .map(|(spendable, _, pag)| {
+                (spendable.map(Vec::from), pag.map(PaginationResponse::from))
+            })
+            .unwrap_or_default();
+
+        QuerySpendableBalancesResponse {
+            balances: spendable.unwrap_or_default(),
+            pagination: pagination_result,
+        }
     }
 
     fn query_balances<DB: Database>(

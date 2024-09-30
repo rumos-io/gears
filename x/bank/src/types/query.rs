@@ -67,7 +67,7 @@ pub struct QueryAllBalancesRequest {
 }
 
 #[derive(Clone, Debug, PartialEq, Query, Protobuf)]
-#[query(url = "/cosmos.bank.v1beta1.Query/DenomsMetadata")]
+#[query(url = "/cosmos.bank.v1beta1.Query/DenomMetadata")]
 #[proto(raw = "inner::QueryDenomMetadataRequest")]
 pub struct QueryDenomMetadataRequest {
     /// denom is the coin denom to query metadata for.
