@@ -11,6 +11,9 @@ jobs:
     - name: Checkout  # Clone git repository
       uses: actions/checkout@v3
 
+    - name: Install dependencies
+      run: apt-get install -y libhidapi-dev
+
     - name: Install stable toolchain
       uses: dtolnay/rust-toolchain@stable
 
