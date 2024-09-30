@@ -80,7 +80,7 @@ impl QueryHandler for AuthQueryHandler {
                 let pagination = cmd
                     .pagination
                     .to_owned()
-                    .try_map(|this| PaginationRequest::try_from(this))?;
+                    .try_map(PaginationRequest::try_from)?;
                 AuthQuery::Accounts(QueryAccountsRequest { pagination })
             }
             AuthCommands::Params => AuthQuery::Params(QueryParamsRequest {}),

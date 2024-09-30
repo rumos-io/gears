@@ -150,7 +150,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthABCIHandler<SK, PSK, M
     ) -> QueryAccountResponse {
         let account = self.keeper.get_account(ctx, &address).unwrap_gas();
 
-        QueryAccountResponse { account: account }
+        QueryAccountResponse { account }
     }
 
     pub fn query_accounts<DB: Database>(
