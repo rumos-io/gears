@@ -959,22 +959,16 @@ impl<
 }
 
 fn denom_metadata_key(denom: String) -> Vec<u8> {
-    let mut key = Vec::new();
-    key.extend(DENOM_METADATA_PREFIX);
-    key.extend(denom.into_bytes());
-    key
+    [DENOM_METADATA_PREFIX.to_vec(), denom.into_bytes()].concat()
 }
 
 fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
-    let addr_len = addr.len();
-    let mut addr: Vec<u8> = addr.into();
-    let mut prefix = Vec::new();
-
-    prefix.extend(ADDRESS_BALANCES_STORE_PREFIX);
-    prefix.push(addr_len);
-    prefix.append(&mut addr);
-
-    prefix
+    [
+        ADDRESS_BALANCES_STORE_PREFIX.to_vec(),
+        [addr.len()].to_vec(),
+        addr.into(),
+    ]
+    .concat()
 }
 
 //TODO: copy tests across
