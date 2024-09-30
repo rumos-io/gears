@@ -125,7 +125,7 @@ impl Module for BankModules {
         }
     }
 
-    fn get_address(&self) -> AccAddress {
+    fn address(&self) -> AccAddress {
         match self {
             BankModules::FeeCollector => {
                 AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
@@ -134,7 +134,7 @@ impl Module for BankModules {
         }
     }
 
-    fn get_permissions(&self) -> Vec<String> {
+    fn permissions(&self) -> Vec<String> {
         match self {
             BankModules::FeeCollector => vec![],
         }

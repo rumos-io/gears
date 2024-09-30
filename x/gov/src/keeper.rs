@@ -185,7 +185,7 @@ impl<
 
         let balance = self
             .bank_keeper
-            .balance_all(ctx, &self.gov_mod.get_address())
+            .balance_all(ctx, &self.gov_mod.address())
             .unwrap_gas();
         /*
            Okay. I think that in our implementation there is no need to create account if it.

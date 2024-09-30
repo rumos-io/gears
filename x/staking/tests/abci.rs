@@ -83,7 +83,7 @@ impl Module for StakingModules {
         }
     }
 
-    fn get_address(&self) -> AccAddress {
+    fn address(&self) -> AccAddress {
         match self {
             StakingModules::FeeCollector => {
                 AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
@@ -100,7 +100,7 @@ impl Module for StakingModules {
         }
     }
 
-    fn get_permissions(&self) -> Vec<String> {
+    fn permissions(&self) -> Vec<String> {
         match self {
             StakingModules::FeeCollector => vec![],
             StakingModules::BondedPool => vec!["burner".into(), "staking".into()],

@@ -52,7 +52,7 @@ impl Module for AuthModules {
         }
     }
 
-    fn get_address(&self) -> AccAddress {
+    fn address(&self) -> AccAddress {
         match self {
             AuthModules::FeeCollector => {
                 AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
@@ -61,7 +61,7 @@ impl Module for AuthModules {
         }
     }
 
-    fn get_permissions(&self) -> Vec<String> {
+    fn permissions(&self) -> Vec<String> {
         match self {
             AuthModules::FeeCollector => vec![],
         }

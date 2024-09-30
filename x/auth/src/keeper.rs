@@ -106,7 +106,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
         ctx: &mut CTX,
         module: &M,
     ) -> Result<(), GasStoreErrors> {
-        let addr = module.get_address();
+        let addr = module.address();
 
         if !self.has_account(ctx, &addr)? {
             let account = ModuleAccount {
@@ -117,7 +117,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
                     sequence: 0,
                 },
                 name: module.name(),
-                permissions: module.get_permissions(),
+                permissions: module.permissions(),
             };
 
             self.set_account(ctx, Account::Module(account))?

@@ -5,7 +5,7 @@ pub trait Module: std::fmt::Debug + Clone + Send + Sync + 'static {
     /// Get module name.
     fn name(&self) -> String;
     /// Get module address.
-    fn get_address(&self) -> AccAddress {
+    fn address(&self) -> AccAddress {
         use sha2::Digest;
         let hash = sha2::Sha256::digest(self.name());
         // sdk behavior. It gets slice of first 20 bytes from sha256 hash
@@ -15,7 +15,7 @@ pub trait Module: std::fmt::Debug + Clone + Send + Sync + 'static {
             .expect("vector of 20 bytes can't produce error because 0 < 20 < MAX_ADDR_LEN")
     }
     /// Module permissions. Default value is empty list.
-    fn get_permissions(&self) -> Vec<String> {
+    fn permissions(&self) -> Vec<String> {
         vec![]
     }
 }
