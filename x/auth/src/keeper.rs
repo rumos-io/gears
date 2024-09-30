@@ -2,6 +2,7 @@ use crate::{AuthParamsKeeper, AuthsParams};
 
 use bytes::Bytes;
 use gears::context::init::InitContext;
+use gears::extensions::gas::GasResultExt;
 use prost::Message;
 
 use gears::application::keepers::params::ParamsKeeper;
@@ -145,19 +146,20 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
         ctx: &mut InitContext<'_, DB, SK>,
         mut accounts: Vec<Account>,
         params: AuthsParams,
-    ) -> Result<(), GasStoreErrors> {
-        self.auth_params_keeper.try_set(ctx, params)?;
+    ) {
+        self.auth_params_keeper.set(ctx, params);
 
         // sanitizing
         accounts.sort_by_key(|a| a.get_account_number());
 
         for mut acct in accounts {
-            acct.set_account_number(next_account_number(&self.store_key, ctx)?);
-            self.set_account(ctx, acct)?;
+            acct.set_account_number(next_account_number(&self.store_key, ctx).unwrap_gas());
+            self.set_account(ctx, acct).unwrap_gas();
         }
 
         // Create the fee collector account
         self.check_create_new_module_account(ctx, &self.fee_collector_module)
+            .unwrap_gas();
     }
 
     pub fn accounts<DB: Database>(

@@ -107,7 +107,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler for AuthABCIHa
         ctx: &mut InitContext<'_, DB, Self::StoreKey>,
         Self::Genesis { accounts, params }: Self::Genesis,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        self.keeper.init(ctx, accounts, params).unwrap_gas();
+        self.keeper.init(ctx, accounts, params);
 
         Vec::new()
     }
