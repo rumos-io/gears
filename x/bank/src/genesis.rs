@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::BankParams;
 
-// TODO: should remove total supply since it can be derived from the balances
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GenesisState {
     pub balances: Vec<Balance>,

@@ -233,7 +233,6 @@ impl<
             pagination,
         }: QuerySpendableBalancesRequest,
     ) -> QuerySpendableBalancesResponse {
-        // TODO: edit error "handling"
         let (spendable, pagination_result) = self
             .keeper
             .spendable_coins(ctx, &address, pagination.map(Pagination::from))

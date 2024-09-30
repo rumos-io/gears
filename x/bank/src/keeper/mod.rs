@@ -31,6 +31,11 @@ use std::marker::PhantomData;
 use std::ops::SubAssign;
 use std::{collections::HashMap, str::FromStr};
 
+pub mod balances;
+pub mod bank;
+pub mod gov;
+pub mod staking;
+
 const SUPPLY_KEY: [u8; 1] = [0];
 const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 const DENOM_METADATA_PREFIX: [u8; 1] = [1];
@@ -44,231 +49,25 @@ pub(crate) fn account_key(addr: &AccAddress) -> Vec<u8> {
     .concat()
 }
 
+fn denom_metadata_key(denom: String) -> Vec<u8> {
+    [DENOM_METADATA_PREFIX.to_vec(), denom.into_bytes()].concat()
+}
+
+fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
+    [
+        ADDRESS_BALANCES_STORE_PREFIX.to_vec(),
+        [addr.len()].to_vec(),
+        addr.into(),
+    ]
+    .concat()
+}
+
 #[derive(Debug, Clone)]
 pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> {
     store_key: SK,
     bank_params_keeper: BankParamsKeeper<PSK>,
     auth_keeper: AK,
     module_key: PhantomData<M>,
-}
-
-impl<
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
-        M: Module,
-    > BankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
-{
-    fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        from_address: AccAddress,
-        to_module: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        self.auth_keeper
-            .check_create_new_module_account(ctx, to_module)?;
-
-        let msg = MsgSend {
-            from_address,
-            to_address: to_module.get_address(),
-            amount,
-        };
-
-        self.send_coins(ctx, msg)?;
-
-        Ok(())
-    }
-
-    fn denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        base: &Denom,
-    ) -> Result<Option<Metadata>, GasStoreErrors> {
-        let bank_store = ctx.kv_store(&self.store_key);
-        let denom_metadata_store = bank_store.prefix_store(denom_metadata_key(base.to_string()));
-
-        Ok(denom_metadata_store
-            .get(&base.to_string().into_bytes())?
-            .map(|metadata| {
-                Metadata::decode::<&[u8]>(&metadata)
-                    .ok()
-                    .unwrap_or_corrupt()
-            }))
-    }
-
-    fn coins_burn<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        module: &M,
-        deposit: &UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        let module_acc_addr = module.get_address();
-
-        let account = self
-            .auth_keeper
-            .get_account(ctx, &module_acc_addr)?
-            .ok_or(AccountNotFound::new(module_acc_addr.to_string()))?;
-
-        match account.has_permissions("burner") {
-            true => Ok(()),
-            false => Err(BankKeeperError::AccountPermission),
-        }?;
-
-        self.sub_unlocked_coins(ctx, &module_acc_addr, deposit)?;
-
-        for coin in deposit.inner() {
-            let supply = self.supply(ctx, &coin.denom)?; // TODO: HOW TO HANDLE OPTION::NONE
-            if let Some(mut supply) = supply {
-                supply.amount.sub_assign(coin.amount);
-                self.set_supply(ctx, supply)?;
-            }
-        }
-
-        ctx.push_event(Event::new(
-            "burn",
-            vec![
-                EventAttribute::new(
-                    "burner".as_bytes().to_owned().into(),
-                    account.get_address().as_ref().to_owned().into(),
-                    false,
-                ),
-                EventAttribute::new(
-                    "amount".as_bytes().to_owned().into(),
-                    format!("{deposit:?}").into(),
-                    false,
-                ),
-            ],
-        ));
-
-        Ok(())
-    }
-
-    fn send_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        address: &AccAddress,
-        module: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        let module_address = module.get_address();
-
-        // TODO: what is blocked account and how to handle it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/keeper.go#L316-L318
-
-        self.send_coins(
-            ctx,
-            MsgSend {
-                from_address: module_address,
-                to_address: address.clone(),
-                amount,
-            },
-        )
-    }
-}
-
-impl<
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
-        M: Module,
-    > BalancesKeeper<SK, M> for Keeper<SK, PSK, AK, M>
-{
-    fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        addr: AccAddress,
-        pagination: Option<Pagination>,
-    ) -> Result<(Option<PaginationResult>, Vec<UnsignedCoin>), GasStoreErrors> {
-        let bank_store = ctx.kv_store(&self.store_key);
-        let prefix = create_denom_balance_prefix(addr.clone());
-        let account_store = bank_store.prefix_store(prefix);
-
-        let mut balances = vec![];
-
-        let (p_result, iterator) = account_store.into_range(..).maybe_paginate(pagination);
-        for rcoin in iterator {
-            let (_, coin) = rcoin?;
-            let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
-                .ok()
-                .unwrap_or_corrupt();
-            balances.push(coin);
-        }
-        Ok((p_result, balances))
-    }
-}
-
-impl<
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
-        M: Module,
-    > StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
-{
-    fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_pool: &M,
-        recepient_pool: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        self.send_coins_from_module_to_module(ctx, sender_pool, recepient_pool, amount)
-    }
-
-    fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_module: &M,
-        addr: AccAddress,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        self.undelegate_coins_from_module_to_account(ctx, sender_module, addr, amount)
-    }
-
-    fn delegate_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_addr: AccAddress,
-        recepient_module: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        self.delegate_coins_from_account_to_module(ctx, sender_addr, recepient_module, amount)
-    }
-}
-
-impl<
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
-        M: Module,
-    > GovernanceBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
-{
-    fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        address: &AccAddress,
-        denom: &Denom,
-    ) -> Result<UnsignedCoin, GasStoreErrors> {
-        let store = ctx
-            .kv_store(&self.store_key)
-            .prefix_store(account_key(address));
-
-        let coin_bytes = store.get(denom.as_str().as_bytes())?;
-        let coin = if let Some(coin_bytes) = coin_bytes {
-            UnsignedCoin {
-                denom: denom.to_owned(),
-                amount: Uint256::from_str(&String::from_utf8_lossy(&coin_bytes))
-                    .ok()
-                    .unwrap_or_corrupt(),
-            }
-        } else {
-            UnsignedCoin {
-                denom: denom.to_owned(),
-                amount: Uint256::zero(),
-            }
-        };
-
-        Ok(coin)
-    }
 }
 
 impl<
@@ -956,19 +755,6 @@ impl<
             Err(_) => Ok((None, total, pagination)),
         }
     }
-}
-
-fn denom_metadata_key(denom: String) -> Vec<u8> {
-    [DENOM_METADATA_PREFIX.to_vec(), denom.into_bytes()].concat()
-}
-
-fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
-    [
-        ADDRESS_BALANCES_STORE_PREFIX.to_vec(),
-        [addr.len()].to_vec(),
-        addr.into(),
-    ]
-    .concat()
 }
 
 //TODO: copy tests across
