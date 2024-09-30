@@ -3,11 +3,7 @@ use crate::{
     RedelegationEntry, StakingParams, UnbondingDelegation, Validator,
 };
 use gears::{
-    core::{
-        errors::CoreError,
-        query::{request::PageRequest, response::PageResponse},
-        Protobuf,
-    },
+    core::{errors::CoreError, Protobuf},
     derive::{Protobuf, Query, Raw},
     types::{
         address::{AccAddress, ValAddress},
@@ -17,6 +13,7 @@ use gears::{
     },
     x::types::validator::BondStatus,
 };
+use ibc_proto::cosmos::base::query::v1beta1::{PageRequest, PageResponse};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 

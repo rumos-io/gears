@@ -5,7 +5,7 @@ use gears::{
     derive::Protobuf,
     store::{database::Database, StoreKey},
     tendermint::{
-        informal::{hash::Algorithm, Hash},
+        informal::hash::{Algorithm, Hash},
         types::{
             proto::{info::Evidence as TmEvidence, validator::VotingPower},
             time::timestamp::{Nanoseconds, Timestamp, TimestampSeconds},

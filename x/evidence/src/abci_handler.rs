@@ -12,9 +12,9 @@ use gears::{
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::{any::google::Any, Protobuf},
     store::{database::Database, StoreKey},
-    tendermint::types::{
-        proto::info::EvidenceType,
-        request::{begin_block::RequestBeginBlock, query::RequestQuery},
+    tendermint::{
+        request::RequestBeginBlock,
+        types::{proto::info::EvidenceType, request::query::RequestQuery},
     },
     x::{
         keepers::{slashing::EvidenceSlashingKeeper, staking::SlashingStakingKeeper},

@@ -14,17 +14,15 @@ use serde::{Deserialize, Serialize};
 use crate::BankParams;
 
 pub mod inner {
-
-    // TODO: Remove re-export of this
-    pub use gears::core::query::request::bank::QueryAllBalancesRequest;
-    pub use gears::core::query::request::bank::QueryBalanceRequest;
-    pub use gears::core::query::request::bank::QueryDenomMetadataRequest;
-    pub use gears::core::query::request::bank::QueryDenomsMetadataRequest;
-    pub use gears::core::query::response::bank::QueryAllBalancesResponse;
-    pub use gears::core::query::response::bank::QueryBalanceResponse;
-    pub use gears::core::query::response::bank::QueryTotalSupplyRequest;
-    pub use gears::core::query::response::bank::QueryTotalSupplyResponse;
+    pub use ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesRequest;
+    pub use ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesResponse;
+    pub use ibc_proto::cosmos::bank::v1beta1::QueryBalanceRequest;
+    pub use ibc_proto::cosmos::bank::v1beta1::QueryBalanceResponse;
+    pub use ibc_proto::cosmos::bank::v1beta1::QueryDenomMetadataRequest;
     pub use ibc_proto::cosmos::bank::v1beta1::QueryDenomMetadataResponse;
+    pub use ibc_proto::cosmos::bank::v1beta1::QueryDenomsMetadataRequest;
+    pub use ibc_proto::cosmos::bank::v1beta1::QueryTotalSupplyRequest;
+    pub use ibc_proto::cosmos::bank::v1beta1::QueryTotalSupplyResponse;
 }
 
 #[derive(Clone, PartialEq, Debug, Query, Protobuf)]
