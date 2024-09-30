@@ -85,3 +85,8 @@ pub mod rpc {
         }
     }
 }
+
+pub mod abci {
+    pub use tendermint_informal::abci::Event;
+    pub use tendermint_informal::abci::EventAttribute;
+}
