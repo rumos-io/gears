@@ -118,17 +118,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler for AuthABCIHa
         query: RequestQuery,
     ) -> Result<Vec<u8>, QueryError> {
         match query.path.as_str() {
-            "/cosmos.auth.v1beta1.Query/Account" => {
+            QueryAccountRequest::QUERY_URL => {
                 let req = QueryAccountRequest::decode(query.data)?;
 
                 Ok(self.query_account(ctx, req).encode_vec())
             }
-            "/cosmos.auth.v1beta1.Query/Accounts" => {
+            QueryAccountsRequest::QUERY_URL => {
                 let req = QueryAccountsRequest::decode(query.data)?;
 
                 Ok(self.query_accounts(ctx, req).encode_vec())
             }
-            "/cosmos.auth.v1beta1.Query/Params" => {
+            QueryParamsRequest::QUERY_URL => {
                 let req = QueryParamsRequest::decode(query.data)?;
 
                 Ok(self.query_params(ctx, req).encode_vec())
