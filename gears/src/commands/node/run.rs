@@ -148,8 +148,11 @@ pub fn run<
         grpc_listen_addr.unwrap_or(config.grpc_listen_addr),
     );
 
-    let server = ServerBuilder::new(read_buf_size)
-        .bind(address.unwrap_or(config.address), ABCI::from(app))?;
+    let addr = address.unwrap_or(config.address);
+
+    let server = ServerBuilder::new(read_buf_size).bind(addr, ABCI::from(app))?;
+
+    info!("Starting proxy server at: {}", addr.to_string());
 
     server.listen().map_err(|e| e.into())
 }
