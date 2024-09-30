@@ -1,8 +1,9 @@
 use crate::{
     QueryDelegationRequest, QueryDelegatorDelegationsRequest,
     QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorValidatorsRequest, QueryPoolRequest,
-    QueryValidatorDelegationsRequest, QueryValidatorRequest, QueryValidatorsRequest,
-    StakingNodeQueryRequest, StakingNodeQueryResponse,
+    QueryValidatorDelegationsRequest, QueryValidatorRequest,
+    QueryValidatorUnbondingDelegationsRequest, QueryValidatorsRequest, StakingNodeQueryRequest,
+    StakingNodeQueryResponse,
 };
 use axum::{
     extract::{Path, Query, State},
@@ -76,6 +77,39 @@ pub async fn validator_delegations<
     });
     let res = rest_state.app.typed_query(req)?;
     Ok(Json(res))
+}
+
+pub async fn validator_unbonding_delegations<
+    QReq: QueryRequest + From<StakingNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<StakingNodeQueryResponse>,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    Path((validator_addr, delegator_addr)): Path<(ValAddress, AccAddress)>,
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+    Query(pagination): Query<Pagination>,
+) -> Result<Json<StakingNodeQueryResponse>, HTTPError> {
+    let req = StakingNodeQueryRequest::ValidatorUnbondingDelegations(
+        QueryValidatorUnbondingDelegationsRequest {
+            validator_addr,
+            pagination: Some(PaginationRequest::from(pagination)),
+        },
+    );
+
+    // TODO: consider to add filtering to the method
+    if let StakingNodeQueryResponse::ValidatorUnbondingDelegations(mut res) = rest_state
+        .app
+        .typed_query(req)?
+        .try_into()
+        .map_err(|_| HTTPError::internal_server_error())?
+    {
+        res.unbonding_responses
+            .retain(|ubd| ubd.delegator_address == delegator_addr);
+        Ok(Json(
+            StakingNodeQueryResponse::ValidatorUnbondingDelegations(res),
+        ))
+    } else {
+        Err(HTTPError::internal_server_error())
+    }
 }
 
 pub async fn delegation<
@@ -180,7 +214,11 @@ pub fn get_router<
         .route("/v1beta1/validators/:validator_addr", get(validator))
         .route(
             "/v1beta1/validators/:validator_addr/delegations",
-            get(delegation),
+            get(validator_delegations),
+        )
+        .route(
+            "/v1beta1/validators/:validator_addr/delegations/:delegator_addr/unbonding_delegation",
+            get(validator_unbonding_delegations),
         )
         .route(
             "/v1beta1/validators/:validator_addr/delegations/:delegator_addr",

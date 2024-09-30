@@ -47,6 +47,9 @@ mod inner {
     };
     pub use ibc_proto::cosmos::staking::v1beta1::{QueryValidatorRequest, QueryValidatorResponse};
     pub use ibc_proto::cosmos::staking::v1beta1::{
+        QueryValidatorUnbondingDelegationsRequest, QueryValidatorUnbondingDelegationsResponse,
+    };
+    pub use ibc_proto::cosmos::staking::v1beta1::{
         QueryValidatorsRequest, QueryValidatorsResponse,
     };
 }
@@ -81,6 +84,18 @@ pub struct QueryValidatorsRequest {
 #[query(url = "/cosmos.staking.v1beta1.Query/ValidatorDelegations")]
 #[proto(raw = "inner::QueryValidatorDelegationsRequest")]
 pub struct QueryValidatorDelegationsRequest {
+    /// validator_addr defines the validator address to query for.
+    pub validator_addr: ValAddress,
+    /// pagination defines an optional pagination for the request.
+    #[proto(optional)]
+    pub pagination: Option<PaginationRequest>,
+}
+
+/// QueryValidatorUnbondingDelegationsRequest is required type for the Query/ValidatorUnbondingDelegations RPC method
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
+#[query(url = "/cosmos.staking.v1beta1.Query/ValidatorUnbondingDelegations")]
+#[proto(raw = "inner::QueryValidatorUnbondingDelegationsRequest")]
+pub struct QueryValidatorUnbondingDelegationsRequest {
     /// validator_addr defines the validator address to query for.
     pub validator_addr: ValAddress,
     /// pagination defines an optional pagination for the request.
@@ -251,6 +266,17 @@ pub struct QueryValidatorsResponse {
 pub struct QueryValidatorDelegationsResponse {
     #[proto(repeated)]
     pub delegation_responses: Vec<DelegationResponse>,
+    /// pagination defines the pagination in the response.
+    #[proto(optional)]
+    pub pagination: Option<PaginationResponse>,
+}
+
+/// QueryValidatorUnbondingDelegationsResponse is response type for the Query/ValidatorUnbondingDelegations RPC method.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryValidatorUnbondingDelegationsResponse")]
+pub struct QueryValidatorUnbondingDelegationsResponse {
+    #[proto(repeated)]
+    pub unbonding_responses: Vec<UnbondingDelegation>,
     /// pagination defines the pagination in the response.
     #[proto(optional)]
     pub pagination: Option<PaginationResponse>,

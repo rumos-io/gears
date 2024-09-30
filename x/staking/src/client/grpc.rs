@@ -91,9 +91,22 @@ where
 
     async fn validator_unbonding_delegations(
         &self,
-        _request: Request<QueryValidatorUnbondingDelegationsRequest>,
+        request: Request<QueryValidatorUnbondingDelegationsRequest>,
     ) -> Result<Response<QueryValidatorUnbondingDelegationsResponse>, Status> {
-        unimplemented!()
+        info!("Received a gRPC request staking::validator_unbonding_delegations");
+        let req = StakingNodeQueryRequest::ValidatorUnbondingDelegations(
+            request.into_inner().try_into()?,
+        );
+        let response = self.app.typed_query(req)?;
+        let response: StakingNodeQueryResponse = response.try_into()?;
+
+        if let StakingNodeQueryResponse::ValidatorUnbondingDelegations(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ))
+        }
     }
 
     async fn delegation(

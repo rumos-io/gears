@@ -1,5 +1,6 @@
 use gears::{
     core::{errors::CoreError, Protobuf},
+    derive::Protobuf,
     extensions::pagination::PaginationKey,
     tendermint::types::time::timestamp::Timestamp,
     types::{
@@ -12,6 +13,14 @@ use gears::{
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::str::FromStr;
+
+mod inner {
+    pub use ibc_proto::cosmos::staking::v1beta1::Delegation;
+    pub use ibc_proto::cosmos::staking::v1beta1::Redelegation;
+    pub use ibc_proto::cosmos::staking::v1beta1::RedelegationEntry;
+    pub use ibc_proto::cosmos::staking::v1beta1::UnbondingDelegation;
+    pub use ibc_proto::cosmos::staking::v1beta1::UnbondingDelegationEntry;
+}
 
 /// Delegation represents the bond with tokens held by an account. It is
 /// owned by one delegator, and is associated with the voting power of one
@@ -78,53 +87,29 @@ impl TryFrom<inner::Delegation> for Delegation {
 
 impl Protobuf<inner::Delegation> for Delegation {}
 
-mod inner {
-    pub use ibc_proto::cosmos::staking::v1beta1::Delegation;
-    pub use ibc_proto::cosmos::staking::v1beta1::Redelegation;
-    pub use ibc_proto::cosmos::staking::v1beta1::RedelegationEntry;
-    pub use ibc_proto::cosmos::staking::v1beta1::UnbondingDelegation;
-    pub use ibc_proto::cosmos::staking::v1beta1::UnbondingDelegationEntry;
-}
-
 /// Delegation represents the bond with tokens held by an account. It is
 /// owned by one delegator, and is associated with the voting power of one
 /// validator.
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Protobuf)]
+#[proto(raw = "inner::UnbondingDelegation")]
 pub struct UnbondingDelegation {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
+    #[proto(repeated)]
     pub entries: Vec<UnbondingDelegationEntry>,
 }
 
-impl From<UnbondingDelegation> for inner::UnbondingDelegation {
-    fn from(value: UnbondingDelegation) -> Self {
-        inner::UnbondingDelegation {
-            delegator_address: value.delegator_address.to_string(),
-            validator_address: value.validator_address.to_string(),
-            entries: value.entries.into_iter().map(Into::into).collect(),
-        }
+impl PaginationKey for UnbondingDelegation {
+    fn iterator_key(&self) -> Cow<'_, [u8]> {
+        Cow::Owned(
+            [
+                self.delegator_address.to_string().as_bytes(),
+                self.validator_address.to_string().as_bytes(),
+            ]
+            .concat(),
+        )
     }
 }
-
-impl TryFrom<inner::UnbondingDelegation> for UnbondingDelegation {
-    type Error = CoreError;
-
-    fn try_from(proto: inner::UnbondingDelegation) -> Result<Self, Self::Error> {
-        Ok(UnbondingDelegation {
-            delegator_address: AccAddress::from_bech32(&proto.delegator_address)
-                .map_err(|e| CoreError::DecodeGeneral(format!("delegator_address: {}", e)))?,
-            validator_address: ValAddress::from_bech32(&proto.validator_address)
-                .map_err(|e| CoreError::DecodeGeneral(format!("validator_address: {}", e)))?,
-            entries: proto
-                .entries
-                .into_iter()
-                .map(TryFrom::try_from)
-                .collect::<Result<_, _>>()?,
-        })
-    }
-}
-
-impl Protobuf<inner::UnbondingDelegation> for UnbondingDelegation {}
 
 /// UnbondingDelegationEntry - entry to an UnbondingDelegation
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -177,46 +162,15 @@ impl TryFrom<inner::UnbondingDelegationEntry> for UnbondingDelegationEntry {
 /// Redelegation contains the list of a particular delegator's
 /// redelegating bonds from a particular source validator to a
 /// particular destination validator
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Protobuf)]
+#[proto(raw = "inner::Redelegation")]
 pub struct Redelegation {
     pub delegator_address: AccAddress,
     pub validator_src_address: ValAddress,
     pub validator_dst_address: ValAddress,
+    #[proto(repeated)]
     pub entries: Vec<RedelegationEntry>,
 }
-
-impl From<Redelegation> for inner::Redelegation {
-    fn from(value: Redelegation) -> Self {
-        inner::Redelegation {
-            delegator_address: value.delegator_address.to_string(),
-            validator_src_address: value.validator_src_address.to_string(),
-            validator_dst_address: value.validator_dst_address.to_string(),
-            entries: value.entries.into_iter().map(Into::into).collect(),
-        }
-    }
-}
-
-impl TryFrom<inner::Redelegation> for Redelegation {
-    type Error = CoreError;
-
-    fn try_from(proto: inner::Redelegation) -> Result<Self, Self::Error> {
-        Ok(Redelegation {
-            delegator_address: AccAddress::from_bech32(&proto.delegator_address)
-                .map_err(|e| CoreError::DecodeGeneral(format!("delegator_address: {}", e)))?,
-            validator_src_address: ValAddress::from_bech32(&proto.validator_src_address)
-                .map_err(|e| CoreError::DecodeGeneral(format!("validator_src_address: {}", e)))?,
-            validator_dst_address: ValAddress::from_bech32(&proto.validator_dst_address)
-                .map_err(|e| CoreError::DecodeGeneral(format!("validator_dst_address: {}", e)))?,
-            entries: proto
-                .entries
-                .into_iter()
-                .map(TryFrom::try_from)
-                .collect::<Result<_, _>>()?,
-        })
-    }
-}
-
-impl Protobuf<inner::Redelegation> for Redelegation {}
 
 impl Redelegation {
     pub fn add_entry(&mut self, redelegation_entry: RedelegationEntry) {

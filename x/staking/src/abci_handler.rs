@@ -11,7 +11,8 @@ use crate::{
 use crate::{
     QueryDelegatorValidatorsRequest, QueryDelegatorValidatorsResponse, QueryHistoricalInfoRequest,
     QueryHistoricalInfoResponse, QueryValidatorDelegationsRequest,
-    QueryValidatorDelegationsResponse,
+    QueryValidatorDelegationsResponse, QueryValidatorUnbondingDelegationsRequest,
+    QueryValidatorUnbondingDelegationsResponse,
 };
 use gears::extensions::gas::GasResultExt;
 use gears::{
@@ -59,6 +60,7 @@ pub enum StakingNodeQueryRequest {
     Validator(QueryValidatorRequest),
     Validators(QueryValidatorsRequest),
     ValidatorDelegations(QueryValidatorDelegationsRequest),
+    ValidatorUnbondingDelegations(QueryValidatorUnbondingDelegationsRequest),
     Delegation(QueryDelegationRequest),
     Delegations(QueryDelegatorDelegationsRequest),
     UnbondingDelegation(QueryUnbondingDelegationRequest),
@@ -83,6 +85,7 @@ pub enum StakingNodeQueryResponse {
     Validator(QueryValidatorResponse),
     Validators(QueryValidatorsResponse),
     ValidatorDelegations(QueryValidatorDelegationsResponse),
+    ValidatorUnbondingDelegations(QueryValidatorUnbondingDelegationsResponse),
     Delegation(QueryDelegationResponse),
     Delegations(QueryDelegatorDelegationsResponse),
     UnbondingDelegation(QueryUnbondingDelegationResponse),
@@ -129,6 +132,11 @@ impl<
             StakingNodeQueryRequest::ValidatorDelegations(req) => {
                 StakingNodeQueryResponse::ValidatorDelegations(
                     self.keeper.query_validator_delegations(ctx, req),
+                )
+            }
+            StakingNodeQueryRequest::ValidatorUnbondingDelegations(req) => {
+                StakingNodeQueryResponse::ValidatorUnbondingDelegations(
+                    self.keeper.query_validator_unbonding_delegations(ctx, req),
                 )
             }
             StakingNodeQueryRequest::Delegation(req) => {
@@ -232,6 +240,14 @@ impl<
                 Ok(self
                     .keeper
                     .query_validator_delegations(ctx, req)
+                    .into_bytes())
+            }
+            "/cosmos.staking.v1beta1.Query/ValidatorUnbondingDelegations" => {
+                let req = QueryValidatorUnbondingDelegationsRequest::decode(query.data)?;
+
+                Ok(self
+                    .keeper
+                    .query_validator_unbonding_delegations(ctx, req)
                     .into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/Delegation" => {

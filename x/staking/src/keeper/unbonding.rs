@@ -1,7 +1,10 @@
 use super::*;
 use crate::{
     parse_validator_queue_key,
-    types::keys::{get_ubd_by_val_index_key, get_ubd_key, get_unbonding_delegation_time_key},
+    types::keys::{
+        get_ubd_by_val_index_key, get_ubd_key, get_ubd_key_from_val_index_key,
+        get_ubds_by_val_index_key, get_unbonding_delegation_time_key,
+    },
     validator_queue_key, DvPairs, UnbondingDelegationEntry, ValAddresses,
 };
 use gears::{
@@ -86,6 +89,34 @@ impl<
         let key =
             get_ubd_by_val_index_key(&delegation.delegator_address, &delegation.validator_address);
         store.delete(&key)
+    }
+
+    /// unbonding_delegations_from_validator returns all unbonding delegations from a
+    /// particular validator.
+    pub fn unbonding_delegations_from_validator<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        val_addr: &ValAddress,
+    ) -> Result<Vec<UnbondingDelegation>, GasStoreErrors> {
+        let store = ctx.kv_store(&self.store_key);
+        let key = get_ubds_by_val_index_key(val_addr);
+        let ubds_store = store.prefix_store(key);
+        let mut unbonding_delegations_keys = vec![];
+        for r in ubds_store.into_range(..) {
+            let (k, _v) = r?;
+            let key = get_ubd_key_from_val_index_key(&k);
+            unbonding_delegations_keys.push(key);
+        }
+        let store = ctx.kv_store(&self.store_key);
+        let mut unbonding_delegations = vec![];
+        for ubd_key in unbonding_delegations_keys {
+            let value = store
+                .get(&ubd_key)?
+                .expect("Expected corresponding key-value pair");
+            unbonding_delegations.push(UnbondingDelegation::decode_vec(&value).unwrap_or_corrupt())
+        }
+
+        Ok(unbonding_delegations)
     }
 
     pub fn has_max_unbonding_delegation_entries<DB: Database, CTX: QueryableContext<DB, SK>>(

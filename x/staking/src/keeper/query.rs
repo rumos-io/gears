@@ -7,7 +7,8 @@ use crate::{
     QueryHistoricalInfoResponse, QueryParamsResponse, QueryPoolResponse,
     QueryUnbondingDelegationRequest, QueryUnbondingDelegationResponse,
     QueryValidatorDelegationsRequest, QueryValidatorDelegationsResponse, QueryValidatorRequest,
-    QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
+    QueryValidatorResponse, QueryValidatorUnbondingDelegationsRequest,
+    QueryValidatorUnbondingDelegationsResponse, QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use gears::{
     baseapp::errors::QueryError,
@@ -185,6 +186,27 @@ impl<
 
         QueryValidatorDelegationsResponse {
             delegation_responses,
+            pagination: p_res.map(PaginationResponse::from),
+        }
+    }
+
+    pub fn query_validator_unbonding_delegations<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryValidatorUnbondingDelegationsRequest,
+    ) -> QueryValidatorUnbondingDelegationsResponse {
+        let unbonding_delegations = self
+            .unbonding_delegations_from_validator(ctx, &query.validator_addr)
+            .unwrap_gas();
+
+        let (p_res, iter) = unbonding_delegations
+            .into_iter()
+            .maybe_paginate(query.pagination.map(Pagination::from));
+
+        let unbonding_responses = iter.collect();
+
+        QueryValidatorUnbondingDelegationsResponse {
+            unbonding_responses,
             pagination: p_res.map(PaginationResponse::from),
         }
     }

@@ -6,6 +6,7 @@ use crate::{
     QueryPoolResponse, QueryRedelegationsRequest, QueryRedelegationsResponse,
     QueryUnbondingDelegationResponse, QueryValidatorDelegationsRequest,
     QueryValidatorDelegationsResponse, QueryValidatorRequest, QueryValidatorResponse,
+    QueryValidatorUnbondingDelegationsRequest, QueryValidatorUnbondingDelegationsResponse,
     QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use clap::{Args, Subcommand};
@@ -39,6 +40,7 @@ pub enum StakingCommands {
     DelegationsTo(DelegationsToCommand),
     UnbondingDelegation(UnbondingDelegationCommand),
     UnbondingDelegations(UnbondingDelegationsCommand),
+    UnbondingDelegationsFrom(UnbondingDelegationsFromCommand),
     Redelegation(RedelegationCommand),
     HistoricalInfo(HistoricalInfoCommand),
     Pool,
@@ -100,6 +102,15 @@ pub struct UnbondingDelegationCommand {
 pub struct UnbondingDelegationsCommand {
     /// Delegator address who sent unbonding request
     pub delegator_address: AccAddress,
+    #[command(flatten)]
+    pub pagination: Option<CliPaginationRequest>,
+}
+
+/// Query all the unbonding delegations from a specific validator
+#[derive(Args, Debug, Clone)]
+pub struct UnbondingDelegationsFromCommand {
+    /// Validator address which is addressed to delegations
+    pub validator_address: ValAddress,
     #[command(flatten)]
     pub pagination: Option<CliPaginationRequest>,
 }
@@ -183,6 +194,15 @@ impl QueryHandler for StakingQueryHandler {
                 delegator_addr: delegator_address.clone(),
                 pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
             }),
+            StakingCommands::UnbondingDelegationsFrom(UnbondingDelegationsFromCommand {
+                validator_address,
+                pagination,
+            }) => {
+                StakingQuery::UnbondingDelegationsFrom(QueryValidatorUnbondingDelegationsRequest {
+                    validator_addr: validator_address.clone(),
+                    pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
+                })
+            }
             StakingCommands::Redelegation(RedelegationCommand {
                 delegator_address,
                 src_validator_address,
@@ -230,6 +250,11 @@ impl QueryHandler for StakingQueryHandler {
             StakingCommands::UnbondingDelegations(_) => StakingQueryResponse::UnbondingDelegations(
                 QueryDelegatorUnbondingDelegationsResponse::decode_vec(&query_bytes)?,
             ),
+            StakingCommands::UnbondingDelegationsFrom(_) => {
+                StakingQueryResponse::UnbondingDelegationsFrom(
+                    QueryValidatorUnbondingDelegationsResponse::decode_vec(&query_bytes)?,
+                )
+            }
             StakingCommands::Redelegation(_) => StakingQueryResponse::Redelegation(
                 QueryRedelegationsResponse::decode_vec(&query_bytes)?,
             ),
@@ -258,6 +283,7 @@ pub enum StakingQuery {
     Delegations(QueryDelegatorDelegationsRequest),
     UnbondingDelegation(QueryDelegationRequest),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsRequest),
+    UnbondingDelegationsFrom(QueryValidatorUnbondingDelegationsRequest),
     Redelegation(QueryRedelegationsRequest),
     HistoricalInfo(QueryHistoricalInfoRequest),
     Pool(QueryPoolRequest),
@@ -275,6 +301,7 @@ pub enum StakingQueryResponse {
     Delegations(QueryDelegatorDelegationsResponse),
     UnbondingDelegation(QueryUnbondingDelegationResponse),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsResponse),
+    UnbondingDelegationsFrom(QueryValidatorUnbondingDelegationsResponse),
     Redelegation(QueryRedelegationsResponse),
     HistoricalInfo(QueryHistoricalInfoResponse),
     Pool(QueryPoolResponse),
