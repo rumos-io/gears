@@ -39,7 +39,7 @@ impl<SK: StoreKey, M: Module> BankKeeper<SK, M> for MockBankKeeper {
         Ok(())
     }
 
-    fn get_denom_metadata<DB: database::Database, CTX: crate::context::QueryableContext<DB, SK>>(
+    fn denom_metadata<DB: database::Database, CTX: crate::context::QueryableContext<DB, SK>>(
         &self,
         _: &CTX,
         _: &crate::types::denom::Denom,

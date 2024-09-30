@@ -27,7 +27,7 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError>;
 
-    fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         base: &Denom,

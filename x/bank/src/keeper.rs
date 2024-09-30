@@ -81,7 +81,7 @@ impl<
         Ok(())
     }
 
-    fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         base: &Denom,
@@ -174,7 +174,7 @@ impl<
         M: Module,
     > StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
-    fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: AccAddress,
@@ -517,7 +517,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         let to_address = msg.to_address;
 
         for send_coin in msg.amount {
-            let mut from_account_store = self.get_address_balances_store(ctx, &from_address);
+            let mut from_account_store = self.address_balances_store(ctx, &from_address);
             let from_balance = from_account_store
                 .get(send_coin.denom.to_string().as_bytes())?
                 .ok_or(InsufficientFundsError::RequiredActual {
@@ -549,7 +549,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 )?;
             }
 
-            let mut to_account_store = self.get_address_balances_store(ctx, &to_address);
+            let mut to_account_store = self.address_balances_store(ctx, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes())?;
 
             let mut to_balance: UnsignedCoin = match to_balance {
@@ -628,7 +628,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         }
     }
 
-    fn get_address_balances_store<'a, DB: Database>(
+    fn address_balances_store<'a, DB: Database>(
         &'a self,
         ctx: &'a mut impl TransactionalContext<DB, SK>,
         address: &AccAddress,

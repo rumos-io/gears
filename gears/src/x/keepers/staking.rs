@@ -213,7 +213,7 @@ pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
     //
     // BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
 
-    fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: AccAddress,

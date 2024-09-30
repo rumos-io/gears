@@ -109,7 +109,7 @@ impl<
                 BankNodeQueryResponse::DenomsMetadata(self.query_denoms(ctx, req))
             }
             BankNodeQueryRequest::DenomMetadata(req) => {
-                let metadata = self.keeper.get_denom_metadata(ctx, &req.denom).unwrap_gas();
+                let metadata = self.keeper.denom_metadata(ctx, &req.denom).unwrap_gas();
                 BankNodeQueryResponse::DenomMetadata(QueryDenomMetadataResponse { metadata })
             }
             BankNodeQueryRequest::Params(_req) => {
@@ -192,7 +192,7 @@ impl<
             }
             QueryDenomMetadataRequest::QUERY_URL => {
                 let req = QueryDenomMetadataRequest::decode(query.data)?;
-                let metadata = self.keeper.get_denom_metadata(ctx, &req.denom).unwrap_gas();
+                let metadata = self.keeper.denom_metadata(ctx, &req.denom).unwrap_gas();
                 Ok(QueryDenomMetadataResponse { metadata }.encode_vec())
             }
             QueryParamsRequest::QUERY_URL => {

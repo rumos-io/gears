@@ -13,7 +13,7 @@ use super::bank::MockBankKeeper;
 
 impl<SK: StoreKey, M: Module> StakingBankKeeper<SK, M> for MockBankKeeper {
     //  TODO: Remove and use balances_all
-    fn get_all_balances<DB: database::Database, CTX: crate::context::QueryableContext<DB, SK>>(
+    fn all_balances<DB: database::Database, CTX: crate::context::QueryableContext<DB, SK>>(
         &self,
         _: &CTX,
         _: address::AccAddress,
