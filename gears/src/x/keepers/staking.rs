@@ -17,7 +17,10 @@ use crate::{
     },
 };
 
-use super::{auth::AuthKeeper, bank::BankKeeper};
+use super::{
+    auth::AuthKeeper,
+    bank::{BalancesKeeper, BankKeeper},
+};
 
 /// Delay, in blocks, between when validator updates are returned to the
 /// consensus-engine and when they are applied. For example, if
@@ -203,7 +206,7 @@ pub trait DistributionStakingKeeper<SK: StoreKey, M: Module>:
 
 /// StakingBankKeeper defines the expected interface needed to retrieve account balances.
 pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
-    Clone + Send + Sync + 'static + BankKeeper<SK, M>
+    BankKeeper<SK, M> + BalancesKeeper<SK, M> + Clone + Send + Sync + 'static
 {
     // GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
     // LockedCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
@@ -212,12 +215,6 @@ pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
     // GetSupply(ctx sdk.Context, denom string) sdk.Coin
     //
     // BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
-
-    fn all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        addr: AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors>;
 
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,

@@ -2,7 +2,11 @@ use kv_store::StoreKey;
 
 use crate::{
     types::{base::coin::UnsignedCoin, store::gas::errors::GasStoreErrors, tx::metadata::Metadata},
-    x::{errors::BankKeeperError, keepers::bank::BankKeeper, module::Module},
+    x::{
+        errors::BankKeeperError,
+        keepers::bank::{BalancesKeeper, BankKeeper},
+        module::Module,
+    },
 };
 
 #[derive(former::Former, Clone, Debug)]
@@ -10,6 +14,23 @@ pub struct MockBankKeeper {
     pub get_denom_metadata: Option<Metadata>,
     pub balance_all: Vec<UnsignedCoin>,
     pub balance: UnsignedCoin,
+}
+
+impl<SK: StoreKey, M: Module> BalancesKeeper<SK, M> for MockBankKeeper {
+    fn balance_all<DB: database::Database, CTX: crate::context::QueryableContext<DB, SK>>(
+        &self,
+        _ctx: &CTX,
+        _address: address::AccAddress,
+        _pagination: Option<extensions::pagination::Pagination>,
+    ) -> Result<
+        (
+            Option<extensions::pagination::PaginationResult>,
+            Vec<UnsignedCoin>,
+        ),
+        GasStoreErrors,
+    > {
+        Ok((None, self.balance_all.clone()))
+    }
 }
 
 impl<SK: StoreKey, M: Module> BankKeeper<SK, M> for MockBankKeeper {

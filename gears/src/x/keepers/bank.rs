@@ -1,14 +1,27 @@
 use database::Database;
+use extensions::pagination::{Pagination, PaginationResult};
 use kv_store::StoreKey;
 
 use crate::{
     context::{QueryableContext, TransactionalContext},
     types::{
-        address::AccAddress, base::coins::UnsignedCoins, denom::Denom,
-        store::gas::errors::GasStoreErrors, tx::metadata::Metadata,
+        address::AccAddress,
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
+        denom::Denom,
+        store::gas::errors::GasStoreErrors,
+        tx::metadata::Metadata,
     },
     x::{errors::BankKeeperError, module::Module},
 };
+
+pub trait BalancesKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
+    fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        address: AccAddress,
+        pagination: Option<Pagination>,
+    ) -> Result<(Option<PaginationResult>, Vec<UnsignedCoin>), GasStoreErrors>;
+}
 
 pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(

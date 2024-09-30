@@ -14,7 +14,7 @@ use gears::store::StoreKey;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::pagination::response::PaginationResponse;
 use gears::x::keepers::auth::AuthKeeper;
-use gears::x::keepers::bank::BankKeeper;
+use gears::x::keepers::bank::{BalancesKeeper, BankKeeper};
 use gears::x::module::Module;
 use serde::Serialize;
 
@@ -206,8 +206,13 @@ impl<
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI: ModuleInfo>
-    BankABCIHandler<SK, PSK, AK, M, MI>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
+        M: Module,
+        MI: ModuleInfo,
+    > BankABCIHandler<SK, PSK, AK, M, MI>
 {
     pub fn new(keeper: Keeper<SK, PSK, AK, M>) -> Self {
         BankABCIHandler {
@@ -253,7 +258,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
     ) -> QueryAllBalancesResponse {
         let (p_result, balances) = self
             .keeper
-            .all_balances(ctx, address, pagination.map(Pagination::from))
+            .balance_all(ctx, address, pagination.map(Pagination::from))
             .unwrap_gas();
 
         QueryAllBalancesResponse {

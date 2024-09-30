@@ -2,25 +2,13 @@ use kv_store::StoreKey;
 
 use crate::{
     context::TransactionalContext,
-    types::{
-        base::{coin::UnsignedCoin, coins::UnsignedCoins},
-        store::gas::errors::GasStoreErrors,
-    },
+    types::base::coins::UnsignedCoins,
     x::{errors::BankKeeperError, keepers::staking::StakingBankKeeper, module::Module},
 };
 
 use super::bank::MockBankKeeper;
 
 impl<SK: StoreKey, M: Module> StakingBankKeeper<SK, M> for MockBankKeeper {
-    //  TODO: Remove and use balances_all
-    fn all_balances<DB: database::Database, CTX: crate::context::QueryableContext<DB, SK>>(
-        &self,
-        _: &CTX,
-        _: address::AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
-        Ok(self.balance_all.clone())
-    }
-
     fn send_coins_from_module_to_module<
         DB: database::Database,
         CTX: TransactionalContext<DB, SK>,

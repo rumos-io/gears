@@ -1,4 +1,3 @@
-use crate::types::iter::balances::BalanceIterator;
 use crate::{BankParams, BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
@@ -24,7 +23,7 @@ use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
 use gears::x::errors::{AccountNotFound, BankCoinsError, BankKeeperError, InsufficientFundsError};
 use gears::x::keepers::auth::AuthKeeper;
-use gears::x::keepers::bank::BankKeeper;
+use gears::x::keepers::bank::{BalancesKeeper, BankKeeper};
 use gears::x::keepers::gov::GovernanceBankKeeper;
 use gears::x::keepers::staking::StakingBankKeeper;
 use gears::x::module::Module;
@@ -172,18 +171,39 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M> + Send + Sync + 'static,
         M: Module,
-    > StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
+    > BalancesKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
-    fn all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
-        let (_, result) = self.all_balances(ctx, addr, None)?;
+        pagination: Option<Pagination>,
+    ) -> Result<(Option<PaginationResult>, Vec<UnsignedCoin>), GasStoreErrors> {
+        let bank_store = ctx.kv_store(&self.store_key);
+        let prefix = create_denom_balance_prefix(addr.clone());
+        let account_store = bank_store.prefix_store(prefix);
 
-        Ok(result)
+        let mut balances = vec![];
+
+        let (p_result, iterator) = account_store.into_range(..).maybe_paginate(pagination);
+        for rcoin in iterator {
+            let (_, coin) = rcoin?;
+            let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
+                .ok()
+                .unwrap_or_corrupt();
+            balances.push(coin);
+        }
+        Ok((p_result, balances))
     }
+}
 
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
+        M: Module,
+    > StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
+{
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -222,24 +242,6 @@ impl<
         M: Module,
     > GovernanceBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
-    fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        address: &AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
-        let iterator = BalanceIterator::new(ctx.kv_store(&self.store_key), address)
-            .map(|this| this.map(|(_, val)| val));
-
-        let mut balances = Vec::<UnsignedCoin>::new();
-        for coin in iterator {
-            let coin = coin?;
-
-            balances.push(coin);
-        }
-
-        Ok(balances)
-    }
-
     fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
@@ -269,8 +271,12 @@ impl<
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
-    Keeper<SK, PSK, AK, M>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
+        M: Module,
+    > Keeper<SK, PSK, AK, M>
 {
     pub fn new(store_key: SK, params_subspace_key: PSK, auth_keeper: AK) -> Self {
         let bank_params_keeper = BankParamsKeeper {
@@ -408,29 +414,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             ],
         ));
         Ok(())
-    }
-
-    pub fn all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        addr: AccAddress,
-        pagination: Option<Pagination>,
-    ) -> Result<(Option<PaginationResult>, Vec<UnsignedCoin>), GasStoreErrors> {
-        let bank_store = ctx.kv_store(&self.store_key);
-        let prefix = create_denom_balance_prefix(addr);
-        let account_store = bank_store.prefix_store(prefix);
-
-        let mut balances = vec![];
-
-        let (p_result, iterator) = account_store.into_range(..).maybe_paginate(pagination);
-        for rcoin in iterator {
-            let (_, coin) = rcoin?;
-            let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
-                .ok()
-                .unwrap_or_corrupt();
-            balances.push(coin);
-        }
-        Ok((p_result, balances))
     }
 
     /// Gets the total supply of every denom
@@ -962,7 +945,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ),
         BankKeeperError,
     > {
-        let (pagination, total) = self.all_balances(ctx, addr.clone(), pagination)?;
+        let (pagination, total) = self.balance_all(ctx, addr.clone(), pagination)?;
         let locked = self.locked_coins(ctx, addr)?;
 
         let total = UnsignedCoins::new(total)?;

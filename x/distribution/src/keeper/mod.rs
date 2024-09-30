@@ -182,8 +182,9 @@ impl<
         self.check_set_distribution_account(ctx).unwrap_gas();
         let balances = self
             .bank_keeper
-            .all_balances(ctx, self.distribution_module.get_address())
-            .unwrap_gas();
+            .balance_all(ctx, self.distribution_module.get_address(), None)
+            .unwrap_gas()
+            .1;
 
         if module_holdings_int != Some(UnsignedCoins::new(balances)?) {
             return Err(anyhow!(
