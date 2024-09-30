@@ -263,29 +263,6 @@ impl<
         Ok(())
     }
 
-    /// send_coins_from_module_to_module delegates coins and transfers them from a
-    /// delegator account to a module account. It creates the module accounts if it don't exist.
-    /// It's safe operation because the modules are app generic parameter
-    /// which cannot be added in runtime.
-    pub fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_pool: &M,
-        recepient_pool: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        self.auth_keeper
-            .check_create_new_module_account(ctx, recepient_pool)?;
-
-        let msg = MsgSend {
-            from_address: sender_pool.get_address(),
-            to_address: recepient_pool.get_address(),
-            amount,
-        };
-
-        self.send_coins(ctx, msg)
-    }
-
     fn send_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -463,33 +440,6 @@ impl<
         (p_result, denoms_metadata)
     }
 
-    pub fn delegate_coins_from_account_to_module<
-        DB: Database,
-        CTX: TransactionalContext<DB, SK>,
-    >(
-        &self,
-        ctx: &mut CTX,
-        sender_addr: AccAddress,
-        recepient_module: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        let recepient_module_addr = recepient_module.get_address();
-        self.auth_keeper
-            .check_create_new_module_account(ctx, recepient_module)?;
-
-        if !recepient_module
-            .get_permissions()
-            .iter()
-            .any(|p| p == "staking")
-        {
-            return Err(BankKeeperError::Permission(format!(
-                "module account {} does not have permissions to receive delegated coins",
-                recepient_module.get_name()
-            )));
-        }
-        self.delegate_coins(ctx, sender_addr, recepient_module_addr, amount)
-    }
-
     /// delegate_coins performs delegation by deducting amt coins from an account with
     /// address addr. For vesting accounts, delegations amounts are tracked for both
     /// vesting and vested coins. The coins are then transferred from the delegator
@@ -554,36 +504,6 @@ impl<
         ));
 
         Ok(self.add_coins(ctx, &module_acc_addr, amount.into())?)
-    }
-
-    /// undelegate_coins_from_module_to_account undelegates the unbonding coins and transfers
-    /// them from a module account to the delegator account. It will panic if the
-    /// module account does not exist or is unauthorized.
-    pub fn undelegate_coins_from_module_to_account<
-        DB: Database,
-        CTX: TransactionalContext<DB, SK>,
-    >(
-        &self,
-        ctx: &mut CTX,
-        sender_module: &M,
-        addr: AccAddress,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        let sender_module_addr = sender_module.get_address();
-        self.auth_keeper
-            .check_create_new_module_account(ctx, sender_module)?;
-
-        if !sender_module
-            .get_permissions()
-            .iter()
-            .any(|p| p == "staking")
-        {
-            return Err(BankKeeperError::Permission(format!(
-                "module account {} does not have permissions to receive undelegate coins",
-                sender_module.get_name()
-            )));
-        }
-        self.undelegate_coins(ctx, sender_module_addr, addr, amount)
     }
 
     /// undelegate_coins performs undelegation by crediting amt coins to an account with

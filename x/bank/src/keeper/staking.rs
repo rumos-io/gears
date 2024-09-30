@@ -14,7 +14,16 @@ impl<
         recepient_pool: &M,
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
-        self.send_coins_from_module_to_module(ctx, sender_pool, recepient_pool, amount)
+        self.auth_keeper
+            .check_create_new_module_account(ctx, recepient_pool)?;
+
+        let msg = MsgSend {
+            from_address: sender_pool.get_address(),
+            to_address: recepient_pool.get_address(),
+            amount,
+        };
+
+        self.send_coins(ctx, msg)
     }
 
     fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -24,7 +33,22 @@ impl<
         addr: AccAddress,
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
-        self.undelegate_coins_from_module_to_account(ctx, sender_module, addr, amount)
+        let sender_module_addr = sender_module.get_address();
+        self.auth_keeper
+            .check_create_new_module_account(ctx, sender_module)?;
+
+        if !sender_module
+            .get_permissions()
+            .iter()
+            .any(|p| p == "staking")
+        {
+            return Err(BankKeeperError::Permission(format!(
+                "module account {} does not have permissions to receive undelegate coins",
+                sender_module.get_name()
+            )));
+        }
+
+        self.undelegate_coins(ctx, sender_module_addr, addr, amount)
     }
 
     fn delegate_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -34,6 +58,20 @@ impl<
         recepient_module: &M,
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
-        self.delegate_coins_from_account_to_module(ctx, sender_addr, recepient_module, amount)
+        let recepient_module_addr = recepient_module.get_address();
+        self.auth_keeper
+            .check_create_new_module_account(ctx, recepient_module)?;
+
+        if !recepient_module
+            .get_permissions()
+            .iter()
+            .any(|p| p == "staking")
+        {
+            return Err(BankKeeperError::Permission(format!(
+                "module account {} does not have permissions to receive delegated coins",
+                recepient_module.get_name()
+            )));
+        }
+        self.delegate_coins(ctx, sender_addr, recepient_module_addr, amount)
     }
 }
