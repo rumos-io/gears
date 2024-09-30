@@ -1,15 +1,14 @@
 use super::any::AnyTx;
 use crate::{
     core::{errors::CoreError, Protobuf},
-    tendermint::{
-        abci::Event as InformalEvent, rpc::response::tx::Response, types::proto::event::Event,
-    },
     types::tx::{Tx, TxMessage},
 };
 use core_types::any::google::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use tendermint::{rpc::response::tx::Response, types::proto::event::Event};
+use tendermint::{
+    abci::Event as InformalEvent, rpc::response::tx::Response, types::proto::event::Event,
+};
 
 /// TxResponse defines a structure containing relevant tx data and metadata. The
 /// tags are stringified and the log is JSON decoded.

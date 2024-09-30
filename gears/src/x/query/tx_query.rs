@@ -4,17 +4,6 @@ use crate::{
     cli::query_txs::{TxQueryCli, TxQueryType, TxsQueryCli},
     core::{errors::CoreError, Protobuf},
     rest::tendermint_events_handler::StrEventsHandler,
-    tendermint::{
-        informal::Hash,
-        rpc::{
-            client::{Client, HttpClient},
-            response::{
-                block::Response as BlockResponse,
-                tx::{search::Response as SearchResponse, Response as CosmosTxResponse},
-            },
-        },
-        types::proto::block::Height,
-    },
     types::{
         response::{tx::TxResponse, tx_event::SearchTxsResult},
         tx::TxMessage,
