@@ -5,13 +5,13 @@ use crate::{
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use anyhow::anyhow;
-use gears::extensions::gas::GasResultExt;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
         block::BlockContext, init::InitContext, InfallibleContext, QueryableContext,
         TransactionalContext,
     },
+    extensions::gas::GasResultExt,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -19,7 +19,7 @@ use gears::{
             event::{Event, EventAttribute},
             validator::ValidatorUpdate,
         },
-        time::{duration::Duration, timestamp::Timestamp},
+        time::timestamp::Timestamp,
     },
     types::{
         address::{AccAddress, ValAddress},
@@ -411,12 +411,11 @@ impl<
         let mut amt_from_not_bonded_to_bonded = Uint256::zero();
 
         let mut last = self.last_validators_by_addr(ctx);
-        let validators_map = self.validators_power_store_vals_map(ctx)?;
+        let validators_map = self.validators_power_store_vals_vec(ctx)?;
 
         let mut updates = vec![];
 
-        //TODO: iterating over a map is not deterministic, we should use a BTreeMap
-        for (_k, val_addr) in validators_map.iter().take(max_validators as usize) {
+        for val_addr in validators_map.iter().rev().take(max_validators as usize) {
             // everything that is iterated in this loop is becoming or already a
             // part of the bonded validator set
             let mut validator: Validator = self
@@ -567,7 +566,7 @@ impl<
             BondStatus::Bonded => {
                 // the longest wait - just unbonding period from now
                 let params = self.staking_params_keeper.try_get(ctx)?;
-                let duration = Duration::new_from_nanos(params.unbonding_time());
+                let duration = params.unbonding_time();
 
                 let completion_time = ctx.get_time().checked_add(duration).unwrap();
                 let height = ctx.height();

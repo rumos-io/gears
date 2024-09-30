@@ -1,5 +1,4 @@
 use crate::types::iter::balances::BalanceIterator;
-use crate::types::query::{QueryBalanceRequest, QueryBalanceResponse};
 use crate::{BankParams, BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
@@ -327,35 +326,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         }
     }
 
-    pub fn query_balance<DB: Database>(
-        &self,
-        ctx: &QueryContext<DB, SK>,
-        req: QueryBalanceRequest,
-    ) -> QueryBalanceResponse {
-        let bank_store = ctx.kv_store(&self.store_key);
-        let prefix = create_denom_balance_prefix(req.address);
-
-        let account_store = bank_store.prefix_store(prefix);
-        let bal = account_store.get(req.denom.to_string().as_bytes());
-
-        match bal {
-            Some(amount) => QueryBalanceResponse {
-                balance: Some(
-                    UnsignedCoin::decode::<Bytes>(amount.to_owned().into())
-                        .ok()
-                        .unwrap_or_corrupt(),
-                ),
-            },
-            None => QueryBalanceResponse { balance: None },
-        }
-    }
-
     pub fn params<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> BankParams {
         self.bank_params_keeper.get(ctx)
     }
 
-    // TODO: can we reuse with unwrap from `query_balance`?
-    // See no issue with it. Except new expect
     pub fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,

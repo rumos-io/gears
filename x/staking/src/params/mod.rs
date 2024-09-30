@@ -28,9 +28,7 @@ const KEY_BOND_DENOM: &str = "BondDenom";
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(try_from = "RawStakingParams")]
 pub struct StakingParams {
-    // sdk counts duration as simple i64 type that represents difference
-    // between two instants
-    pub unbonding_time: i64, //TODO: doesn't the SDK use a Duration type? https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/types/staking.pb.go#L837
+    pub unbonding_time: Duration,
     pub max_validators: u32,
     pub max_entries: u32,
     pub historical_entries: u32,
@@ -40,7 +38,7 @@ pub struct StakingParams {
 /// [`RawParams`] exists to allow us to validate params when deserializing them
 #[derive(Deserialize)]
 struct RawStakingParams {
-    unbonding_time: i64,
+    unbonding_time: Duration,
     max_validators: u32,
     max_entries: u32,
     historical_entries: u32,
@@ -75,15 +73,9 @@ impl TryFrom<inner::Params> for StakingParams {
         }: inner::Params,
     ) -> Result<Self, Self::Error> {
         StakingParams::new(
-            i128::from(
-                Duration::try_from(
-                    unbonding_time.ok_or(anyhow!("missing field 'unbonding_time'"))?,
-                )
-                .map_err(|_| anyhow!("cannot conver google duration"))?
-                .duration_nanoseconds(),
-            )
-            .try_into()
-            .map_err(|_| anyhow!("cannot conver google duration"))?,
+            unbonding_time
+                .ok_or(anyhow!("missing field 'unbonding_time'"))?
+                .try_into()?,
             max_validators,
             max_entries,
             historical_entries,
@@ -103,7 +95,7 @@ impl From<StakingParams> for inner::Params {
         }: StakingParams,
     ) -> Self {
         inner::Params {
-            unbonding_time: Some(Duration::new_from_nanos(unbonding_time).into()),
+            unbonding_time: Some(unbonding_time.into()),
             max_validators,
             max_entries,
             historical_entries,
@@ -119,7 +111,7 @@ impl Default for StakingParams {
             Denom::try_from(environment::DEFAULT_DENOM).expect("default denom should be valid");
         StakingParams {
             // 3 weeks
-            unbonding_time: 60_000_000_000 * 60 * 24 * 7 * 3,
+            unbonding_time: Duration::new_from_nanos(60_000_000_000 * 60 * 24 * 7 * 3),
             max_validators: 100,
             max_entries: 7,
             bond_denom,
@@ -145,7 +137,11 @@ impl ParamsSerialize for StakingParams {
         vec![
             (
                 KEY_UNBONDING_TIME,
-                format!("\"{}\"", self.unbonding_time).into_bytes(),
+                format!(
+                    "\"{}\"",
+                    i128::from(self.unbonding_time.duration_nanoseconds())
+                )
+                .into_bytes(),
             ),
             (
                 KEY_MAX_VALIDATORS,
@@ -198,7 +194,7 @@ impl ParamsDeserialize for StakingParams {
         // TODO: should we validate the params here?
 
         StakingParams {
-            unbonding_time,
+            unbonding_time: Duration::new_from_nanos(unbonding_time),
             max_validators,
             max_entries,
             bond_denom,
@@ -209,16 +205,16 @@ impl ParamsDeserialize for StakingParams {
 
 impl StakingParams {
     pub fn new(
-        unbonding_time: i64,
+        unbonding_time: Duration,
         max_validators: u32,
         max_entries: u32,
         historical_entries: u32,
         bond_denom: Denom,
     ) -> Result<Self, anyhow::Error> {
-        if unbonding_time < 0 {
+        if unbonding_time < Duration::ZERO {
             return Err(anyhow::anyhow!(format!(
                 "unbonding time must be non negative: {}",
-                unbonding_time
+                serde_json::to_string(&unbonding_time).expect("will always serialize"),
             )));
         }
 
@@ -245,7 +241,7 @@ impl StakingParams {
         })
     }
 
-    pub fn unbonding_time(&self) -> i64 {
+    pub fn unbonding_time(&self) -> Duration {
         self.unbonding_time
     }
 
