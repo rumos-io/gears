@@ -1,6 +1,7 @@
 use crate::{AuthParamsKeeper, AuthsParams};
 
 use bytes::Bytes;
+use gears::context::init::InitContext;
 use prost::Message;
 
 use gears::application::keepers::params::ParamsKeeper;
@@ -139,9 +140,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
         }
     }
 
-    pub fn init<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn init<DB: Database>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut InitContext<'_, DB, SK>,
         mut accounts: Vec<Account>,
         params: AuthsParams,
     ) -> Result<(), GasStoreErrors> {
