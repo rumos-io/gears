@@ -1,148 +1,178 @@
 //! This modules should be added to test modules with `#[path = "./utilities.rs"]` as it contains gaia specific code and dedicated crate is bothersome.
 #![allow(dead_code)]
 
-use std::{path::PathBuf, str::FromStr, sync::OnceLock, time::Duration};
+use std::{
+    net::{Ipv4Addr, SocketAddr},
+    ops::Deref,
+    str::FromStr,
+};
 
 use gaia_rs::{
-    abci_handler::GaiaABCIHandler, config::AppConfig, genesis::GenesisState,
-    store_keys::GaiaParamsStoreKey, GaiaApplication, GaiaCore,
+    client::{GaiaQueryCommands, GaiaTxCommands, WrappedGaiaQueryCommands, WrappedGaiaTxCommands},
+    query::GaiaQueryResponse,
+    GaiaCoreClient, QueryNodeFetcher,
 };
 use gears::{
-    application::node::NodeApplication,
-    baseapp::genesis::{Genesis, GenesisError},
     commands::{
-        client::keys::{keys, AddKeyCommand, KeyCommand, KeyringBackend},
-        node::{
-            run::{LogLevel, RunCommand},
-            AppCommands,
+        client::{
+            query::QueryCommand,
+            tx::{ClientTxContext, RuntxResult, TxCommand},
         },
+        node::run::{LogLevel, RunCommand},
     },
-    config::{DEFAULT_ADDRESS, DEFAULT_GRPC_LISTEN_ADDR, DEFAULT_REST_LISTEN_ADDR},
-    store::database::{sled::SledDb, DBBuilder},
-    types::{
-        base::{coin::UnsignedCoin, coins::UnsignedCoins},
-        denom::Denom,
-    },
-};
-use gears::{
+    extensions::testing::UnwrapTesting,
     types::address::AccAddress,
-    utils::tendermint::{TempDir, TendermintSubprocess},
+    utils::tendermint::{random_port, TendermintSubprocess},
 };
+use vec1::Vec1;
 
-pub const TENDERMINT_PATH: &str = "./tests/assets";
-pub const BIP39_MNEMONIC : &str = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
+/// List of all accounts saved into genesis file - alice is validator
+/// key name | account address | mnemonic
+const ACCOUNTS_LIST  : [(&str, &str, &str); 11] =  [
+    ("alice",  "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux", "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow"),
+    ("alice0", "cosmos18mjeafdpsgdgu0tmt39zggx20h7994hpd6wkpx", "same season present whip glass cargo fiber volume exit bracket gentle wish umbrella honey grab grace rigid mix credit route morning doll enemy wire"),
+    ("alice1", "cosmos1nxyyhwcfzzptad0trg6suh6j650npjlxxc73ay", "cute oppose want human pact ecology pig climb spider miracle local gentle title odor swamp liar other wage cheap wage barrel salute addict brick"),
+    ("alice2", "cosmos1ks9zdcycywxfcj880m3rlyctsfhfsh87fc7cm3", "ten despair spin toward soap brown obvious border episode arrow ice alley wet swim monitor allow smile check bind raw coast base wing antenna"),
+    ("alice3", "cosmos1luuusx6cura35dl4ztezd9x2pjea3js0xvvmc8", "lunch mosquito rice flag green laundry round solve kitten empower gold subway security warrior humor accident maze small party ship velvet note balcony suggest"),
+    ("alice4", "cosmos1mf4pu0zmzlng5rn8m0nmju9auxujns6jswcxwr", "debris six path vintage whisper parrot novel toward select fresh bachelor turn loyal walk elite order festival model birth strike evolve diary lady suggest"),
+    ("alice5", "cosmos15rteevxs5vsxfaj5qukh0hhuecgkel8s45g4dt", "impose super rich deliver roast robust caught toe gift vessel alter danger final found goose phone remind custom pigeon harvest blind monitor sight noble"),
+    ("alice6", "cosmos1ly29f22fpeqsafa03tpnf7huyewv9vl2dvamxp", "myself caution entire tumble movie exist drama tray carbon cheap brand tobacco beach web puppy breeze shaft imitate rail expect mixed expose space project"),
+    ("alice7", "cosmos1f78mzqldvqmpxxf5xf0354hu3cx7n3xrptyql9", "setup census bronze spoil swarm corn note misery lemon eyebrow fit canvas until cereal link fit endorse rookie ski flower stereo oxygen lumber follow"),
+    ("alice8", "cosmos1kn7ccmk9k2q024l66efw39mat4ys2cvxc2kh67", "voyage wealth dust general alter rare puppy exist when taste fit inflict since combine offer awesome artist cereal fiction glue same general seminar sorry"),
+    ("alice9", "cosmos19k5n7f35e4tskjcm2peujta0e3rvszmmzlhjej", "moon meat day town sugar matrix coffee lamp metal output fever document crush forum noise pear question cycle surprise wasp enough achieve initial shop"),
+];
 
-pub const NODE_URL_STR: &str = "http://localhost:26657/";
-
-pub fn node_url() -> url::Url {
-    NODE_URL_STR.try_into().expect("Default should be valid")
+pub struct GaiaNode {
+    tendermint: TendermintSubprocess,
+    gaia_handler: std::thread::JoinHandle<()>,
+    pub proxy_addr: SocketAddr,
+    pub grpc_addr: SocketAddr,
+    pub rest_addr: SocketAddr,
+    pub rpc_addr: url::Url,
 }
 
-pub const ACC_ADDRESS: &str = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux";
+impl GaiaNode {
+    pub fn validator_account() -> AccAddress {
+        let (_, addr, _) = ACCOUNTS_LIST[0];
+        AccAddress::from_bech32(addr).unwrap_test()
+    }
 
-pub fn acc_address() -> AccAddress {
-    AccAddress::from_bech32(ACC_ADDRESS).expect("Default Address should be valid")
-}
+    pub fn validator_key() -> &'static str {
+        let (key, _, _) = ACCOUNTS_LIST[0];
+        key
+    }
 
-pub fn tendermint() -> &'static TendermintSubprocess {
-    static TENDERMINT: OnceLock<(TendermintSubprocess, std::thread::JoinHandle<()>)> =
-        OnceLock::new();
+    pub fn accounts() -> Vec1<(&'static str, AccAddress)> {
+        let mut result = Vec::with_capacity(11);
 
-    &TENDERMINT
-        .get_or_init(|| {
-            let res = run_gaia_and_tendermint([(acc_address(), default_coin(200_000_000_u32))]);
-
-            match res {
-                Ok(res) => res,
-                Err(err) => panic!("Failed to start tendermint with err: {err}"),
-            }
-        })
-        .0
-}
-
-/// Helper method to start gaia node and tendermint in tmp folder
-pub fn run_gaia_and_tendermint(
-    accounts: impl IntoIterator<Item = (AccAddress, UnsignedCoin)>,
-) -> anyhow::Result<(TendermintSubprocess, std::thread::JoinHandle<()>)> {
-    let tmp_dir = TempDir::new()?;
-    let tmp_path = tmp_dir.to_path_buf();
-
-    key_add(tmp_dir.to_path_buf(), KEY_NAME, BIP39_MNEMONIC)?;
-
-    let genesis = {
-        let mut genesis = MockGenesis::default();
-
-        for (acc, coin) in accounts {
-            genesis.add_genesis_account(acc, UnsignedCoins::new([coin])?)?;
+        for (key, addr, _) in ACCOUNTS_LIST {
+            result.push((key, AccAddress::from_bech32(addr).unwrap_test()));
         }
 
-        genesis
-    };
+        result.try_into().expect("not empty")
+    }
 
-    let tendermint =
-        TendermintSubprocess::run_tendermint::<_, AppConfig>(tmp_dir, TENDERMINT_PATH, &genesis)?;
+    pub fn run() -> anyhow::Result<Self> {
+        const TENDERMINT_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/assets");
+        const LOG_LEVEL: LogLevel = LogLevel::Off;
 
-    std::thread::sleep(Duration::from_secs(10));
+        let tendermint = TendermintSubprocess::run(TENDERMINT_PATH, LOG_LEVEL)?;
+        let tmp_path = tendermint.home();
 
-    let server_thread = std::thread::spawn(move || {
-        let node = NodeApplication::<GaiaCore, SledDb, _, _>::new(
-            GaiaCore,
-            DBBuilder,
-            GaiaABCIHandler::new,
-            GaiaParamsStoreKey::BaseApp,
+        let proxy_addr = SocketAddr::new(
+            std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            tendermint.proxy_port,
         );
 
-        let cmd = RunCommand {
-            home: tmp_path,
-            address: Some(DEFAULT_ADDRESS),
-            rest_listen_addr: Some(DEFAULT_REST_LISTEN_ADDR),
-            grpc_listen_addr: Some(DEFAULT_GRPC_LISTEN_ADDR),
-            read_buf_size: 1048576,
-            log_level: LogLevel::Off,
-            min_gas_prices: Default::default(),
-            tendermint_rpc_addr: None,
+        let rest_addr = SocketAddr::new(
+            std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            random_port(),
+        );
+
+        let grpc_addr = SocketAddr::new(
+            std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            random_port(),
+        );
+
+        let rpc_addr = url::Url::from_str(&format!("http://localhost:{}", tendermint.rpc_port))?;
+
+        let rpc_addr_moved = rpc_addr.clone();
+        let server_thread = std::thread::spawn(move || {
+            let node = gears::application::node::NodeApplication::<
+                gaia_rs::GaiaCore,
+                gears::store::database::sled::SledDb,
+                _,
+                _,
+            >::new(
+                gaia_rs::GaiaCore,
+                gears::store::database::DBBuilder,
+                gaia_rs::abci_handler::GaiaABCIHandler::new,
+                gaia_rs::store_keys::GaiaParamsStoreKey::BaseApp,
+            );
+
+            let cmd = RunCommand {
+                home: tmp_path,
+                address: Some(proxy_addr),
+                rest_listen_addr: Some(rest_addr),
+                grpc_listen_addr: Some(grpc_addr),
+                read_buf_size: 1048576,
+                log_level: LOG_LEVEL,
+                min_gas_prices: Default::default(),
+                tendermint_rpc_addr: Some(rpc_addr_moved.try_into().expect("invalid rpc addr")),
+            };
+
+            let _ = node
+                .execute::<gaia_rs::GaiaApplication>(gears::commands::node::AppCommands::Run(cmd));
+        });
+
+        std::thread::sleep(std::time::Duration::from_secs(10));
+
+        Ok(Self {
+            tendermint,
+            gaia_handler: server_thread,
+            proxy_addr,
+            grpc_addr,
+            rest_addr,
+            rpc_addr,
+        })
+    }
+
+    pub fn query(&self, cmd: GaiaQueryCommands) -> anyhow::Result<GaiaQueryResponse> {
+        let cmd = QueryCommand {
+            node: self.rpc_addr.clone(),
+            height: None,
+            inner: WrappedGaiaQueryCommands(cmd),
         };
 
-        let _ = node.execute::<GaiaApplication>(AppCommands::Run(cmd));
-    });
+        let result = gears::commands::client::query::run_query(cmd, &gaia_rs::GaiaCoreClient)?;
 
-    std::thread::sleep(Duration::from_secs(10));
+        Ok(result)
+    }
 
-    Ok((tendermint, server_thread))
-}
+    pub fn tx(&self, cmd: GaiaTxCommands, key: &str) -> anyhow::Result<RuntxResult> {
+        let responses = gears::commands::client::tx::run_tx(
+            TxCommand {
+                ctx: ClientTxContext::new_online(
+                    self.tendermint.home(),
+                    200_000_u32.try_into().expect("default gas is valid"),
+                    self.rpc_addr.clone().try_into().expect("invalid addr"),
+                    self.tendermint.chain_id.clone(),
+                    key,
+                ),
+                inner: WrappedGaiaTxCommands(cmd),
+            },
+            &GaiaCoreClient,
+            &QueryNodeFetcher,
+        )?;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
-pub struct MockGenesis(pub GenesisState);
-
-impl Genesis for MockGenesis {
-    fn add_genesis_account(
-        &mut self,
-        address: AccAddress,
-        coins: UnsignedCoins,
-    ) -> Result<(), GenesisError> {
-        self.0.add_genesis_account(address, coins)
+        Ok(responses)
     }
 }
 
-pub const KEY_NAME: &str = "alice";
+impl Deref for GaiaNode {
+    type Target = TendermintSubprocess;
 
-pub fn key_add(home: impl Into<PathBuf>, name: &str, mnemonic: &str) -> anyhow::Result<()> {
-    let cmd = AddKeyCommand {
-        name: name.to_owned(),
-        recover: true,
-        home: home.into(),
-        keyring_backend: KeyringBackend::Test,
-        bip39_mnemonic: Some(mnemonic.to_owned()),
-    };
-
-    keys(KeyCommand::Add(cmd))?;
-
-    Ok(())
-}
-
-pub fn default_coin(amount: u32) -> UnsignedCoin {
-    UnsignedCoin {
-        denom: Denom::from_str("uatom").expect("default denom should be valid"),
-        amount: amount.into(),
+    fn deref(&self) -> &Self::Target {
+        &self.tendermint
     }
 }

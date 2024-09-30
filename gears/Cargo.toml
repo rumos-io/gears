@@ -83,7 +83,7 @@ data-encoding = { workspace = true }
 # test utils
 run_script = { workspace = true, optional = true }
 assert_fs = { workspace = true, optional = true }
-dircpy = { workspace = true, optional = true }
+# dircpy = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -94,7 +94,7 @@ default = [ "cli", "xmods" ]
 xmods = []
 governance = []
 macros_test = []
-utils = ["dep:run_script", "dep:assert_fs", "dep:dircpy", "dep:rand" ]
+utils = ["dep:run_script", "dep:assert_fs", "dep:rand" ] # "dep:dircpy"
 mocks = [ "utils", "xmods" ]
 cli = ["dep:clap", "dep:clap_complete"]
 rocksdb = ["database/rocksdb"]
