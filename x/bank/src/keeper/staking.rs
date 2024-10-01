@@ -4,7 +4,7 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M> + Send + Sync + 'static,
-        M: Module,
+        M: Module + strum::IntoEnumIterator,
     > StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(

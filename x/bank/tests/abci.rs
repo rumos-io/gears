@@ -113,7 +113,7 @@ impl ModuleInfo for BankModuleInfo {
     const NAME: &'static str = "bank";
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, strum::EnumIter)]
 pub enum BankModules {
     FeeCollector,
 }

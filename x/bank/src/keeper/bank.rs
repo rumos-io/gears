@@ -1,10 +1,12 @@
+use std::{collections::HashSet, sync::OnceLock};
+
 use super::*;
 
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M> + Send + Sync + 'static,
-        M: Module,
+        M: Module + strum::IntoEnumIterator,
     > BankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
     fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -104,7 +106,12 @@ impl<
     ) -> Result<(), BankKeeperError> {
         let module_address = module.address();
 
-        // TODO: what is blocked account and how to handle it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/keeper.go#L316-L318
+        // Simple check that we don't try to send coins to account that actually a module.
+        // Cosmos uses set with accounts. For details check: 
+        // https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/keeper.go#L316-L318
+        if blocked_addr::<M>().contains(address) {
+            Err(BankKeeperError::Blocked(address.to_owned()))?
+        }
 
         self.send_coins(
             ctx,
@@ -115,4 +122,10 @@ impl<
             },
         )
     }
+}
+
+fn blocked_addr<M: Module + strum::IntoEnumIterator>() -> &'static HashSet<AccAddress> {
+    static ADDR: OnceLock<HashSet<AccAddress>> = OnceLock::new();
+
+    ADDR.get_or_init(|| M::iter().map(|this| this.address()).collect::<HashSet<_>>())
 }

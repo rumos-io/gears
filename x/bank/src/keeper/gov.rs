@@ -4,7 +4,7 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M> + Send + Sync + 'static,
-        M: Module,
+        M: Module + strum::IntoEnumIterator,
     > GovernanceBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
     fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(

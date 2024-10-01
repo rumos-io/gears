@@ -75,7 +75,7 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M> + Send + Sync + 'static,
-        M: Module,
+        M: Module + strum::IntoEnumIterator,
         MI: ModuleInfo + Clone + Send + Sync + 'static,
     > ABCIHandler for BankABCIHandler<SK, PSK, AK, M, MI>
 {
