@@ -1,17 +1,23 @@
-use crate::{query::QueryAccountRequest, AuthNodeQueryRequest, AuthNodeQueryResponse};
+use crate::{
+    query::{QueryAccountRequest, QueryAccountsRequest, QueryParamsRequest},
+    AuthNodeQueryRequest, AuthNodeQueryResponse,
+};
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     routing::get,
     Json, Router,
 };
-use gears::types::address::AccAddress;
 use gears::{
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
     rest::{error::HTTPError, RestState},
 };
+use gears::{
+    rest::Pagination,
+    types::{address::AccAddress, pagination::request::PaginationRequest},
+};
 
 /// Get a particular account data.
-pub async fn get_account<
+pub async fn account<
     QReq: QueryRequest + From<AuthNodeQueryRequest>,
     QRes: QueryResponse + TryInto<AuthNodeQueryResponse>,
     App: NodeQueryHandler<QReq, QRes>,
@@ -24,13 +30,42 @@ pub async fn get_account<
     Ok(Json(res))
 }
 
+/// Get all account data.
+pub async fn accounts<
+    QReq: QueryRequest + From<AuthNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<AuthNodeQueryResponse>,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    Query(pagination): Query<Pagination>,
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<QRes>, HTTPError> {
+    let req = AuthNodeQueryRequest::Accounts(QueryAccountsRequest {
+        pagination: PaginationRequest::from(pagination),
+    });
+    let res = rest_state.app.typed_query(req)?;
+    Ok(Json(res))
+}
+
+/// Get module params.
+pub async fn params<
+    QReq: QueryRequest + From<AuthNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<AuthNodeQueryResponse>,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<QRes>, HTTPError> {
+    let req = AuthNodeQueryRequest::Params(QueryParamsRequest {});
+    let res = rest_state.app.typed_query(req)?;
+    Ok(Json(res))
+}
+
 pub fn get_router<
     QReq: QueryRequest + From<AuthNodeQueryRequest>,
     QRes: QueryResponse + TryInto<AuthNodeQueryResponse>,
     App: NodeQueryHandler<QReq, QRes>,
 >() -> Router<RestState<QReq, QRes, App>> {
-    Router::new().route(
-        "/v1beta1/accounts/:address",
-        get(get_account::<QReq, QRes, App>),
-    )
+    Router::new()
+        .route("/v1beta1/accounts/:address", get(account))
+        .route("/v1beta1/accounts", get(accounts))
+        .route("/v1beta1/params", get(params))
 }
