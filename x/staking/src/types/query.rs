@@ -3,7 +3,7 @@ use crate::{
     StakingParams, UnbondingDelegation, Validator,
 };
 use gears::{
-    core::{errors::CoreError, query::request::PageRequest, Protobuf},
+    core::{errors::CoreError, Protobuf},
     derive::{Protobuf, Query, Raw},
     extensions::pagination::PaginationKey,
     types::{
@@ -14,6 +14,7 @@ use gears::{
     },
     x::types::validator::BondStatus,
 };
+use ibc_proto::cosmos::base::query::v1beta1::PageRequest;
 use serde::{Deserialize, Serialize};
 
 mod inner {

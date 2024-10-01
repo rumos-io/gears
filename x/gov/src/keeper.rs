@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    marker::PhantomData,
-    ops::{Div, Mul},
-};
+use std::{collections::HashMap, marker::PhantomData, ops::Mul};
 
 use gears::extensions::gas::GasResultExt;
 use gears::{
@@ -28,7 +24,7 @@ use gears::{
 use strum::IntoEnumIterator;
 
 use crate::{
-    errors::{GovKeeperError, SERDE_JSON_CONVERSION},
+    errors::{GovKeeperError, TallyError, SERDE_JSON_CONVERSION},
     genesis::GovGenesisState,
     msg::{
         deposit::Deposit,
@@ -185,7 +181,7 @@ impl<
 
         let balance = self
             .bank_keeper
-            .balance_all(ctx, &self.gov_mod.get_address())
+            .balance_all(ctx, &self.gov_mod.address())
             .unwrap_gas();
         /*
            Okay. I think that in our implementation there is no need to create account if it.
@@ -470,7 +466,9 @@ impl<
             status: ProposalStatus::DepositPeriod,
             final_tally_result: None,
             submit_time,
-            deposit_end_time: submit_time.checked_add(deposit_period).unwrap(), // TODO: HANDLE THIS
+            deposit_end_time: submit_time
+                .checked_add(deposit_period)
+                .ok_or(GovKeeperError::Time("Deposit end time overflow".to_owned()))?,
             total_deposit: initial_deposit,
             voting_start_time: None,
             voting_end_time: None,
@@ -552,7 +550,13 @@ impl<
                 let mut proposal = proposal.unwrap_gas();
 
                 let (passes, burn_deposit, tally_result) =
-                    self.tally(ctx, proposal.proposal_id).unwrap_gas();
+                    match self.tally(ctx, proposal.proposal_id) {
+                        Ok(var) => var,
+                        Err(err) => match err {
+                            TallyError::Gas(_) => unreachable!("block ctx doesn't have any gas"),
+                            TallyError::Math(e) => panic!("Failed to get tally: {e}"),
+                        },
+                    };
 
                 if burn_deposit {
                     deposit_del(ctx, self, proposal.proposal_id).unwrap_gas();
@@ -600,7 +604,7 @@ impl<
         &self,
         ctx: &mut CTX,
         proposal_id: u64,
-    ) -> Result<(bool, bool, TallyResult), GasStoreErrors> {
+    ) -> Result<(bool, bool, TallyResult), TallyError> {
         let mut curr_validators = HashMap::<ValAddress, ValidatorGovInfo>::new();
 
         for validator in self.staking_keeper.bonded_validators_by_power_iter(ctx)? {
@@ -648,13 +652,25 @@ impl<
                     // There is no need to handle the special case that validator address equal to voter address.
                     // Because voter's voting power will tally again even if there will deduct voter's voting power from validator.
 
-                    validator.delegator_deduction += delegation.shares(); // TODO: handle overflow?
+                    validator.delegator_deduction = validator
+                        .delegator_deduction
+                        .checked_add(*delegation.shares())
+                        .map_err(|e| {
+                            TallyError::Math(format!("Delegator deduction overflow: {e}"))
+                        })?;
 
                     // delegation shares * bonded / total shares
                     let voting_power = delegation
                         .shares()
-                        .mul(Decimal256::from_atomics(validator.bounded_tokens, 0).unwrap()) // TODO: HANDLE THIS
-                        .div(validator.delegator_shares);
+                        .mul(
+                            Decimal256::from_atomics(validator.bounded_tokens, 0).map_err(|e| {
+                                TallyError::Math(format!(
+                                    "Decimal overflow while calculating voting power: {e}"
+                                ))
+                            })?,
+                        )
+                        .checked_div(validator.delegator_shares)
+                        .map_err(|e| TallyError::Math(format!("Div on voting power: {e}")))?;
 
                     for VoteOptionWeighted { option, weight } in &vote_options {
                         let result_option = tally_results.get_mut(option);

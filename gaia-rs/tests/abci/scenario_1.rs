@@ -10,7 +10,7 @@ use crate::setup_mock_node;
 fn scenario_1() {
     let (mut node, user) = setup_mock_node(None::<&str>);
 
-    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
         "36fd98b5248f0e4bfa6ef4e311134403b1b3deb8865bdbba7187cf05e5644a83"
@@ -33,7 +33,7 @@ fn scenario_1() {
 
     let txs = generate_txs([(0, msg)], &user, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
+    let app_hash = node.step(txs, Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
         "8eb5f41a3f77e034185be06e5385ff0d0a42f8d0f59171b1cc12b1ac6a66bbef"

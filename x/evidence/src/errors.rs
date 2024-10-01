@@ -1,5 +1,5 @@
 use gears::{
-    tendermint::informal::Hash,
+    tendermint::informal::hash::Hash,
     types::{address::ConsAddress, store::gas::errors::GasStoreErrors},
 };
 

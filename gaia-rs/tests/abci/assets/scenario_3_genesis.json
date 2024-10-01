@@ -14,6 +14,13 @@
                 "pub_key": null,
                 "account_number": "0",
                 "sequence": "0"
+            },
+            {
+                "@type": "/cosmos.auth.v1beta1.BaseAccount",
+                "address": "cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q",
+                "pub_key": null,
+                "account_number": "0",
+                "sequence": "0"
             }
         ]
     },
@@ -29,6 +36,15 @@
                     {
                         "denom": "uatom",
                         "amount": "1000000000000"
+                    }
+                ]
+            },
+            {
+                "address": "cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q",
+                "coins": [
+                    {
+                        "amount": "10000000000000",
+                        "denom": "uatom"
                     }
                 ]
             }
@@ -133,7 +149,7 @@
     },
     "staking": {
         "params": {
-            "unbonding_time": 1814400000000000,
+            "unbonding_time": "1814400s",
             "max_validators": 1,
             "max_entries": 7,
             "historical_entries": 10000,

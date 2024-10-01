@@ -301,6 +301,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let mut state = self.state.write().expect(POISONED_LOCK);
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
+        state.take_block_cache(&mut multi_store);
+
         let header = self.get_block_header();
 
         let consensus_params = {

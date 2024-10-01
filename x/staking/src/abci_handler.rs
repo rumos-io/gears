@@ -15,22 +15,21 @@ use crate::{
     QueryValidatorDelegationsResponse, QueryValidatorUnbondingDelegationsRequest,
     QueryValidatorUnbondingDelegationsResponse,
 };
-use gears::extensions::gas::GasResultExt;
-use gears::extensions::pagination::IteratorPaginate;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
     baseapp::{errors::QueryError, QueryRequest, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::Protobuf,
     derive::Query,
-    extensions::pagination::Pagination,
+    extensions::{
+        gas::GasResultExt,
+        pagination::{IteratorPaginate, Pagination},
+    },
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::{
-        proto::validator::ValidatorUpdate,
-        request::{
-            begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
-        },
+    tendermint::{
+        request::{RequestBeginBlock, RequestEndBlock},
+        types::{proto::validator::ValidatorUpdate, request::query::RequestQuery},
     },
     types::pagination::response::PaginationResponse,
     x::{

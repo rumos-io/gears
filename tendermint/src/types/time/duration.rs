@@ -23,7 +23,15 @@ const ABS_DURATION_NANOSECONDS: i128 =
 /// be expressed in JSON format as "3.000000001s", and 3 seconds and 1
 /// microsecond should be expressed in JSON format as "3.000001s".
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, ::prost::Message, serde::Serialize, serde::Deserialize,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    ::prost::Message,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 #[serde(
     try_from = "super::serializers::SerdeDuration",
@@ -132,6 +140,13 @@ impl Duration {
         seconds: ABS_DURATION_SECONDS,
         nanos: NANOS_PER_SECOND - 1,
     };
+
+    /// The zero `Duration` value.
+    pub const ZERO: Duration = Duration {
+        seconds: 0,
+        nanos: 0,
+    };
+
     /// Creates a new `Duration` from the given number of seconds and nanoseconds.
     /// Returns an error if `seconds` is out of the range [-315,576,000,000, 315,576,000,000]
     /// or if `nanos` is out of the range [-999_999_999, 999_999_999]. Also returns an error

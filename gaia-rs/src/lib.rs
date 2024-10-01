@@ -350,8 +350,8 @@ impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
 }
 
 mod inner {
+    pub use auth::query::inner::QueryAccountResponse;
     pub use bank::types::query::inner::QueryDenomMetadataResponse;
-    pub use gears::core::query::response::auth::QueryAccountResponse;
 }
 
 #[derive(Debug, Clone)]

@@ -36,7 +36,7 @@ fn test_init_and_few_blocks() {
 
     let (mut node, _) = init_node(opt);
 
-    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    let app_hash = &node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
         "079ca947e30b69479b21da61e1cb9bad4ff5c8ec99dc3d9e32919179f6604a1d"
@@ -44,7 +44,7 @@ fn test_init_and_few_blocks() {
 
     node.skip_steps(100);
 
-    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    let app_hash = &node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
         "079ca947e30b69479b21da61e1cb9bad4ff5c8ec99dc3d9e32919179f6604a1d"
@@ -76,7 +76,7 @@ fn test_init_and_sending_tx() {
 
     let (mut node, user) = init_node(opt);
 
-    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    let app_hash = &node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
         "7422bab46c0294d81bcf5fca0495c114a8e40ddd0601539775e5c03f479ad289"
@@ -99,7 +99,7 @@ fn test_init_and_sending_tx() {
 
     let txs = generate_txs([(0, msg)], &user, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
+    let app_hash = &node.step(txs, Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
         "f9da1d84dcdbd650d3be54bb6fd02ce74c94667922aa9911bd96ca397f4d4e38"
@@ -119,13 +119,13 @@ pub enum BankModules {
 }
 
 impl Module for BankModules {
-    fn get_name(&self) -> String {
+    fn name(&self) -> String {
         match self {
             BankModules::FeeCollector => "fee_collector".into(),
         }
     }
 
-    fn get_address(&self) -> AccAddress {
+    fn address(&self) -> AccAddress {
         match self {
             BankModules::FeeCollector => {
                 AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
@@ -134,7 +134,7 @@ impl Module for BankModules {
         }
     }
 
-    fn get_permissions(&self) -> Vec<String> {
+    fn permissions(&self) -> Vec<String> {
         match self {
             BankModules::FeeCollector => vec![],
         }

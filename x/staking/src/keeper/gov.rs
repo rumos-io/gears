@@ -41,7 +41,7 @@ impl<
     ) -> Result<UnsignedCoin, GasStoreErrors> {
         let account = self
             .auth_keeper
-            .get_account(ctx, &self.bonded_module.get_address())?
+            .get_account(ctx, &self.bonded_module.address())?
             .unwrap(); // TODO: Unsure what to do in this case
 
         self.bank_keeper.balance(

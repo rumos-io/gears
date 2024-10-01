@@ -25,7 +25,7 @@ fn test_init_and_few_blocks() {
 
     let (mut node, _) = init_node(opt);
 
-    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    let app_hash = &node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
         "8d3663f81a98bec58a6d3a9f39c38469438bfecd8257dd335c8c047b933b08ad"
@@ -33,7 +33,7 @@ fn test_init_and_few_blocks() {
 
     node.skip_steps(100);
 
-    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    let app_hash = &node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
         "8d3663f81a98bec58a6d3a9f39c38469438bfecd8257dd335c8c047b933b08ad"
@@ -46,13 +46,13 @@ pub enum AuthModules {
 }
 
 impl Module for AuthModules {
-    fn get_name(&self) -> String {
+    fn name(&self) -> String {
         match self {
             AuthModules::FeeCollector => "fee_collector".into(),
         }
     }
 
-    fn get_address(&self) -> AccAddress {
+    fn address(&self) -> AccAddress {
         match self {
             AuthModules::FeeCollector => {
                 AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
@@ -61,7 +61,7 @@ impl Module for AuthModules {
         }
     }
 
-    fn get_permissions(&self) -> Vec<String> {
+    fn permissions(&self) -> Vec<String> {
         match self {
             AuthModules::FeeCollector => vec![],
         }

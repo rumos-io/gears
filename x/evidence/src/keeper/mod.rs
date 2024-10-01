@@ -5,7 +5,7 @@ use gears::{
     core::any::google::Any,
     extensions::corruption::UnwrapCorrupt,
     store::{database::Database, StoreKey},
-    tendermint::informal::Hash,
+    tendermint::informal::hash::Hash,
     types::store::gas::errors::GasStoreErrors,
     x::{
         keepers::{slashing::EvidenceSlashingKeeper, staking::SlashingStakingKeeper},

@@ -28,11 +28,13 @@ pub mod keyring {
 }
 
 pub mod core {
-    pub use core_types::*;
+    #[allow(unused_imports)]
+    pub use core_types::public::*;
 }
 
 pub mod tendermint {
-    pub use tendermint::*;
+    #[allow(unused_imports)]
+    pub use tendermint::public::*;
 }
 
 pub mod store {

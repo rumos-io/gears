@@ -1,3 +1,5 @@
+use std::collections::{BTreeMap, HashSet};
+
 use database::{prefix::PrefixDB, Database};
 
 use crate::{bank::kv::transaction::TransactionKVBank, StoreKey};
@@ -42,5 +44,16 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, TransactionStore<DB, SK>> {
         for (sk, store) in &mut self.backend.0 {
             store.append_block_cache(other.kv_store_mut(sk))
         }
+    }
+
+    pub fn take_block_cache(
+        &mut self,
+    ) -> HashMap<SK, (BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>)> {
+        let mut set = HashMap::with_capacity(self.backend.0.len());
+        for (sk, store) in &mut self.backend.0 {
+            set.insert(sk.clone(), store.take_block_cache());
+        }
+
+        set
     }
 }
