@@ -227,9 +227,20 @@ where
 
     async fn delegator_validator(
         &self,
-        _request: Request<QueryDelegatorValidatorRequest>,
+        request: Request<QueryDelegatorValidatorRequest>,
     ) -> Result<Response<QueryDelegatorValidatorResponse>, Status> {
-        unimplemented!()
+        info!("Received a gRPC request staking::delegator_validator");
+        let req = StakingNodeQueryRequest::DelegatorValidator(request.into_inner().try_into()?);
+        let response = self.app.typed_query(req)?;
+        let response: StakingNodeQueryResponse = response.try_into()?;
+
+        if let StakingNodeQueryResponse::DelegatorValidator(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ))
+        }
     }
 
     async fn historical_info(

@@ -29,6 +29,9 @@ mod inner {
         QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorUnbondingDelegationsResponse,
     };
     pub use ibc_proto::cosmos::staking::v1beta1::{
+        QueryDelegatorValidatorRequest, QueryDelegatorValidatorResponse,
+    };
+    pub use ibc_proto::cosmos::staking::v1beta1::{
         QueryDelegatorValidatorsRequest, QueryDelegatorValidatorsResponse,
     };
     pub use ibc_proto::cosmos::staking::v1beta1::{
@@ -150,6 +153,17 @@ pub struct QueryDelegatorUnbondingDelegationsRequest {
     /// pagination defines an optional pagination for the request.
     #[proto(optional)]
     pub pagination: Option<PaginationRequest>,
+}
+
+/// QueryDelegatorValidatorRequest is request type for the Query/DelegatorValidator RPC method.
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
+#[query(url = "/cosmos.staking.v1beta1.Query/DelegatorUnbondingDelegations")]
+#[proto(raw = "inner::QueryDelegatorValidatorRequest")]
+pub struct QueryDelegatorValidatorRequest {
+    /// delegator_addr defines the delegator address to query for.
+    pub delegator_addr: AccAddress,
+    /// validator_addr defines the validator address to query for.
+    pub validator_addr: ValAddress,
 }
 
 /// QueryRedelegationRequest is request type for the Query/Redelegation RPC method.
@@ -334,6 +348,15 @@ pub struct QueryDelegatorUnbondingDelegationsResponse {
     /// pagination defines the pagination in the response.
     #[proto(optional)]
     pub pagination: Option<PaginationResponse>,
+}
+
+/// QueryDelegatorValidatorResponse response type for the Query/DelegatorValidator RPC method.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryDelegatorValidatorResponse")]
+pub struct QueryDelegatorValidatorResponse {
+    /// validator defines the validator info.
+    #[proto(optional)]
+    pub validator: Option<Validator>,
 }
 
 /// RedelegationEntryResponse is equivalent to a RedelegationEntry except that it

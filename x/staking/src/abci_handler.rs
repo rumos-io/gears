@@ -9,6 +9,7 @@ use crate::{
     RedelegationResponse,
 };
 use crate::{
+    QueryDelegatorValidatorRequest, QueryDelegatorValidatorResponse,
     QueryDelegatorValidatorsRequest, QueryDelegatorValidatorsResponse, QueryHistoricalInfoRequest,
     QueryHistoricalInfoResponse, QueryValidatorDelegationsRequest,
     QueryValidatorDelegationsResponse, QueryValidatorUnbondingDelegationsRequest,
@@ -65,6 +66,7 @@ pub enum StakingNodeQueryRequest {
     Delegations(QueryDelegatorDelegationsRequest),
     UnbondingDelegation(QueryUnbondingDelegationRequest),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsRequest),
+    DelegatorValidator(QueryDelegatorValidatorRequest),
     Redelegations(QueryRedelegationsRequest),
     DelegatorValidators(QueryDelegatorValidatorsRequest),
     HistoricalInfo(QueryHistoricalInfoRequest),
@@ -90,6 +92,7 @@ pub enum StakingNodeQueryResponse {
     Delegations(QueryDelegatorDelegationsResponse),
     UnbondingDelegation(QueryUnbondingDelegationResponse),
     UnbondingDelegations(QueryDelegatorUnbondingDelegationsResponse),
+    DelegatorValidator(QueryDelegatorValidatorResponse),
     Redelegations(QueryRedelegationsResponse),
     DelegatorValidators(QueryDelegatorValidatorsResponse),
     HistoricalInfo(QueryHistoricalInfoResponse),
@@ -158,6 +161,11 @@ impl<
                             pagination: None,
                         },
                     ),
+                )
+            }
+            StakingNodeQueryRequest::DelegatorValidator(req) => {
+                StakingNodeQueryResponse::DelegatorValidator(
+                    self.keeper.query_delegator_validator(ctx, req),
                 )
             }
             StakingNodeQueryRequest::Redelegations(req) => {

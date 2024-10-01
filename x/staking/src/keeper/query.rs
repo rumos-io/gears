@@ -3,6 +3,7 @@ use crate::{
     DelegationResponse, QueryDelegationRequest, QueryDelegationResponse,
     QueryDelegatorDelegationsRequest, QueryDelegatorDelegationsResponse,
     QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorUnbondingDelegationsResponse,
+    QueryDelegatorValidatorRequest, QueryDelegatorValidatorResponse,
     QueryDelegatorValidatorsRequest, QueryDelegatorValidatorsResponse, QueryHistoricalInfoRequest,
     QueryHistoricalInfoResponse, QueryParamsResponse, QueryPoolResponse,
     QueryUnbondingDelegationRequest, QueryUnbondingDelegationResponse,
@@ -151,6 +152,25 @@ impl<
         QueryDelegatorDelegationsResponse {
             delegation_responses,
             pagination: p_result.map(PaginationResponse::from),
+        }
+    }
+
+    pub fn query_delegator_validator<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryDelegatorValidatorRequest {
+            delegator_addr,
+            validator_addr,
+        }: QueryDelegatorValidatorRequest,
+    ) -> QueryDelegatorValidatorResponse {
+        let delegation = self
+            .delegation(ctx, &delegator_addr, &validator_addr)
+            .unwrap_gas();
+        let validator = self.validator(ctx, &validator_addr).unwrap_gas();
+        if delegation.is_some() {
+            QueryDelegatorValidatorResponse { validator }
+        } else {
+            QueryDelegatorValidatorResponse { validator: None }
         }
     }
 
