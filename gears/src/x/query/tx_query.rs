@@ -4,17 +4,6 @@ use crate::{
     cli::query_txs::{TxQueryCli, TxQueryType, TxsQueryCli},
     core::{errors::CoreError, Protobuf},
     rest::tendermint_events_handler::StrEventsHandler,
-    tendermint::{
-        informal::Hash,
-        rpc::{
-            client::{Client, HttpClient},
-            response::{
-                block::Response as BlockResponse,
-                tx::{search::Response as SearchResponse, Response as CosmosTxResponse},
-            },
-        },
-        types::proto::block::Height,
-    },
     types::{
         response::{tx::TxResponse, tx_event::SearchTxsResult},
         tx::TxMessage,
@@ -26,6 +15,17 @@ use crate::{
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, marker::PhantomData, str::FromStr};
+use tendermint::{
+    informal::Hash,
+    rpc::{
+        client::{Client, HttpClient},
+        response::{
+            block::Response as BlockResponse,
+            tx::{search::Response as SearchResponse, Response as CosmosTxResponse},
+        },
+    },
+    types::proto::block::Height,
+};
 
 #[derive(Clone, PartialEq)]
 pub enum TxQuery {
@@ -140,7 +140,7 @@ impl<M: TxMessage> QueryHandler for TxQueryHandler<M> {
         &self,
         query: Self::QueryRequest,
         node: url::Url,
-        _height: Option<crate::tendermint::types::proto::block::Height>,
+        _height: Option<tendermint::types::proto::block::Height>,
     ) -> anyhow::Result<Vec<u8>> {
         let client = HttpClient::new(node.as_str())?;
         let runtime = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
@@ -235,7 +235,7 @@ impl<M: TxMessage> QueryHandler for TxsQueryHandler<M> {
         &self,
         query: Self::QueryRequest,
         node: url::Url,
-        _height: Option<crate::tendermint::types::proto::block::Height>,
+        _height: Option<tendermint::types::proto::block::Height>,
     ) -> anyhow::Result<Vec<u8>> {
         let client = HttpClient::new(node.as_str())?;
         let runtime = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
@@ -262,7 +262,7 @@ fn query_txs_by_event<M: TxMessage>(
     req: &QueryGetTxsEventRequest,
 ) -> anyhow::Result<Vec<u8>> {
     let query_str_events = req.events.join(" AND ");
-    let query = crate::tendermint::rpc::query::Query::from_str(&query_str_events)?;
+    let query = tendermint::rpc::query::Query::from_str(&query_str_events)?;
     let res: anyhow::Result<(SearchResponse, HashMap<Height, BlockResponse>)> =
         runtime.block_on(async {
             let txs = client
@@ -271,7 +271,7 @@ fn query_txs_by_event<M: TxMessage>(
                     true,
                     req.page,
                     req.limit.try_into().unwrap_or(u8::MAX),
-                    crate::tendermint::rpc::Order::from_str(&req.order_by)?,
+                    tendermint::rpc::Order::from_str(&req.order_by)?,
                 )
                 .await?;
             let mut blocks: HashMap<Height, BlockResponse> = HashMap::with_capacity(txs.txs.len());

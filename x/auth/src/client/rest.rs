@@ -1,4 +1,4 @@
-use crate::{query::QueryAccountRequest, AuthNodeQueryRequest, AuthNodeQueryResponse};
+use crate::{types::query::QueryAccountRequest, AuthNodeQueryRequest, AuthNodeQueryResponse};
 use axum::{
     extract::{Path, State},
     routing::get,

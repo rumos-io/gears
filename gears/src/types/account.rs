@@ -122,6 +122,17 @@ pub enum Account {
 }
 
 impl Account {
+    pub fn new_base(address: AccAddress) -> Self {
+        let acc = BaseAccount {
+            address,
+            pub_key: None,
+            account_number: 0, // This is ignored when initializing from genesis
+            sequence: 0,
+        };
+
+        Self::Base(acc)
+    }
+
     pub fn get_public_key(&self) -> Option<&PublicKey> {
         match self {
             Account::Base(acct) => acct.pub_key.as_ref(),

@@ -1,11 +1,11 @@
 use gears::{
-    core::query::request::PageRequest,
     derive::{Protobuf, Query, Raw},
     types::{
         address::ConsAddress,
         pagination::{request::PaginationRequest, response::PaginationResponse},
     },
 };
+use ibc_proto::cosmos::base::query::v1beta1::{PageRequest, PageResponse};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
@@ -62,7 +62,7 @@ pub struct QuerySigningInfosResponse {
     #[raw(kind(message), raw = ValidatorSigningInfoRaw, repeated)]
     #[proto(repeated)]
     pub info: Vec<ValidatorSigningInfo>,
-    #[raw(kind(message), raw = gears::core::query::response::PageResponse, optional)]
+    #[raw(kind(message), raw = PageResponse, optional)]
     #[proto(optional)]
     pub pagination: Option<PaginationResponse>,
 }

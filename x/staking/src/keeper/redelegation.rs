@@ -169,7 +169,7 @@ impl<
         val_dst_addr: &ValAddress,
     ) -> Result<Option<Redelegation>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
-        let key = keys::redelegation_key(&del_addr, &val_src_addr, &val_dst_addr);
+        let key = keys::redelegation_key(del_addr, val_src_addr, val_dst_addr);
         Ok(store
             .get(&key)?
             .map(|bytes| Redelegation::decode::<Bytes>(bytes.into()).unwrap_or_corrupt()))

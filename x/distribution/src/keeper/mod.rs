@@ -182,7 +182,7 @@ impl<
         self.check_set_distribution_account(ctx).unwrap_gas();
         let balances = self
             .bank_keeper
-            .balance_all(ctx, self.distribution_module.get_address(), None)
+            .balance_all(ctx, self.distribution_module.address(), None)
             .unwrap_gas()
             .1;
 

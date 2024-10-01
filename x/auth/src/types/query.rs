@@ -11,9 +11,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::AuthsParams;
 
-mod inner {
-    pub use gears::core::query::request::auth::QueryAccountRequest;
-    pub use gears::core::query::response::auth::QueryAccountResponse;
+pub mod inner {
+    pub use ibc_proto::cosmos::auth::v1beta1::QueryAccountRequest;
+    pub use ibc_proto::cosmos::auth::v1beta1::QueryAccountResponse;
     pub use ibc_proto::cosmos::auth::v1beta1::QueryAccountsRequest;
     pub use ibc_proto::cosmos::auth::v1beta1::QueryAccountsResponse;
     pub use ibc_proto::cosmos::auth::v1beta1::QueryParamsRequest;
@@ -50,7 +50,7 @@ pub struct QueryAccountRequest {
 pub struct QueryAccountsRequest {
     /// pagination defines an optional pagination for the request.
     #[proto(optional)]
-    pub pagination: PaginationRequest,
+    pub pagination: Option<PaginationRequest>,
 }
 
 /// QueryAccountsResponse is the response type for the Query/Accounts RPC method.

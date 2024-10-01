@@ -208,7 +208,7 @@ impl<
 
         let bonded_balance = self
             .bank_keeper
-            .balance_all::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.get_address(), None)
+            .balance_all::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.address(), None)
             .unwrap_gas()
             .1;
 
@@ -235,7 +235,7 @@ impl<
             .bank_keeper
             .balance_all::<DB, InitContext<'_, DB, SK>>(
                 ctx,
-                self.not_bonded_module.get_address(),
+                self.not_bonded_module.address(),
                 None,
             )
             .unwrap_gas()
@@ -595,13 +595,13 @@ impl<
         let denom = self.staking_params_keeper.try_get(ctx)?.bond_denom;
         let not_bonded_tokens = self
             .bank_keeper
-            .balance_all(ctx, self.not_bonded_module.get_address(), None)?
+            .balance_all(ctx, self.not_bonded_module.address(), None)?
             .1
             .into_iter()
             .find(|e| e.denom == denom);
         let bonded_tokens = self
             .bank_keeper
-            .balance_all(ctx, self.bonded_module.get_address(), None)?
+            .balance_all(ctx, self.bonded_module.address(), None)?
             .1
             .into_iter()
             .find(|e| e.denom == denom);

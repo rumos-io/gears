@@ -14,6 +14,7 @@ pub mod crypto;
 pub mod error;
 pub(crate) mod ext;
 pub mod informal;
+pub mod public;
 pub mod rpc;
 pub mod types;
 

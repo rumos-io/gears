@@ -27,11 +27,14 @@ pub fn expand_macro(
         }
     });
 
-    let into_any = variants.iter().map(|v| v.clone().ident).map(|i| {
-        quote! {
-            #type_ident ::#i(msg) => msg.into()
-        }
-    });
+    let into_any = variants
+        .iter()
+        .map(|v: &syn::Variant| v.clone().ident)
+        .map(|i| {
+            quote! {
+                #type_ident ::#i(msg) => msg.into()
+            }
+        });
 
     let mut from_any = Vec::new();
     for v in &variants {
