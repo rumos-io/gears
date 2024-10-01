@@ -19,7 +19,7 @@ impl<
 
         let msg = MsgSend {
             from_address,
-            to_address: to_module.get_address(),
+            to_address: to_module.address(),
             amount,
         };
 
@@ -51,7 +51,7 @@ impl<
         module: &M,
         deposit: &UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
-        let module_acc_addr = module.get_address();
+        let module_acc_addr = module.address();
 
         let account = self
             .auth_keeper
@@ -102,7 +102,7 @@ impl<
         module: &M,
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
-        let module_address = module.get_address();
+        let module_address = module.address();
 
         // TODO: what is blocked account and how to handle it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/keeper.go#L316-L318
 

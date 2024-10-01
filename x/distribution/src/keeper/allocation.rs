@@ -44,7 +44,7 @@ impl<
         // (and distributed to the previous proposer)
         let fees_collected_int = self
             .bank_keeper
-            .balance_all(ctx, self.fee_collector_module.get_address(), None)
+            .balance_all(ctx, self.fee_collector_module.address(), None)
             .unwrap_gas()
             .1;
         let fees_collected = DecimalCoins::try_from(fees_collected_int.clone())?;

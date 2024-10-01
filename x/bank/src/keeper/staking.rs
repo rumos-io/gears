@@ -18,8 +18,8 @@ impl<
             .check_create_new_module_account(ctx, recepient_pool)?;
 
         let msg = MsgSend {
-            from_address: sender_pool.get_address(),
-            to_address: recepient_pool.get_address(),
+            from_address: sender_pool.address(),
+            to_address: recepient_pool.address(),
             amount,
         };
 
@@ -33,18 +33,14 @@ impl<
         addr: AccAddress,
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
-        let sender_module_addr = sender_module.get_address();
+        let sender_module_addr = sender_module.address();
         self.auth_keeper
             .check_create_new_module_account(ctx, sender_module)?;
 
-        if !sender_module
-            .get_permissions()
-            .iter()
-            .any(|p| p == "staking")
-        {
+        if !sender_module.permissions().iter().any(|p| p == "staking") {
             return Err(BankKeeperError::Permission(format!(
                 "module account {} does not have permissions to receive undelegate coins",
-                sender_module.get_name()
+                sender_module.name()
             )));
         }
 
@@ -58,18 +54,18 @@ impl<
         recepient_module: &M,
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
-        let recepient_module_addr = recepient_module.get_address();
+        let recepient_module_addr = recepient_module.address();
         self.auth_keeper
             .check_create_new_module_account(ctx, recepient_module)?;
 
         if !recepient_module
-            .get_permissions()
+            .permissions()
             .iter()
             .any(|p| p == "staking")
         {
             return Err(BankKeeperError::Permission(format!(
                 "module account {} does not have permissions to receive delegated coins",
-                recepient_module.get_name()
+                recepient_module.name()
             )));
         }
         self.delegate_coins(ctx, sender_addr, recepient_module_addr, amount)

@@ -181,7 +181,7 @@ impl<
 
         let balance = self
             .bank_keeper
-            .balance_all(ctx, self.gov_mod.get_address(), None)
+            .balance_all(ctx, self.gov_mod.address(), None)
             .unwrap_gas()
             .1;
         /*
