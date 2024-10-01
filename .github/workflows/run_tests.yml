@@ -3,11 +3,18 @@ name: Run tests
 on:
   # Run on any PR
   pull_request:
-    
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review  
 
 jobs:
   test:
-    runs-on: ubuntu-latest  
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
     steps:
     - name: Checkout  # Clone git repository
       uses: actions/checkout@v3
