@@ -48,10 +48,13 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
         handler: &AH,
         tx_with_raw: &TxWithRaw<AH::Message>,
     ) -> Result<(), RunTxError> {
-        handler
+        let result = handler
             .run_ante_checks(ctx, tx_with_raw, true)
-            .inspect_err(|_| ctx.multi_store_mut().clear_cache())
-            .map_err(RunTxError::from)
+            .map_err(RunTxError::from);
+
+        ctx.multi_store_mut().upgrade_cache();
+
+        result
     }
 
     fn runnable(_: &mut TxContext<'_, DB, AH::StoreKey>) -> Result<(), RunTxError> {
