@@ -66,7 +66,10 @@ impl<
         self.sub_unlocked_coins(ctx, &module_acc_addr, deposit)?;
 
         for coin in deposit.inner() {
-            let supply = self.supply(ctx, &coin.denom)?; // TODO: HOW TO HANDLE OPTION::NONE
+            let supply = self.supply(ctx, &coin.denom)?;
+            // we slightly different from cosmos in this. They return coin always.
+            // If no value found then new coin with zero balance, subtraction and call of set_supply which deletes coins with zero balance
+            // We omitted it but if any issue arise be aware that maybe we should delete zero coins if we store any.
             if let Some(mut supply) = supply {
                 supply.amount.sub_assign(coin.amount);
                 self.set_supply(ctx, supply)?;
