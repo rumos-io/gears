@@ -107,7 +107,7 @@ impl<
         let module_address = module.address();
 
         // Simple check that we don't try to send coins to account that actually a module.
-        // Cosmos uses set with accounts. For details check: 
+        // Cosmos uses set with accounts. For details check:
         // https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/keeper.go#L316-L318
         if blocked_addr::<M>().contains(address) {
             Err(BankKeeperError::Blocked(address.to_owned()))?

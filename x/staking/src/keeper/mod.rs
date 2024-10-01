@@ -233,11 +233,7 @@ impl<
 
         let not_bonded_balance = self
             .bank_keeper
-            .balance_all::<DB, InitContext<'_, DB, SK>>(
-                ctx,
-                self.not_bonded_module.address(),
-                None,
-            )
+            .balance_all::<DB, InitContext<'_, DB, SK>>(ctx, self.not_bonded_module.address(), None)
             .unwrap_gas()
             .1;
 

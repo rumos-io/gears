@@ -29,6 +29,4 @@ impl<
         }
         Ok((p_result, balances))
     }
-
-    
 }
