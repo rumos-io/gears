@@ -5,7 +5,7 @@ use crate::{
     ValidatorSlashEvent, ValidatorSlashEventRaw,
 };
 use gears::{
-    core::{errors::CoreError, query::request::PageRequest, Protobuf},
+    core::{errors::CoreError, Protobuf},
     derive::{Protobuf, Raw},
     types::{
         address::{AccAddress, AddressError, ValAddress},
@@ -14,6 +14,7 @@ use gears::{
         pagination::{request::PaginationRequest, response::PaginationResponse},
     },
 };
+use ibc_proto::cosmos::base::query::v1beta1::{PageRequest, PageResponse};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
@@ -325,7 +326,7 @@ pub struct QueryValidatorSlashesResponseRaw {
     #[prost(message, repeated, tag = "1")]
     pub slashes: Vec<ValidatorSlashEventRaw>,
     #[prost(message, optional, tag = "2")]
-    pub pagination: Option<gears::core::query::response::PageResponse>,
+    pub pagination: Option<PageResponse>,
 }
 
 impl From<QueryValidatorSlashesResponse> for QueryValidatorSlashesResponseRaw {

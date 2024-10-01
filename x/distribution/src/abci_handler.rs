@@ -15,12 +15,12 @@ use gears::{
     core::Protobuf,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::request::{begin_block::RequestBeginBlock, query::RequestQuery},
+    tendermint::{request::RequestBeginBlock, types::request::query::RequestQuery},
     types::address::ConsAddress,
     x::{
         keepers::{
-            auth::AuthKeeper, staking::DistributionStakingKeeper,
-            staking::StakingBankKeeper as BankKeeper,
+            auth::AuthKeeper,
+            staking::{DistributionStakingKeeper, StakingBankKeeper as BankKeeper},
         },
         module::Module,
     },

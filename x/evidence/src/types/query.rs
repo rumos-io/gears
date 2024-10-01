@@ -1,9 +1,10 @@
 use gears::{
-    core::{any::google::Any, errors::CoreError, query::request::PageRequest, Protobuf},
+    core::{any::google::Any, errors::CoreError, Protobuf},
     derive::{Protobuf, Query, Raw},
-    tendermint::informal::Hash,
+    tendermint::informal::hash::Hash,
     types::pagination::{request::PaginationRequest, response::PaginationResponse},
 };
+use ibc_proto::cosmos::base::query::v1beta1::{PageRequest, PageResponse};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -70,7 +71,7 @@ pub struct QueryAllEvidenceResponse {
     #[raw(kind(message), raw = Any, repeated)]
     #[proto(repeated)]
     pub evidence: Vec<Any>,
-    #[raw(kind(message), raw = gears::core::query::response::PageResponse, optional)]
+    #[raw(kind(message), raw = PageResponse, optional)]
     #[proto(optional)]
     pub pagination: Option<PaginationResponse>,
 }

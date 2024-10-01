@@ -16,13 +16,7 @@ fn base_accounts_query() -> anyhow::Result<()> {
     let gaia = GaiaNode::run()?;
 
     let cmd = GaiaQueryCommands::Auth(AuthQueryCli {
-        command: AuthCommands::Accounts(AccountsCommand {
-            pagination: CliPaginationRequest {
-                key: None,
-                offset: None,
-                limit: 100,
-            },
-        }),
+        command: AuthCommands::Accounts(AccountsCommand { pagination: None }),
     });
 
     let result = gaia.query(cmd)?;

@@ -40,7 +40,7 @@ pub async fn accounts<
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
     let req = AuthNodeQueryRequest::Accounts(QueryAccountsRequest {
-        pagination: PaginationRequest::from(pagination),
+        pagination: Some(PaginationRequest::from(pagination)),
     });
     let res = rest_state.app.typed_query(req)?;
     Ok(Json(res))

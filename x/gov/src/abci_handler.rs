@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use gears::baseapp::QueryResponse;
 use gears::extensions::gas::GasResultExt;
+use gears::tendermint::request::RequestEndBlock;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
     baseapp::errors::QueryError,
@@ -17,7 +18,7 @@ use gears::{
             event::{Event, EventAttribute},
             validator::ValidatorUpdate,
         },
-        request::{end_block::RequestEndBlock, query::RequestQuery},
+        request::query::RequestQuery,
     },
     types::tx::raw::TxWithRaw,
     x::{

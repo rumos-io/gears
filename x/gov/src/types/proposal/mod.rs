@@ -297,7 +297,7 @@ fn parse_proposal_key_bytes(bytes: impl AsRef<[u8]>) -> (u64, DateTime<Utc>) {
     });
 
     let time = DateTime::parse_from_rfc3339(
-        &String::from_utf8(bytes.as_ref()[1..1 + length_time].to_vec())
+        core::str::from_utf8(&bytes.as_ref()[1..1 + length_time])
             .expect("We serialize date as String so conversion is save"),
     )
     .unwrap() // TODO

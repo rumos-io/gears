@@ -1,9 +1,6 @@
 use gears::{
     baseapp::genesis::{Genesis, GenesisError},
-    types::{
-        account::{Account, BaseAccount},
-        address::AccAddress,
-    },
+    types::{account::Account, address::AccAddress},
 };
 use serde::{Deserialize, Serialize};
 
@@ -51,12 +48,7 @@ impl GenesisState {
         }
 
         if !contains {
-            self.accounts.push(Account::Base(BaseAccount {
-                address,
-                pub_key: None,
-                account_number: 0, // This is ignored when initializing from genesis
-                sequence: 0,       //TODO: make a BaseAccount constructor
-            }));
+            self.accounts.push(Account::new_base(address));
             Ok(())
         } else {
             Err(GenesisError(address))?
@@ -67,7 +59,7 @@ impl GenesisState {
 #[cfg(test)]
 mod tests {
 
-    use gears::extensions::testing::UnwrapTesting;
+    use gears::{extensions::testing::UnwrapTesting, types::account::BaseAccount};
 
     use super::*;
 
