@@ -231,60 +231,60 @@ impl<
         query: RequestQuery,
     ) -> Result<Vec<u8>, QueryError> {
         match query.path.as_str() {
-            "/cosmos.staking.v1beta1.Query/Validator" => {
+            QueryValidatorRequest::QUERY_URL => {
                 let req = QueryValidatorRequest::decode(query.data)?;
 
                 Ok(self.query_validator(ctx, req).into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/Validators" => {
+            QueryValidatorsRequest::QUERY_URL => {
                 let req = QueryValidatorsRequest::decode(query.data)?;
 
                 Ok(self.query_validators(ctx, req).into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/ValidatorDelegations" => {
+            QueryValidatorDelegationsRequest::QUERY_URL => {
                 let req = QueryValidatorDelegationsRequest::decode(query.data)?;
 
                 Ok(self.query_validator_delegations(ctx, req).into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/ValidatorUnbondingDelegations" => {
+            QueryValidatorUnbondingDelegationsRequest::QUERY_URL => {
                 let req = QueryValidatorUnbondingDelegationsRequest::decode(query.data)?;
 
                 Ok(self
                     .query_validator_unbonding_delegations(ctx, req)
                     .into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/Delegation" => {
+            QueryDelegationRequest::QUERY_URL => {
                 let req = QueryDelegationRequest::decode(query.data)?;
 
                 Ok(self.query_delegation(ctx, req).into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/DelegatorDelegations" => {
+            QueryDelegatorDelegationsRequest::QUERY_URL => {
                 let req = QueryDelegatorDelegationsRequest::decode(query.data)?;
 
                 Ok(self.query_delegator_delegations(ctx, req).into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/UnbondingDelegation" => {
+            QueryUnbondingDelegationRequest::QUERY_URL => {
                 let req = QueryUnbondingDelegationRequest::decode(query.data)?;
 
                 Ok(self.query_unbonding_delegation(ctx, req).into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/DelegatorUnbondingDelegations" => {
+            QueryDelegatorUnbondingDelegationsRequest::QUERY_URL => {
                 let req = QueryDelegatorUnbondingDelegationsRequest::decode(query.data)?;
 
                 Ok(self.query_unbonding_delegations(ctx, req)?.into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/Redelegations" => {
+            QueryRedelegationsRequest::QUERY_URL => {
                 let req = QueryRedelegationsRequest::decode(query.data)?;
 
                 Ok(self.query_redelegations(ctx, req).into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/HistoricalInfo" => {
+            QueryHistoricalInfoRequest::QUERY_URL => {
                 let req = QueryHistoricalInfoRequest::decode(query.data)?;
 
                 Ok(self.query_historical_info(ctx, req).into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/Pool" => Ok(self.query_pool(ctx).into_bytes()),
-            "/cosmos.staking.v1beta1.Query/Params" => Ok(self.query_params(ctx).into_bytes()),
+            QueryPoolRequest::QUERY_URL => Ok(self.query_pool(ctx).into_bytes()),
+            QueryParamsRequest::QUERY_URL => Ok(self.query_params(ctx).into_bytes()),
             _ => Err(QueryError::PathNotFound),
         }
     }
