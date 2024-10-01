@@ -1,7 +1,7 @@
 use crate::{
     types::query::{
         QueryAllBalancesRequest, QueryBalanceRequest, QueryDenomMetadataRequest,
-        QuerySupplyOfRequest, QueryTotalSupplyRequest,
+        QueryParamsRequest, QuerySupplyOfRequest, QueryTotalSupplyRequest,
     },
     BankNodeQueryRequest, BankNodeQueryResponse,
 };
@@ -91,7 +91,6 @@ pub struct QueryData {
 
 // TODO: returns {"balance":null} if balance is zero, is this expected?
 /// Get balance for a given address and denom
-//#[get("/cosmos/bank/v1beta1/balances/<addr>/by_denom?<denom>")]
 pub async fn get_balances_by_denom<
     QReq: QueryRequest + From<BankNodeQueryRequest>,
     QRes: QueryResponse + TryInto<BankNodeQueryResponse>,
@@ -125,6 +124,19 @@ pub async fn get_denom_metadata<
     Ok(Json(res))
 }
 
+/// params queries the module parameters.
+pub async fn params<
+    QReq: QueryRequest + From<BankNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<BankNodeQueryResponse>,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<QRes>, HTTPError> {
+    let req = BankNodeQueryRequest::Params(QueryParamsRequest {});
+    let res = rest_state.app.typed_query(req)?;
+    Ok(Json(res))
+}
+
 pub fn get_router<
     QReq: QueryRequest + From<BankNodeQueryRequest>,
     QRes: QueryResponse + TryInto<BankNodeQueryResponse>,
@@ -137,10 +149,8 @@ pub fn get_router<
         .route("/v1beta1/balances/:address", get(get_balances))
         .route(
             "/v1beta1/balances/:address/by_denom",
-            get(get_balances_by_denom::<QReq, QRes, App>),
+            get(get_balances_by_denom),
         )
-        .route(
-            "/v1beta1/denoms_metadata/:denom",
-            get(get_denom_metadata::<QReq, QRes, App>),
-        )
+        .route("/v1beta1/denoms_metadata/:denom", get(get_denom_metadata))
+        .route("/v1beta1/params", get(params))
 }
