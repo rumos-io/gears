@@ -16,7 +16,7 @@ pub fn handle_aux_cmd(cmd: BankAuxCmd) -> anyhow::Result<()> {
             home,
             metadata,
             dedup_input,
-            ignore_dup,
+            fail_on_dup: ignore_dup,
             overwrite_same,
         }) => {
             let metadata = match serde_json::from_str(&metadata) {

@@ -10,7 +10,7 @@ pub struct CoinsMetaGenesisCmd {
     pub home: PathBuf,
     pub metadata: String,
     pub dedup_input: bool,
-    pub ignore_dup: bool,
+    pub fail_on_dup: bool,
     pub overwrite_same: bool,
 }
 
@@ -18,7 +18,7 @@ pub fn add_coins_meta_to_genesis(
     home: impl AsRef<Path>,
     metadata: impl IntoIterator<Item = Metadata>,
     dedup_input: bool,
-    ignore_dup: bool,
+    fail_on_dup: bool,
     overwrite_same: bool,
 ) -> anyhow::Result<()> {
     let metadata = {
@@ -55,7 +55,7 @@ pub fn add_coins_meta_to_genesis(
 
         match dup {
             Some(dup) => {
-                if !ignore_dup {
+                if fail_on_dup {
                     Err(anyhow::anyhow!("Duplicate meta: {}", dup.name))?
                 }
 

@@ -15,9 +15,9 @@ pub struct CoinsMetaGenesisCli<AI: ApplicationInfo> {
     /// Dedup input metadata list
     #[arg(long, default_value_t = false)]
     pub dedup_input: bool,
-    /// Ignore duplicates found in original genesis file
-    #[arg(long, default_value_t = true)]
-    pub ignore_dup: bool,
+    /// Return error if found duplicates with original genesis file
+    #[arg(long, default_value_t = false)]
+    pub fail_on_dup: bool,
     /// Overwrite metadata with same coin name
     #[arg(long, default_value_t = false)]
     pub overwrite_same: bool,
@@ -32,7 +32,7 @@ impl<AI: ApplicationInfo> From<CoinsMetaGenesisCli<AI>> for CoinsMetaGenesisCmd 
             home,
             metadata,
             dedup_input,
-            ignore_dup,
+            fail_on_dup,
             overwrite_same,
             _marker,
         }: CoinsMetaGenesisCli<AI>,
@@ -41,7 +41,7 @@ impl<AI: ApplicationInfo> From<CoinsMetaGenesisCli<AI>> for CoinsMetaGenesisCmd 
             home,
             metadata,
             dedup_input,
-            ignore_dup,
+            fail_on_dup,
             overwrite_same,
         }
     }
