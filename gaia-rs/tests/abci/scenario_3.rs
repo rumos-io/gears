@@ -23,14 +23,14 @@ fn scenario_3() {
     let user_0 = crate::user(2, USER_0);
     let user_1 = crate::user(3, USER_1);
 
-    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
         "e111f4a62a52f13c7e942694aa9c6997f4f6e131b9306090aa022297ce362540"
     );
 
     //----------------------------------------
-    // Try to create a validator with the same pubkey as the one in the genesis file - should fail
+    // Try to create a validator with validator address and delegator address derived from different keys - should fail
 
     let consensus_pub_key = serde_json::from_str::<PublicKey>(
         r#"{
@@ -64,9 +64,15 @@ fn scenario_3() {
 
     let txs = generate_txs([(1, msg)], &user_0, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::try_new(0, 0).unwrap());
+    let step_res = node.step(txs, Timestamp::try_new(0, 0).unwrap());
+
     assert_eq!(
-        hex::encode(app_hash),
+        step_res.tx_responses[0].log,
+        // TODO: error messages are too verbose
+        "decode error: `error converting message type into domain type: error converting message type into domain type: decode error: `delegator address and validator address must be derived from the same public key`\n\nLocation:\n    /home/kevin/.cargo/registry/src/index.crates.io-6f17d22bba15001f/flex-error-0.4.4/src/tracer_impl/eyre.rs:10:9\n\nLocation:\n    /home/kevin/.cargo/registry/src/index.crates.io-6f17d22bba15001f/flex-error-0.4.4/src/tracer_impl/eyre.rs:10:9`".to_string()
+    );
+    assert_eq!(
+        hex::encode(step_res.app_hash),
         "6d0b1e5f3f4f3759c05be2eabed1f4586d176ab36f76df7d9b874dbe850016c8"
     );
 
@@ -121,7 +127,9 @@ fn scenario_3() {
 
     let txs = generate_txs([(0, msg)], &user_1, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::try_new(0, 0).expect("hardcoded is valid"));
+    let app_hash = node
+        .step(txs, Timestamp::try_new(0, 0).expect("hardcoded is valid"))
+        .app_hash;
     assert_eq!(
         hex::encode(app_hash),
         "815b88380e50eb8a82f9df53503dddb14cba409970aaf77e7de1164ca8bc61f5"
@@ -147,9 +155,53 @@ fn scenario_3() {
     //----------------------------------------
     // Jump forward in time - the unbonding validator will be unbonded
 
-    let app_hash = node.step(vec![], Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap()); // 30 days which is greater than the unbonding time
+    let app_hash = node
+        .step(vec![], Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap())
+        .app_hash; // 30 days which is greater than the unbonding time
     assert_eq!(
         hex::encode(app_hash),
         "07f42dc05073c352627503e52acd89538ddcf08a0bb7d385027938f32013cc1e"
+    );
+
+    //----------------------------------------
+    // redelegate from the bonded validator to the unbonded validator - we want to create an unbonding validator (user_1)
+
+    let msg =
+        gaia_rs::message::Message::Staking(staking::Message::Redelegate(staking::RedelegateMsg {
+            delegator_address: user_1.address(),
+            src_validator_address: user_1.address().into(),
+            dst_validator_address: user_0.address().into(),
+            amount: "20000000000uatom".parse().expect("hardcoded is valid"),
+        }));
+
+    let txs = generate_txs([(1, msg)], &user_1, node.chain_id().clone());
+
+    let step_response = node.step(txs, Timestamp::UNIX_EPOCH);
+
+    assert_eq!(
+        hex::encode(step_response.app_hash),
+        "f77db9b981dd5de1a9df98e8c0ba4de05a9e0654ab3f8f797d8cfdba1c9b46cf"
+    );
+
+    //----------------------------------------
+    // try to revert the previous redelegation - should fail (transitive redelegations are not allowed)
+
+    let msg =
+        gaia_rs::message::Message::Staking(staking::Message::Redelegate(staking::RedelegateMsg {
+            delegator_address: user_1.address(),
+            src_validator_address: user_0.address().into(),
+            dst_validator_address: user_1.address().into(),
+            amount: "20000000000uatom".parse().expect("hardcoded is valid"),
+        }));
+
+    let txs = generate_txs([(2, msg)], &user_1, node.chain_id().clone());
+
+    let step_response = node.step(txs, Timestamp::UNIX_EPOCH);
+
+    assert_eq!("transitive redelegation", step_response.tx_responses[0].log);
+
+    assert_eq!(
+        hex::encode(step_response.app_hash),
+        "20944376e837b74f887b4a9f20e85dc181d711e872009c9adfed09c91064b6bc"
     );
 }

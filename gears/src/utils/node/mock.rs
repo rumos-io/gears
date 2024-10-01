@@ -15,7 +15,7 @@ use tendermint::{
             begin_block::RequestBeginBlock, deliver_tx::RequestDeliverTx,
             end_block::RequestEndBlock, init_chain::RequestInitChain, query::RequestQuery,
         },
-        response::query::ResponseQuery,
+        response::{deliver_tx::ResponseDeliverTx, query::ResponseQuery},
         time::timestamp::Timestamp,
     },
 };
@@ -53,6 +53,11 @@ pub struct MockNode<App, G> {
     _phantom: std::marker::PhantomData<G>,
 }
 
+pub struct StepResponse {
+    pub app_hash: Bytes,
+    pub tx_responses: Vec<ResponseDeliverTx>,
+}
+
 impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
     pub fn new(app: App, init_state: InitState<G>) -> Self {
         // NOTE: the use of height here is complicated. Usually the init_state height will be 1. This
@@ -83,7 +88,7 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
         }
     }
 
-    pub fn step(&mut self, txs: impl IntoIterator<Item = Bytes>, block_time: Timestamp) -> &Bytes {
+    pub fn step(&mut self, txs: Vec<Bytes>, block_time: Timestamp) -> StepResponse {
         self.height += 1;
         self.time = block_time;
         let header = self.calculate_header();
@@ -101,8 +106,9 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
         };
         self.app.begin_block(request_begin_block);
 
+        let mut tx_responses = Vec::with_capacity(txs.len());
         for tx in txs {
-            self.app.deliver_tx(RequestDeliverTx { tx });
+            tx_responses.push(self.app.deliver_tx(RequestDeliverTx { tx }));
         }
 
         self.app.end_block(RequestEndBlock {
@@ -113,7 +119,10 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
 
         self.app_hash = res_commit.data;
 
-        &self.app_hash
+        StepResponse {
+            app_hash: self.app_hash.clone(),
+            tx_responses,
+        }
     }
 
     pub fn query(&self, req: RequestQuery) -> ResponseQuery {
@@ -177,7 +186,7 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
 
     pub fn skip_steps(&mut self, steps: usize) {
         for _ in 0..steps {
-            let _ = self.step([], Timestamp::UNIX_EPOCH);
+            let _ = self.step(vec![], Timestamp::UNIX_EPOCH);
         }
     }
 }

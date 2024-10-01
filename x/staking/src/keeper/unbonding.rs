@@ -404,6 +404,7 @@ impl<
         unbonding_height: u32,
     ) -> Result<Vec<ValAddress>, GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
+        // TODO: we shouldn't be using the prefix store here - since the validator_queue_key adds the prefix
         let store = store.prefix_store(VALIDATOR_QUEUE_KEY);
 
         if let Some(bz) = store.get(&validator_queue_key(unbonding_time, unbonding_height))? {

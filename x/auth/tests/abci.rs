@@ -25,7 +25,7 @@ fn test_init_and_few_blocks() {
 
     let (mut node, _) = init_node(opt);
 
-    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    let app_hash = &node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
         "8d3663f81a98bec58a6d3a9f39c38469438bfecd8257dd335c8c047b933b08ad"
@@ -33,7 +33,7 @@ fn test_init_and_few_blocks() {
 
     node.skip_steps(100);
 
-    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    let app_hash = &node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
         "8d3663f81a98bec58a6d3a9f39c38469438bfecd8257dd335c8c047b933b08ad"
