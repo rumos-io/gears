@@ -356,7 +356,7 @@ impl<
         ctx: &mut CTX,
         coin: UnsignedCoin,
     ) -> Result<(), GasStoreErrors> {
-        // If there will be any issue with bank then delete coins with zero balance. See for more details:
+        // If there will be any issue with bank then delete coins with zero balance. See for more details: https://github.com/NYBACHOK/gears/blob/c79c50f60e40cee3fbc050002bf1ce63a72b67a3/x/bank/src/keeper/bank.rs#L70-L72
 
         let bank_store = ctx.kv_store_mut(&self.store_key);
         let mut supply_store = bank_store.prefix_store_mut(SUPPLY_KEY);
