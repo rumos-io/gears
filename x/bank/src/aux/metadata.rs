@@ -39,16 +39,13 @@ pub fn add_coins_meta_to_genesis(
     let mut genesis = serde_json::from_slice::<serde_json::Value>(&std::fs::read(&genesis_path)?)?;
 
     let value = genesis
-        .get_mut("app_state")
-        .ok_or(anyhow::anyhow!("missing `app_state`"))?
-        .get_mut("bank")
-        .ok_or(anyhow::anyhow!("`bank` module is not found"))?
-        .get_mut("denom_metadata")
-        .ok_or(anyhow::anyhow!("`denom_metadata` is not found"))?;
+        .pointer_mut("/app_state/bank/denom_metadata")
+        .ok_or(anyhow::anyhow!(
+            "`/app_state/bank/denom_metadata` not found. Check is genesis file is valid"
+        ))?
+        .take();
 
-    let owned_value = value.take();
-
-    let mut original_meta = serde_json::from_value::<Vec<Metadata>>(owned_value)?
+    let mut original_meta = serde_json::from_value::<Vec<Metadata>>(value)?
         .into_iter()
         .map(|this| (this.name.clone(), this))
         .collect::<HashMap<_, _>>();
@@ -79,7 +76,9 @@ pub fn add_coins_meta_to_genesis(
         }
     }
 
-    *value = serde_json::to_value(
+    *genesis
+        .pointer_mut("/app_state/bank/denom_metadata")
+        .expect("we checked that this exists") = serde_json::to_value(
         original_meta
             .into_iter()
             .map(|(_, this)| this)
@@ -89,7 +88,7 @@ pub fn add_coins_meta_to_genesis(
 
     std::fs::write(
         genesis_path,
-        serde_json::to_string_pretty(value).expect("serde encoding"),
+        serde_json::to_string_pretty(&genesis).expect("serde encoding"),
     )?;
 
     Ok(())
