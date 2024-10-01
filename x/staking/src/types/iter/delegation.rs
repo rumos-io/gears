@@ -15,7 +15,8 @@ pub struct DelegationIterator<'a, DB>(StoreRange<'a, DB>);
 
 impl<'a, DB: Database> DelegationIterator<'a, DB> {
     pub fn new(store: Store<'a, DB>, address: &AccAddress) -> DelegationIterator<'a, DB> {
-        let prefix = store.prefix_store([DELEGATION_KEY.as_slice(), address.as_ref()].concat());
+        let prefix =
+            store.prefix_store([DELEGATION_KEY.as_slice(), &address.prefix_len_bytes()].concat());
 
         let range = prefix.into_range(..);
 

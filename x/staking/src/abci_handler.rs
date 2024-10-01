@@ -16,6 +16,7 @@ use crate::{
     QueryValidatorUnbondingDelegationsResponse,
 };
 use gears::extensions::gas::GasResultExt;
+use gears::extensions::pagination::IteratorPaginate;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
     baseapp::{errors::QueryError, QueryRequest, QueryResponse},
@@ -127,35 +128,35 @@ impl<
     ) -> Self::QRes {
         match query {
             StakingNodeQueryRequest::Validator(req) => {
-                StakingNodeQueryResponse::Validator(self.keeper.query_validator(ctx, req))
+                StakingNodeQueryResponse::Validator(self.query_validator(ctx, req))
             }
             StakingNodeQueryRequest::Validators(req) => {
-                StakingNodeQueryResponse::Validators(self.keeper.query_validators(ctx, req))
+                StakingNodeQueryResponse::Validators(self.query_validators(ctx, req))
             }
             StakingNodeQueryRequest::ValidatorDelegations(req) => {
                 StakingNodeQueryResponse::ValidatorDelegations(
-                    self.keeper.query_validator_delegations(ctx, req),
+                    self.query_validator_delegations(ctx, req),
                 )
             }
             StakingNodeQueryRequest::ValidatorUnbondingDelegations(req) => {
                 StakingNodeQueryResponse::ValidatorUnbondingDelegations(
-                    self.keeper.query_validator_unbonding_delegations(ctx, req),
+                    self.query_validator_unbonding_delegations(ctx, req),
                 )
             }
             StakingNodeQueryRequest::Delegation(req) => {
-                StakingNodeQueryResponse::Delegation(self.keeper.query_delegation(ctx, req))
+                StakingNodeQueryResponse::Delegation(self.query_delegation(ctx, req))
             }
-            StakingNodeQueryRequest::Delegations(req) => StakingNodeQueryResponse::Delegations(
-                self.keeper.query_delegator_delegations(ctx, req),
-            ),
+            StakingNodeQueryRequest::Delegations(req) => {
+                StakingNodeQueryResponse::Delegations(self.query_delegator_delegations(ctx, req))
+            }
             StakingNodeQueryRequest::UnbondingDelegation(req) => {
                 StakingNodeQueryResponse::UnbondingDelegation(
-                    self.keeper.query_unbonding_delegation(ctx, req),
+                    self.query_unbonding_delegation(ctx, req),
                 )
             }
             StakingNodeQueryRequest::UnbondingDelegations(req) => {
                 StakingNodeQueryResponse::UnbondingDelegations(
-                    self.keeper.query_unbonding_delegations(ctx, req).unwrap_or(
+                    self.query_unbonding_delegations(ctx, req).unwrap_or(
                         QueryDelegatorUnbondingDelegationsResponse {
                             unbonding_responses: vec![],
                             pagination: None,
@@ -165,7 +166,7 @@ impl<
             }
             StakingNodeQueryRequest::DelegatorValidator(req) => {
                 StakingNodeQueryResponse::DelegatorValidator(
-                    self.keeper.query_delegator_validator(ctx, req),
+                    self.query_delegator_validator(ctx, req),
                 )
             }
             StakingNodeQueryRequest::Redelegations(req) => {
@@ -173,19 +174,17 @@ impl<
             }
             StakingNodeQueryRequest::DelegatorValidators(req) => {
                 StakingNodeQueryResponse::DelegatorValidators(
-                    self.keeper.query_delegator_validators(ctx, req),
+                    self.query_delegator_validators(ctx, req),
                 )
             }
             StakingNodeQueryRequest::HistoricalInfo(req) => {
-                StakingNodeQueryResponse::HistoricalInfo(
-                    self.keeper.query_historical_info(ctx, req),
-                )
+                StakingNodeQueryResponse::HistoricalInfo(self.query_historical_info(ctx, req))
             }
             StakingNodeQueryRequest::Pool(_) => {
-                StakingNodeQueryResponse::Pool(self.keeper.query_pool(ctx))
+                StakingNodeQueryResponse::Pool(self.query_pool(ctx))
             }
             StakingNodeQueryRequest::Params(_) => {
-                StakingNodeQueryResponse::Params(self.keeper.query_params(ctx))
+                StakingNodeQueryResponse::Params(self.query_params(ctx))
             }
         }
     }
@@ -235,57 +234,44 @@ impl<
             "/cosmos.staking.v1beta1.Query/Validator" => {
                 let req = QueryValidatorRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_validator(ctx, req).into_bytes())
+                Ok(self.query_validator(ctx, req).into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/Validators" => {
                 let req = QueryValidatorsRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_validators(ctx, req).into_bytes())
+                Ok(self.query_validators(ctx, req).into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/ValidatorDelegations" => {
                 let req = QueryValidatorDelegationsRequest::decode(query.data)?;
 
-                Ok(self
-                    .keeper
-                    .query_validator_delegations(ctx, req)
-                    .into_bytes())
+                Ok(self.query_validator_delegations(ctx, req).into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/ValidatorUnbondingDelegations" => {
                 let req = QueryValidatorUnbondingDelegationsRequest::decode(query.data)?;
 
                 Ok(self
-                    .keeper
                     .query_validator_unbonding_delegations(ctx, req)
                     .into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/Delegation" => {
                 let req = QueryDelegationRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_delegation(ctx, req).into_bytes())
+                Ok(self.query_delegation(ctx, req).into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/DelegatorDelegations" => {
                 let req = QueryDelegatorDelegationsRequest::decode(query.data)?;
 
-                Ok(self
-                    .keeper
-                    .query_delegator_delegations(ctx, req)
-                    .into_bytes())
+                Ok(self.query_delegator_delegations(ctx, req).into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/UnbondingDelegation" => {
                 let req = QueryUnbondingDelegationRequest::decode(query.data)?;
 
-                Ok(self
-                    .keeper
-                    .query_unbonding_delegation(ctx, req)
-                    .into_bytes())
+                Ok(self.query_unbonding_delegation(ctx, req).into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/DelegatorUnbondingDelegations" => {
                 let req = QueryDelegatorUnbondingDelegationsRequest::decode(query.data)?;
 
-                Ok(self
-                    .keeper
-                    .query_unbonding_delegations(ctx, req)?
-                    .into_bytes())
+                Ok(self.query_unbonding_delegations(ctx, req)?.into_bytes())
             }
             "/cosmos.staking.v1beta1.Query/Redelegations" => {
                 let req = QueryRedelegationsRequest::decode(query.data)?;
@@ -295,12 +281,10 @@ impl<
             "/cosmos.staking.v1beta1.Query/HistoricalInfo" => {
                 let req = QueryHistoricalInfoRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_historical_info(ctx, req).into_bytes())
+                Ok(self.query_historical_info(ctx, req).into_bytes())
             }
-            "/cosmos.staking.v1beta1.Query/Pool" => Ok(self.keeper.query_pool(ctx).into_bytes()),
-            "/cosmos.staking.v1beta1.Query/Params" => {
-                Ok(self.keeper.query_params(ctx).into_bytes())
-            }
+            "/cosmos.staking.v1beta1.Query/Pool" => Ok(self.query_pool(ctx).into_bytes()),
+            "/cosmos.staking.v1beta1.Query/Params" => Ok(self.query_params(ctx).into_bytes()),
             _ => Err(QueryError::PathNotFound),
         }
     }
@@ -411,5 +395,195 @@ impl<
         }
 
         Ok(resp)
+    }
+    pub fn query_validator<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryValidatorRequest,
+    ) -> QueryValidatorResponse {
+        let validator = self
+            .keeper
+            .validator(ctx, &query.validator_addr)
+            .unwrap_gas()
+            .map(Into::into);
+        QueryValidatorResponse { validator }
+    }
+
+    pub fn query_validators<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryValidatorsRequest,
+    ) -> QueryValidatorsResponse {
+        let (pagination, validators) = self.keeper.validators(ctx, query.status, query.pagination);
+
+        QueryValidatorsResponse {
+            validators,
+            pagination,
+        }
+    }
+
+    pub fn query_delegation<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryDelegationRequest,
+    ) -> QueryDelegationResponse {
+        if let Some(delegation) = self
+            .keeper
+            .delegation(ctx, &query.delegator_addr, &query.validator_addr)
+            .unwrap_gas()
+        {
+            let delegation_response = self
+                .keeper
+                .delegation_to_delegation_response(ctx, delegation)
+                .ok();
+            QueryDelegationResponse {
+                delegation_response,
+            }
+        } else {
+            QueryDelegationResponse {
+                delegation_response: None,
+            }
+        }
+    }
+
+    pub fn query_delegator_delegations<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryDelegatorDelegationsRequest,
+    ) -> QueryDelegatorDelegationsResponse {
+        let (pagination, delegation_responses) =
+            self.keeper
+                .delegator_delegations(ctx, &query.delegator_addr, query.pagination);
+
+        QueryDelegatorDelegationsResponse {
+            delegation_responses,
+            pagination,
+        }
+    }
+
+    pub fn query_delegator_validator<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryDelegatorValidatorRequest {
+            delegator_addr,
+            validator_addr,
+        }: QueryDelegatorValidatorRequest,
+    ) -> QueryDelegatorValidatorResponse {
+        let delegation = self
+            .keeper
+            .delegation(ctx, &delegator_addr, &validator_addr)
+            .unwrap_gas();
+        let validator = self.keeper.validator(ctx, &validator_addr).unwrap_gas();
+        if delegation.is_some() {
+            QueryDelegatorValidatorResponse { validator }
+        } else {
+            QueryDelegatorValidatorResponse { validator: None }
+        }
+    }
+
+    pub fn query_validator_delegations<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryValidatorDelegationsRequest,
+    ) -> QueryValidatorDelegationsResponse {
+        let (pagination, delegation_responses) =
+            self.keeper
+                .validator_delegations(ctx, &query.validator_addr, query.pagination);
+
+        QueryValidatorDelegationsResponse {
+            delegation_responses,
+            pagination,
+        }
+    }
+
+    pub fn query_validator_unbonding_delegations<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryValidatorUnbondingDelegationsRequest,
+    ) -> QueryValidatorUnbondingDelegationsResponse {
+        let unbonding_delegations = self
+            .keeper
+            .unbonding_delegations_from_validator(ctx, &query.validator_addr)
+            .unwrap_gas();
+
+        let (p_res, iter) = unbonding_delegations
+            .into_iter()
+            .maybe_paginate(query.pagination.map(Pagination::from));
+
+        let unbonding_responses = iter.collect();
+
+        QueryValidatorUnbondingDelegationsResponse {
+            unbonding_responses,
+            pagination: p_res.map(PaginationResponse::from),
+        }
+    }
+
+    pub fn query_unbonding_delegation<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryUnbondingDelegationRequest,
+    ) -> QueryUnbondingDelegationResponse {
+        QueryUnbondingDelegationResponse {
+            unbond: self
+                .keeper
+                .unbonding_delegation(ctx, &query.delegator_addr, &query.validator_addr)
+                .unwrap_gas(),
+        }
+    }
+
+    pub fn query_unbonding_delegations<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryDelegatorUnbondingDelegationsRequest,
+    ) -> Result<QueryDelegatorUnbondingDelegationsResponse, QueryError> {
+        let res = self
+            .keeper
+            .unbonding_delegations(ctx, &query.delegator_addr, query.pagination);
+
+        res.map(
+            |(pagination, unbonding_responses)| QueryDelegatorUnbondingDelegationsResponse {
+                unbonding_responses,
+                pagination,
+            },
+        )
+    }
+
+    /// query_delegator_validators queries all validators info for given delegator address
+    pub fn query_delegator_validators<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryDelegatorValidatorsRequest,
+    ) -> QueryDelegatorValidatorsResponse {
+        let (pagination, validators) =
+            self.keeper
+                .delegator_validators(ctx, &query.delegator_addr, query.pagination);
+
+        QueryDelegatorValidatorsResponse {
+            validators,
+            pagination,
+        }
+    }
+
+    pub fn query_historical_info<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryHistoricalInfoRequest { height }: QueryHistoricalInfoRequest,
+    ) -> QueryHistoricalInfoResponse {
+        let historical_info = self.keeper.historical_info(ctx, height as u32).unwrap_gas();
+        QueryHistoricalInfoResponse {
+            hist: historical_info,
+        }
+    }
+
+    pub fn query_pool<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryPoolResponse {
+        let pool = self.keeper.pool(ctx).unwrap_gas();
+        QueryPoolResponse { pool: Some(pool) }
+    }
+
+    pub fn query_params<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryParamsResponse {
+        let params = self.keeper.params(ctx);
+        QueryParamsResponse {
+            params: Some(params),
+        }
     }
 }

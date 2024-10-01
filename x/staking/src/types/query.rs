@@ -5,6 +5,7 @@ use crate::{
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
     derive::{Protobuf, Query, Raw},
+    extensions::pagination::PaginationKey,
     types::{
         address::{AccAddress, AddressError, ValAddress},
         base::coin::UnsignedCoin,
@@ -305,6 +306,17 @@ pub struct DelegationResponse {
     pub delegation: Option<Delegation>,
     #[proto(optional)]
     pub balance: Option<UnsignedCoin>,
+}
+
+impl PaginationKey for DelegationResponse {
+    fn iterator_key(&self) -> std::borrow::Cow<'_, [u8]> {
+        std::borrow::Cow::Owned(
+            self.delegation
+                .clone()
+                .map(|d| Vec::from(d.delegator_address))
+                .unwrap_or_default(),
+        )
+    }
 }
 
 /// QueryDelegationResponse is the response type for the Query/Delegation RPC method.
