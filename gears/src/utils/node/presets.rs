@@ -66,7 +66,7 @@ pub fn init_node<PSK: ParamsSubspaceKey, H: ABCIHandler<Genesis = GS>, GS: Genes
         bip32::Mnemonic::new(mnemonic, bip32::Language::English).expect("Invalid mnemonic");
     let key_pair = KeyPair::from_mnemonic(&mnemonic);
     let address = key_pair.get_address();
-    let consensus_key = crate::tendermint::crypto::new_private_key();
+    let consensus_key = tendermint::crypto::new_private_key();
 
     let app_genesis = match genesis {
         GenesisSource::File(path) => {

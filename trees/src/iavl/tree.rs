@@ -183,7 +183,7 @@ impl Node {
     /// Returns the leftmost leaf key in the subtree rooted at this node AKA the smallest key in the subtree.
     fn leftmost_leaf_key<T: Database>(&self, node_db: &NodeDB<T>) -> Vec<u8> {
         match self {
-            Node::Leaf(leaf) => return leaf.key.clone(),
+            Node::Leaf(leaf) => leaf.key.clone(),
             Node::Inner(inner) => {
                 let mut left_node = match &inner.left_node {
                     Some(inner_left_node) => inner_left_node,
@@ -199,7 +199,7 @@ impl Node {
                         Node::Leaf(leaf) => break leaf.key.clone(),
                         Node::Inner(inner) => match &inner.left_node {
                             Some(inner_left_node) => {
-                                left_node = &inner_left_node;
+                                left_node = inner_left_node;
                             }
                             None => {
                                 cached_node = node_db
@@ -748,12 +748,12 @@ where
                                     // Also, the right node's height and size were correct so don't need re-calculating
                                     // on the new root node.
                                     // The new leftmost leaf key for the subtree has changed so we return it
-                                    return (
+                                    (
                                         value,
                                         Some(node.hash()),
                                         false,
                                         Some(NodeKey(node.leftmost_leaf_key(node_db))),
-                                    );
+                                    )
                                 } else if let Some(new_hash) = new_hash {
                                     // The left subtree's root hash has changed, so update the node's hash
                                     // By updating the node's hash we're essentially creating a new node, so we need to

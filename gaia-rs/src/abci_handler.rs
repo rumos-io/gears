@@ -172,7 +172,7 @@ impl ABCIHandler for GaiaABCIHandler {
     fn begin_block<DB: Database>(
         &self,
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
-        request: gears::tendermint::types::request::begin_block::RequestBeginBlock,
+        request: gears::tendermint::request::RequestBeginBlock,
     ) {
         self.staking_abci_handler.begin_block(ctx, request);
     }
@@ -180,7 +180,7 @@ impl ABCIHandler for GaiaABCIHandler {
     fn end_block<DB: Database>(
         &self,
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
-        request: gears::tendermint::types::request::end_block::RequestEndBlock,
+        request: gears::tendermint::request::RequestEndBlock,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
         self.staking_abci_handler.end_block(ctx, request)
     }
@@ -193,7 +193,7 @@ impl ABCIHandler for GaiaABCIHandler {
         self.bank_abci_handler.genesis(ctx, genesis.bank);
         let staking_updates = self.staking_abci_handler.genesis(ctx, genesis.staking);
         self.ibc_abci_handler.genesis(ctx, genesis.ibc);
-        self.auth_abci_handler.genesis(ctx, genesis.auth);
+        self.auth_abci_handler.init_genesis(ctx, genesis.auth);
         let genutil_updates = self.genutil_handler.init_genesis(ctx, genesis.genutil);
 
         match (genutil_updates.is_empty(), staking_updates.is_empty()) {

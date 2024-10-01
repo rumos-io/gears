@@ -4,7 +4,7 @@ use crate::types::{
 use clap::Args;
 use gears::{
     application::handlers::client::QueryHandler, cli::pagination::CliPaginationRequest,
-    core::Protobuf, derive::Query, tendermint::informal::Hash,
+    core::Protobuf, derive::Query, tendermint::informal::hash::Hash,
     types::pagination::request::PaginationRequest,
 };
 use serde::{Deserialize, Serialize};
