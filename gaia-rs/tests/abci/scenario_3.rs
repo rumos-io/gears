@@ -66,11 +66,13 @@ fn scenario_3() {
 
     let step_res = node.step(txs, Timestamp::try_new(0, 0).unwrap());
 
-    assert_eq!(
-        step_res.tx_responses[0].log,
-        // TODO: error messages are too verbose
-        "decode error: `error converting message type into domain type: error converting message type into domain type: decode error: `delegator address and validator address must be derived from the same public key`\n\nLocation:\n    /home/kevin/.cargo/registry/src/index.crates.io-6f17d22bba15001f/flex-error-0.4.4/src/tracer_impl/eyre.rs:10:9\n\nLocation:\n    /home/kevin/.cargo/registry/src/index.crates.io-6f17d22bba15001f/flex-error-0.4.4/src/tracer_impl/eyre.rs:10:9`".to_string()
+    // TODO: error messages are too verbose
+    assert!(
+        step_res.tx_responses[0].log.starts_with("decode error: `error converting message type into domain type: error converting message type into domain type: decode error: `delegator address and validator address must be derived from the same public key`\n\nLocation:\n    "),
     );
+    assert!(step_res.tx_responses[0]
+        .log
+        .ends_with("flex-error-0.4.4/src/tracer_impl/eyre.rs:10:9`"),);
     assert_eq!(
         hex::encode(step_res.app_hash),
         "6d0b1e5f3f4f3759c05be2eabed1f4586d176ab36f76df7d9b874dbe850016c8"
