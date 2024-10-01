@@ -171,16 +171,16 @@ fn scenario_3() {
             delegator_address: user_1.address(),
             src_validator_address: user_1.address().into(),
             dst_validator_address: user_0.address().into(),
-            amount: "20000000000uatom".parse().expect("hardcoded is valid"),
+            amount: "15000000000uatom".parse().expect("hardcoded is valid"),
         }));
 
     let txs = generate_txs([(1, msg)], &user_1, node.chain_id().clone());
 
-    let step_response = node.step(txs, Timestamp::UNIX_EPOCH);
+    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "f77db9b981dd5de1a9df98e8c0ba4de05a9e0654ab3f8f797d8cfdba1c9b46cf"
+        "9c4df3dd21c2eee54b0ac4a831615fae64417cea9d2d98301c6a2b0ce63c2963"
     );
 
     //----------------------------------------
@@ -191,17 +191,40 @@ fn scenario_3() {
             delegator_address: user_1.address(),
             src_validator_address: user_0.address().into(),
             dst_validator_address: user_1.address().into(),
-            amount: "20000000000uatom".parse().expect("hardcoded is valid"),
+            amount: "15000000000uatom".parse().expect("hardcoded is valid"),
         }));
 
     let txs = generate_txs([(2, msg)], &user_1, node.chain_id().clone());
 
-    let step_response = node.step(txs, Timestamp::UNIX_EPOCH);
+    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
 
     assert_eq!("transitive redelegation", step_response.tx_responses[0].log);
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "20944376e837b74f887b4a9f20e85dc181d711e872009c9adfed09c91064b6bc"
+        "c60067ca69637b341607ed8bbf19048b5b04b6860dbe9f01f91b0d09d18c9e8e"
+    );
+
+    //----------------------------------------
+    // repeat redelegate from the bonded validator to the unbonded validator - this will test appending to the
+    // redelegation_queue_time_slice
+
+    let msg =
+        gaia_rs::message::Message::Staking(staking::Message::Redelegate(staking::RedelegateMsg {
+            delegator_address: user_1.address(),
+            src_validator_address: user_1.address().into(),
+            dst_validator_address: user_0.address().into(),
+            amount: "5000000000uatom".parse().expect("hardcoded is valid"),
+        }));
+
+    let txs = generate_txs([(3, msg)], &user_1, node.chain_id().clone());
+
+    println!("txs: {:?}", txs[0].to_vec());
+
+    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
+
+    assert_eq!(
+        hex::encode(step_response.app_hash),
+        "89584a1350b27aa49cba197b36550a98a2ecc2c5e25fd0807f1c16ae73f26d6f"
     );
 }
