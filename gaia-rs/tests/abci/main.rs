@@ -10,7 +10,7 @@ use gears::config::Config;
 use gears::crypto::keys::ReadAccAddress;
 use gears::store::database::MemDB;
 use gears::tendermint::types::chain_id::ChainId;
-use gears::tendermint::types::proto::consensus::ConsensusParams;
+use gears::tendermint::types::consensus::ConsensusParams;
 use gears::tendermint::types::proto::validator::{ValidatorUpdate, VotingPower};
 use gears::tendermint::types::time::timestamp::Timestamp;
 use gears::utils::node::{InitState, MockNode, User};

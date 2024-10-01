@@ -8,6 +8,7 @@ pub struct GenesisError(pub AccAddress);
 pub trait Genesis:
     std::fmt::Debug + Default + DeserializeOwned + Serialize + Clone + Send + Sync + 'static
 {
+    // TODO: REMOVE?
     fn add_genesis_account(
         &mut self,
         address: AccAddress,

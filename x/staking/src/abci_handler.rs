@@ -9,6 +9,7 @@ use crate::{
     RedelegationResponse,
 };
 use gears::extensions::gas::GasResultExt;
+use gears::tendermint::request::{RequestBeginBlock, RequestEndBlock};
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
     baseapp::{errors::QueryError, QueryRequest, QueryResponse},
@@ -18,12 +19,7 @@ use gears::{
     extensions::pagination::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::{
-        proto::validator::ValidatorUpdate,
-        request::{
-            begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
-        },
-    },
+    tendermint::types::{proto::validator::ValidatorUpdate, request::query::RequestQuery},
     types::pagination::response::PaginationResponse,
     x::{
         keepers::{

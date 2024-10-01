@@ -72,7 +72,7 @@ impl<
 
         let msg = MsgSend {
             from_address,
-            to_address: to_module.get_address(),
+            to_address: to_module.address(),
             amount,
         };
 
@@ -104,7 +104,7 @@ impl<
         module: &M,
         deposit: &UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
-        let module_acc_addr = module.get_address();
+        let module_acc_addr = module.address();
 
         let account = self
             .auth_keeper
@@ -152,7 +152,7 @@ impl<
         module: &M,
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
-        let module_address = module.get_address();
+        let module_address = module.address();
 
         // TODO: what is blocked account and how to handle it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/keeper.go#L316-L318
 
@@ -496,8 +496,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             .check_create_new_module_account(ctx, recepient_pool)?;
 
         let msg = MsgSend {
-            from_address: sender_pool.get_address(),
-            to_address: recepient_pool.get_address(),
+            from_address: sender_pool.address(),
+            to_address: recepient_pool.address(),
             amount,
         };
 
@@ -691,18 +691,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         recepient_module: &M,
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
-        let recepient_module_addr = recepient_module.get_address();
+        let recepient_module_addr = recepient_module.address();
         self.auth_keeper
             .check_create_new_module_account(ctx, recepient_module)?;
 
         if !recepient_module
-            .get_permissions()
+            .permissions()
             .iter()
             .any(|p| p == "staking")
         {
             return Err(BankKeeperError::Permission(format!(
                 "module account {} does not have permissions to receive delegated coins",
-                recepient_module.get_name()
+                recepient_module.name()
             )));
         }
         self.delegate_coins(ctx, sender_addr, recepient_module_addr, amount)
@@ -787,18 +787,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         addr: AccAddress,
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
-        let sender_module_addr = sender_module.get_address();
+        let sender_module_addr = sender_module.address();
         self.auth_keeper
             .check_create_new_module_account(ctx, sender_module)?;
 
-        if !sender_module
-            .get_permissions()
-            .iter()
-            .any(|p| p == "staking")
-        {
+        if !sender_module.permissions().iter().any(|p| p == "staking") {
             return Err(BankKeeperError::Permission(format!(
                 "module account {} does not have permissions to receive undelegate coins",
-                sender_module.get_name()
+                sender_module.name()
             )));
         }
         self.undelegate_coins(ctx, sender_module_addr, addr, amount)
