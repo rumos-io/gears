@@ -28,9 +28,6 @@ impl Default for GenesisState {
                 send_enabled: vec![],
                 default_send_enabled: true,
             },
-            //TODO: this denom metadata should not be hard coded into the bank module
-            // this has been added here for short term convenience. There should be a
-            // CLI command to add denom metadata to the genesis state
             denom_metadata: vec![],
             // denom_metadata: vec![Metadata {
             //     description: String::new(),

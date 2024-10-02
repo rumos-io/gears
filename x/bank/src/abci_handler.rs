@@ -121,7 +121,7 @@ impl<
                 BankNodeQueryResponse::SupplyOf(self.query_supply_of(ctx, req))
             }
             BankNodeQueryRequest::Spendable(req) => {
-                let balance = self.spendable(ctx, req);
+                let balance = self.query_spendable(ctx, req);
                 BankNodeQueryResponse::Spendable(balance)
             }
         }
@@ -155,7 +155,7 @@ impl<
         ctx: &mut InitContext<'_, DB, Self::StoreKey>,
         genesis: Self::Genesis,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        self.genesis(ctx, genesis);
+        self.keeper.init_genesis(ctx, genesis);
 
         Vec::new()
     }
@@ -221,11 +221,7 @@ impl<
         }
     }
 
-    pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
-        self.keeper.init_genesis(ctx, genesis)
-    }
-
-    fn spendable<DB: Database>(
+    fn query_spendable<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
         QuerySpendableBalancesRequest {
