@@ -13,14 +13,14 @@ pub struct CoinsMetaGenesisCli<AI: ApplicationInfo> {
     /// Json with array of metadata or path to json file
     pub metadata: String,
     /// Dedup input metadata list
-    #[arg(long, default_value_t = false)]
+    #[arg(long = "dedup", default_value_t = false)]
     pub dedup_input: bool,
-    /// Return error if found duplicates with original genesis file
-    #[arg(long, default_value_t = false)]
-    pub fail_on_dup: bool,
     /// Overwrite metadata with same coin name
+    #[arg(long = "overwrite", default_value_t = false)]
+    pub overwrite_dup: bool,
+    /// Don't save changes to disk
     #[arg(long, default_value_t = false)]
-    pub overwrite_same: bool,
+    pub dry: bool,
 
     #[arg(skip)]
     _marker: PhantomData<AI>,
@@ -32,8 +32,8 @@ impl<AI: ApplicationInfo> From<CoinsMetaGenesisCli<AI>> for CoinsMetaGenesisCmd 
             home,
             metadata,
             dedup_input,
-            fail_on_dup,
-            overwrite_same,
+            overwrite_dup,
+            dry,
             _marker,
         }: CoinsMetaGenesisCli<AI>,
     ) -> Self {
@@ -41,8 +41,8 @@ impl<AI: ApplicationInfo> From<CoinsMetaGenesisCli<AI>> for CoinsMetaGenesisCmd 
             home,
             metadata,
             dedup_input,
-            fail_on_dup,
-            overwrite_same,
+            overwrite_dup,
+            dry,
         }
     }
 }

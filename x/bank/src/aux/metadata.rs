@@ -10,16 +10,16 @@ pub struct CoinsMetaGenesisCmd {
     pub home: PathBuf,
     pub metadata: String,
     pub dedup_input: bool,
-    pub fail_on_dup: bool,
-    pub overwrite_same: bool,
+    pub overwrite_dup: bool,
+    pub dry: bool,
 }
 
 pub fn add_coins_meta_to_genesis(
     home: impl AsRef<Path>,
     metadata: impl IntoIterator<Item = Metadata>,
     dedup_input: bool,
-    fail_on_dup: bool,
-    overwrite_same: bool,
+    overwrite_dup: bool,
+    dry: bool,
 ) -> anyhow::Result<()> {
     let metadata = {
         let mut metadata = metadata.into_iter().collect::<Vec<_>>();
@@ -55,19 +55,15 @@ pub fn add_coins_meta_to_genesis(
 
         match dup {
             Some(dup) => {
-                if fail_on_dup {
-                    Err(anyhow::anyhow!("Duplicate meta: {}", dup.name))?
-                }
-
-                if !overwrite_same && ((dup == &meta) == true) {
-                    Err(anyhow::anyhow!(
-                        "Similar meta with name: {}\nNew: {:#?}\nOriginal: {:#?}",
-                        dup.name,
-                        meta,
-                        dup
-                    ))?
-                } else {
+                if overwrite_dup {
                     original_meta.insert(meta.name.clone(), meta);
+                } else {
+                    Err(anyhow::anyhow!(
+                        "Duplicate meta with name: {}\nNew: {}\nOriginal: {}",
+                        dup.name,
+                        serde_json::to_string_pretty(&meta).expect("serde encoding"),
+                        serde_json::to_string_pretty(&dup).expect("serde encoding"),
+                    ))?
                 }
             }
             None => {
@@ -76,20 +72,22 @@ pub fn add_coins_meta_to_genesis(
         }
     }
 
-    *genesis
-        .pointer_mut("/app_state/bank/denom_metadata")
-        .expect("we checked that this exists") = serde_json::to_value(
-        original_meta
-            .into_iter()
-            .map(|(_, this)| this)
-            .collect::<Vec<_>>(),
-    )
-    .expect("serde encoding");
+    if !dry {
+        *genesis
+            .pointer_mut("/app_state/bank/denom_metadata")
+            .expect("we checked that this exists") = serde_json::to_value(
+            original_meta
+                .into_iter()
+                .map(|(_, this)| this)
+                .collect::<Vec<_>>(),
+        )
+        .expect("serde encoding");
 
-    std::fs::write(
-        genesis_path,
-        serde_json::to_string_pretty(&genesis).expect("serde encoding"),
-    )?;
+        std::fs::write(
+            genesis_path,
+            serde_json::to_string_pretty(&genesis).expect("serde encoding"),
+        )?;
+    }
 
     Ok(())
 }

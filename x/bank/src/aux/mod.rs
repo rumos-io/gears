@@ -16,8 +16,8 @@ pub fn handle_aux_cmd(cmd: BankAuxCmd) -> anyhow::Result<()> {
             home,
             metadata,
             dedup_input,
-            fail_on_dup: ignore_dup,
-            overwrite_same,
+            overwrite_dup,
+            dry,
         }) => {
             let metadata = match serde_json::from_str(&metadata) {
                 Ok(metadata) => metadata,
@@ -30,13 +30,7 @@ pub fn handle_aux_cmd(cmd: BankAuxCmd) -> anyhow::Result<()> {
                 },
             };
 
-            metadata::add_coins_meta_to_genesis(
-                home,
-                metadata,
-                dedup_input,
-                ignore_dup,
-                overwrite_same,
-            )
+            metadata::add_coins_meta_to_genesis(home, metadata, dedup_input, overwrite_dup, dry)
         }
     }
 }
