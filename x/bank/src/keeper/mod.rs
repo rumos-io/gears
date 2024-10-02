@@ -585,7 +585,6 @@ impl<
         &self,
         ctx: &CTX,
         addr: &AccAddress,
-        // TODO: consider to add struct Coins that can have empty coins list
     ) -> Result<Vec<UnsignedCoin>, BankKeeperError> {
         if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
             //     vacc, ok := acc.(vestexported.VestingAccount)
