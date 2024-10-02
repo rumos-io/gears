@@ -263,16 +263,15 @@ impl<
     fn send_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        msg: MsgSend,
+        MsgSend {
+            from_address,
+            to_address,
+            amount,
+        }: MsgSend,
     ) -> Result<(), BankKeeperError> {
-        // TODO: refactor this to subtract all amounts before adding all amounts
-
         let mut events = vec![];
 
-        let from_address = msg.from_address;
-        let to_address = msg.to_address;
-
-        for send_coin in msg.amount {
+        for send_coin in amount.inner() {
             let mut from_account_store = self.address_balances_store(ctx, &from_address);
             let from_balance = from_account_store
                 .get(send_coin.denom.to_string().as_bytes())?
@@ -304,7 +303,9 @@ impl<
                     from_balance.encode_vec(),
                 )?;
             }
+        }
 
+        for send_coin in amount.inner() {
             let mut to_account_store = self.address_balances_store(ctx, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes())?;
 
