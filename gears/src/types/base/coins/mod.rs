@@ -1,9 +1,12 @@
 use core_types::Protobuf;
-pub use decimal::*;
 use prost::Message;
+
+pub use decimal::*;
+pub use simple::*;
 pub use unsigned::*;
 
 mod decimal;
+mod simple;
 mod unsigned;
 
 use std::{marker::PhantomData, str::FromStr};
