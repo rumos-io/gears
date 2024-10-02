@@ -1,3 +1,5 @@
+use bytes::Bytes;
+
 use crate::types::base::coin::{DecimalCoin, UnsignedCoin};
 
 use super::*;
@@ -5,12 +7,19 @@ use super::*;
 pub type SimpleDecimalCoins = SimpleCoins<DecimalCoin>;
 pub type SimpleUnsignedCoins = SimpleCoins<UnsignedCoin>;
 
+// TODO: Allow borrowed data
 #[derive(Debug, Clone)]
 pub struct SimpleCoins<U>(Vec<U>);
 
 impl<U> SimpleCoins<U> {
     pub fn new(coins: impl IntoIterator<Item = U>) -> Self {
         Self(coins.into_iter().collect())
+    }
+}
+
+impl<U: ToString> SimpleCoins<U> {
+    pub fn to_string_bytes(&self) -> Bytes {
+        self.to_string().into_bytes().into()
     }
 }
 

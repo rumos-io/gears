@@ -88,7 +88,7 @@ impl<
                 ),
                 EventAttribute::new(
                     "amount".as_bytes().to_owned().into(),
-                    format!("{deposit:?}").into(),
+                    SimpleCoins::new(deposit.inner()).to_string_bytes(),
                     false,
                 ),
             ],

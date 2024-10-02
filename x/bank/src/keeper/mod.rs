@@ -14,7 +14,7 @@ use gears::store::StoreKey;
 use gears::tendermint::types::proto::event::{Event, EventAttribute};
 use gears::types::address::AccAddress;
 use gears::types::base::coin::UnsignedCoin;
-use gears::types::base::coins::UnsignedCoins;
+use gears::types::base::coins::{SimpleCoins, UnsignedCoins};
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
 use gears::types::store::gas::errors::GasStoreErrors;
@@ -202,12 +202,9 @@ impl<
                     String::from(address.clone()).into(),
                     true,
                 ),
-                // TODO: serialization of vector of coins
                 EventAttribute::new(
                     "amount".into(),
-                    serde_json::to_string(&amount)
-                        .unwrap_or(amount[0].amount.to_string())
-                        .into(),
+                    SimpleCoins::new(amount).to_string_bytes(),
                     true,
                 ),
             ],
@@ -492,12 +489,9 @@ impl<
             "coin_spent",
             [
                 EventAttribute::new("spender".into(), String::from(delegator_addr).into(), true),
-                // TODO: serialization of vector of coins
                 EventAttribute::new(
                     "amount".into(),
-                    serde_json::to_string(&amount)
-                        .unwrap_or(amount.inner()[0].amount.to_string())
-                        .into(),
+                    SimpleCoins::new(amount.clone()).to_string_bytes(),
                     true,
                 ),
             ],
@@ -573,12 +567,9 @@ impl<
             "coin_spent",
             [
                 EventAttribute::new("spender".into(), String::from(addr.clone()).into(), true),
-                // TODO: serialization of vector of coins
                 EventAttribute::new(
                     "amount".into(),
-                    serde_json::to_string(&amount)
-                        .unwrap_or(amount.inner()[0].amount.to_string())
-                        .into(),
+                    SimpleCoins::new(amount.clone()).to_string_bytes(),
                     true,
                 ),
             ],
