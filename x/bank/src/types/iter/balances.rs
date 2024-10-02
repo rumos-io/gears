@@ -18,7 +18,7 @@ impl<'a, DB: Database> BalanceIterator<'a, DB> {
     pub fn new(store: Store<'a, DB>, addr: &AccAddress) -> BalanceIterator<'a, DB> {
         let store = store.prefix_store(account_key(addr));
 
-        // TODO: WHY https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/store/prefix/store.go#L88-L93
+        // https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/store/prefix/store.go#L88-L93
         BalanceIterator(store.into_range(..))
     }
 }
