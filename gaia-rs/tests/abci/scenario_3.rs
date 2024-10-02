@@ -214,17 +214,65 @@ fn scenario_3() {
             delegator_address: user_1.address(),
             src_validator_address: user_1.address().into(),
             dst_validator_address: user_0.address().into(),
-            amount: "5000000000uatom".parse().expect("hardcoded is valid"),
+            amount: "4000000000uatom".parse().expect("hardcoded is valid"),
         }));
 
     let txs = generate_txs([(3, msg)], &user_1, node.chain_id().clone());
-
-    println!("txs: {:?}", txs[0].to_vec());
 
     let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "89584a1350b27aa49cba197b36550a98a2ecc2c5e25fd0807f1c16ae73f26d6f"
+        "10861c9ab65d0eb11443bf8b3d2954263654b9d285f00b14edc7ff64705a7ac8"
     );
+
+    //----------------------------------------
+    // delegate to user_1 - this should cause user_1 to go from unbonding to bonded
+
+    // check user_1 is unbonding
+    let query = QueryValidatorsRequest {
+        status: BondStatus::Unbonding,
+        pagination: None,
+    };
+    let res = node.query(RequestQuery {
+        data: query.encode_vec().into(),
+        path: "/cosmos.staking.v1beta1.Query/Validators".to_string(),
+        height: 0,
+        prove: false,
+    });
+    let res = QueryValidatorsResponse::decode(res.value).unwrap();
+    assert_eq!(res.validators.len(), 1);
+    assert_eq!(res.validators[0].operator_address, user_1.address().into());
+
+    // delegate to user_1
+    let msg =
+        gaia_rs::message::Message::Staking(staking::Message::Delegate(staking::DelegateMsg {
+            delegator_address: user_1.address(),
+            validator_address: user_1.address().into(),
+            amount: "31000000000uatom".parse().expect("hardcoded is valid"),
+        }));
+
+    let txs = generate_txs([(4, msg)], &user_1, node.chain_id().clone());
+
+    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
+
+    assert_eq!(
+        hex::encode(step_response.app_hash),
+        "0bea54601cf4d17baf46875b36a90620818862a7b96d76e35d6a54e67af28603"
+    );
+
+    // check user_1 is bonded
+    let query = QueryValidatorsRequest {
+        status: BondStatus::Bonded,
+        pagination: None,
+    };
+    let res = node.query(RequestQuery {
+        data: query.encode_vec().into(),
+        path: "/cosmos.staking.v1beta1.Query/Validators".to_string(),
+        height: 0,
+        prove: false,
+    });
+    let res = QueryValidatorsResponse::decode(res.value).unwrap();
+    assert_eq!(res.validators.len(), 1);
+    assert_eq!(res.validators[0].operator_address, user_1.address().into());
 }
