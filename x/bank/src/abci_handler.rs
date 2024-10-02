@@ -153,9 +153,14 @@ impl<
     fn init_genesis<DB: Database>(
         &self,
         ctx: &mut InitContext<'_, DB, Self::StoreKey>,
-        genesis: Self::Genesis,
+        Self::Genesis {
+            balances,
+            params,
+            denom_metadata,
+        }: Self::Genesis,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        self.keeper.init_genesis(ctx, genesis);
+        self.keeper
+            .init_genesis(ctx, balances, params, denom_metadata);
 
         Vec::new()
     }

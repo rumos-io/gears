@@ -1,4 +1,4 @@
-use crate::{BankParams, BankParamsKeeper, GenesisState};
+use crate::{Balance, BankParams, BankParamsKeeper};
 use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
@@ -92,16 +92,20 @@ impl<
     pub fn init_genesis<DB: Database>(
         &self,
         ctx: &mut InitContext<'_, DB, SK>,
-        genesis: GenesisState,
+        mut balances: Vec<Balance>,
+        params: BankParams,
+        denom_metadata: Vec<Metadata>,
     ) {
-        // TODO:
-        // 1. cosmos SDK sorts the balances first
-        // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
-        // 3. Need to set denom metadata
-        self.bank_params_keeper.set(ctx, genesis.params);
+        // 1. cosmos SDK sorts the balances first - Make sure that rust ordering gives same result
+        // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.) - Yes it does and our Coins type did it
+        // 3. Need to set denom metadata - dedicated cmd for it
+        self.bank_params_keeper.set(ctx, params);
+
+        // Make sure that this 100% same as in cosmos(generally it should)
+        balances.sort_by_key(|this| this.address.clone());
 
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
-        for balance in genesis.balances {
+        for balance in balances {
             let prefix = create_denom_balance_prefix(balance.address);
             let mut denom_balance_store =
                 ctx.kv_store_mut(&self.store_key).prefix_store_mut(prefix);
@@ -114,19 +118,14 @@ impl<
             }
         }
 
-        // TODO: does the SDK sort these?
-        for coin in total_supply {
-            self.set_supply(
-                ctx,
-                UnsignedCoin {
-                    denom: coin.0,
-                    amount: coin.1,
-                },
-            )
-            .unwrap_gas();
+        // does the SDK sort these?
+        // No. It uses ordering from balances https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/genesis.go#L32-L34
+        for (denom, amount) in total_supply {
+            self.set_supply(ctx, UnsignedCoin { denom, amount })
+                .unwrap_gas();
         }
 
-        for denom_metadata in genesis.denom_metadata {
+        for denom_metadata in denom_metadata {
             self.set_denom_metadata(ctx, denom_metadata);
         }
     }
