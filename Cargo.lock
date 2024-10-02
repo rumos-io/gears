@@ -2049,6 +2049,8 @@ dependencies = [
  "serde_json",
  "strum",
  "thiserror",
+ "tonic",
+ "tracing",
 ]
 
 [[package]]
