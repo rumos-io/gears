@@ -359,10 +359,15 @@ impl<
         let bank_store = ctx.kv_store_mut(&self.store_key);
         let mut supply_store = bank_store.prefix_store_mut(SUPPLY_KEY);
 
-        supply_store.set(
-            coin.denom.to_string().into_bytes(),
-            coin.amount.to_string().into_bytes(),
-        )
+        match coin.amount.is_zero() {
+            true => supply_store
+                .delete(coin.denom.to_string().as_bytes())
+                .map(|_| ()),
+            false => supply_store.set(
+                coin.denom.to_string().into_bytes(),
+                coin.amount.to_string().into_bytes(),
+            ),
+        }
     }
 
     pub fn supply<DB: Database, CTX: QueryableContext<DB, SK>>(
