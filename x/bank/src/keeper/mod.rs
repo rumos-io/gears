@@ -29,7 +29,7 @@ use gears::x::keepers::staking::StakingBankKeeper;
 use gears::x::module::Module;
 use std::marker::PhantomData;
 use std::ops::SubAssign;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 pub mod balances;
 pub mod bank;
@@ -96,7 +96,6 @@ impl<
         params: BankParams,
         denom_metadata: Vec<Metadata>,
     ) {
-        // TODO
         // 1. cosmos SDK sorts the balances first - Make sure that rust ordering gives same result
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.) - Yes it does and our Coins type did it
         // 3. Need to set denom metadata - dedicated cmd for it
@@ -105,7 +104,7 @@ impl<
         // Make sure that this 100% same as in cosmos(generally it should)
         balances.sort_by_key(|this| this.address.clone());
 
-        let mut total_supply: Vec<(Denom, Uint256)> = Vec::with_capacity(balances.len());
+        let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
         for balance in balances {
             let prefix = create_denom_balance_prefix(balance.address);
             let mut denom_balance_store =
@@ -114,12 +113,8 @@ impl<
             for coin in balance.coins {
                 denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
                 let zero = Uint256::zero();
-                let current_balance = total_supply
-                    .iter()
-                    .find(|(this, _)| this == &coin.denom)
-                    .map(|(_, this)| this)
-                    .unwrap_or(&zero);
-                total_supply.push((coin.denom, coin.amount + current_balance));
+                let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
+                total_supply.insert(coin.denom, coin.amount + current_balance);
             }
         }
 
