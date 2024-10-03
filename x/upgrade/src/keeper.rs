@@ -37,11 +37,36 @@ impl<SK: StoreKey, M: Module> UpgradeKeeper<SK, M> {
             .map(|this| Protobuf::decode::<Bytes>(this.into()).unwrap_or_corrupt()))
     }
 
-    // pub fn last_completed_upgrade<DB: Database, CTX: QueryableContext<DB, SK>>(
-    //     &self,
-    //     ctx: &CTX,
-    // ) -> Result<Option<Upgrade>, GasStoreErrors> {
-    // }
+    pub fn last_completed_upgrade<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Result<Option<Upgrade>, GasStoreErrors> {
+        // TODO: When revertable iterator will be available use it
+        let upgrade_bytes = ctx
+            .kv_store(&self.store_key)
+            .prefix_store(DONE_KEY)
+            .into_range(..);
+
+        let mut found = false;
+        let mut last_upgrade = Option::None;
+        for bytes in upgrade_bytes {
+            let (key, value) = bytes?;
+            let upgrade = Upgrade::try_new(key.as_slice(), value.as_slice()).unwrap_or_corrupt();
+
+            if !found
+                || upgrade.block
+                    >= last_upgrade
+                        .as_ref()
+                        .map(|this: &Upgrade| this.block)
+                        .unwrap_or_default()
+            {
+                found = true;
+                last_upgrade = Some(upgrade)
+            }
+        }
+
+        Ok(last_upgrade)
+    }
 }
 
 mod downgrade_flag {
