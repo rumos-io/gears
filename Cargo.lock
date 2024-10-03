@@ -5825,6 +5825,14 @@ checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
 [[package]]
 name = "upgrade"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "gears",
+ "ibc-proto 0.33.0",
+ "prost",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "url"

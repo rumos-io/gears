@@ -7,3 +7,16 @@ edition = "2021"
 workspace = true
 
 [dependencies]
+#local
+gears = { path = "../../gears", features = ["cli", "xmods", "governance" ] }
+
+#serialization
+prost = { workspace = true }
+serde = { workspace = true, default-features = false }
+serde_json = { workspace = true }
+
+# utils
+anyhow = { workspace = true }
+
+# nutypes
+ibc-proto = { workspace = true }
