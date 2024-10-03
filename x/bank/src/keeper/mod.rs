@@ -101,6 +101,7 @@ impl<
         // 3. Need to set denom metadata - dedicated cmd for it
         self.bank_params_keeper.set(ctx, params);
 
+        // TODO: This ordering is same as cosmos, but needs to add other constrains like `Coins` type, but with possible empty array
         // Make sure that this 100% same as in cosmos(generally it should)
         balances.sort_by_key(|this| this.address.clone());
 
