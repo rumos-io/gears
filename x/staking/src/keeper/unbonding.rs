@@ -404,11 +404,9 @@ impl<
         unbonding_height: u32,
     ) -> Result<Vec<ValAddress>, GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        // TODO: we shouldn't be using the prefix store here - since the validator_queue_key adds the prefix
-        let store = store.prefix_store(VALIDATOR_QUEUE_KEY);
 
         if let Some(bz) = store.get(&validator_queue_key(unbonding_time, unbonding_height))? {
-            let res: Vec<ValAddress> = serde_json::from_slice(&bz).unwrap_or_corrupt();
+            let res: Vec<ValAddress> = ValAddresses::decode_vec(&bz).unwrap_or_corrupt().addresses;
             Ok(res)
         } else {
             Ok(Vec::new())
@@ -437,9 +435,8 @@ impl<
         end_time: Timestamp,
         end_height: u32,
     ) -> Result<(), GasStoreErrors> {
-        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
-        store.delete(&validator_queue_key(&end_time, end_height))?; //TODO: should we NOT be using the prefix store here - since the validator_queue_key adds the prefix?
+        let mut store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
+        store.delete(&validator_queue_key(&end_time, end_height))?;
         Ok(())
     }
 

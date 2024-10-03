@@ -66,10 +66,9 @@ fn scenario_3() {
 
     let step_res = node.step(txs, Timestamp::try_new(0, 0).unwrap());
 
-    assert_eq!(
-        step_res.tx_responses[0].log,
+    assert!(
+        step_res.tx_responses[0].log.contains("decode error: `error converting message type into domain type: error converting message type into domain type: decode error: `delegator address and validator address must be derived from the same public key"),
         // TODO: error messages are too verbose
-        "decode error: `error converting message type into domain type: error converting message type into domain type: decode error: `delegator address and validator address must be derived from the same public key`\n\nLocation:\n    /home/kevin/.cargo/registry/src/index.crates.io-6f17d22bba15001f/flex-error-0.4.4/src/tracer_impl/eyre.rs:10:9\n\nLocation:\n    /home/kevin/.cargo/registry/src/index.crates.io-6f17d22bba15001f/flex-error-0.4.4/src/tracer_impl/eyre.rs:10:9`".to_string()
     );
     assert_eq!(
         hex::encode(step_res.app_hash),
@@ -171,16 +170,16 @@ fn scenario_3() {
             delegator_address: user_1.address(),
             src_validator_address: user_1.address().into(),
             dst_validator_address: user_0.address().into(),
-            amount: "20000000000uatom".parse().expect("hardcoded is valid"),
+            amount: "15000000000uatom".parse().expect("hardcoded is valid"),
         }));
 
     let txs = generate_txs([(1, msg)], &user_1, node.chain_id().clone());
 
-    let step_response = node.step(txs, Timestamp::UNIX_EPOCH);
+    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "f77db9b981dd5de1a9df98e8c0ba4de05a9e0654ab3f8f797d8cfdba1c9b46cf"
+        "9c4df3dd21c2eee54b0ac4a831615fae64417cea9d2d98301c6a2b0ce63c2963"
     );
 
     //----------------------------------------
@@ -191,17 +190,88 @@ fn scenario_3() {
             delegator_address: user_1.address(),
             src_validator_address: user_0.address().into(),
             dst_validator_address: user_1.address().into(),
-            amount: "20000000000uatom".parse().expect("hardcoded is valid"),
+            amount: "15000000000uatom".parse().expect("hardcoded is valid"),
         }));
 
     let txs = generate_txs([(2, msg)], &user_1, node.chain_id().clone());
 
-    let step_response = node.step(txs, Timestamp::UNIX_EPOCH);
+    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
 
     assert_eq!("transitive redelegation", step_response.tx_responses[0].log);
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "20944376e837b74f887b4a9f20e85dc181d711e872009c9adfed09c91064b6bc"
+        "c60067ca69637b341607ed8bbf19048b5b04b6860dbe9f01f91b0d09d18c9e8e"
     );
+
+    //----------------------------------------
+    // repeat redelegate from the bonded validator to the unbonded validator - this will test appending to the
+    // redelegation_queue_time_slice
+
+    let msg =
+        gaia_rs::message::Message::Staking(staking::Message::Redelegate(staking::RedelegateMsg {
+            delegator_address: user_1.address(),
+            src_validator_address: user_1.address().into(),
+            dst_validator_address: user_0.address().into(),
+            amount: "4000000000uatom".parse().expect("hardcoded is valid"),
+        }));
+
+    let txs = generate_txs([(3, msg)], &user_1, node.chain_id().clone());
+
+    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
+
+    assert_eq!(
+        hex::encode(step_response.app_hash),
+        "10861c9ab65d0eb11443bf8b3d2954263654b9d285f00b14edc7ff64705a7ac8"
+    );
+
+    //----------------------------------------
+    // delegate to user_1 - this should cause user_1 to go from unbonding to bonded
+
+    // check user_1 is unbonding
+    let query = QueryValidatorsRequest {
+        status: BondStatus::Unbonding,
+        pagination: None,
+    };
+    let res = node.query(RequestQuery {
+        data: query.encode_vec().into(),
+        path: "/cosmos.staking.v1beta1.Query/Validators".to_string(),
+        height: 0,
+        prove: false,
+    });
+    let res = QueryValidatorsResponse::decode(res.value).unwrap();
+    assert_eq!(res.validators.len(), 1);
+    assert_eq!(res.validators[0].operator_address, user_1.address().into());
+
+    // delegate to user_1
+    let msg =
+        gaia_rs::message::Message::Staking(staking::Message::Delegate(staking::DelegateMsg {
+            delegator_address: user_1.address(),
+            validator_address: user_1.address().into(),
+            amount: "31000000000uatom".parse().expect("hardcoded is valid"),
+        }));
+
+    let txs = generate_txs([(4, msg)], &user_1, node.chain_id().clone());
+
+    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
+
+    assert_eq!(
+        hex::encode(step_response.app_hash),
+        "0bea54601cf4d17baf46875b36a90620818862a7b96d76e35d6a54e67af28603"
+    );
+
+    // check user_1 is bonded
+    let query = QueryValidatorsRequest {
+        status: BondStatus::Bonded,
+        pagination: None,
+    };
+    let res = node.query(RequestQuery {
+        data: query.encode_vec().into(),
+        path: "/cosmos.staking.v1beta1.Query/Validators".to_string(),
+        height: 0,
+        prove: false,
+    });
+    let res = QueryValidatorsResponse::decode(res.value).unwrap();
+    assert_eq!(res.validators.len(), 1);
+    assert_eq!(res.validators[0].operator_address, user_1.address().into());
 }
