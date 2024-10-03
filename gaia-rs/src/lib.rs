@@ -156,7 +156,9 @@ impl AuxHandler for GaiaCore {
                     genutil::gentx::gentx_cmd(cmd, "bank", "staking", &EmptyNodeFetcher)?;
                 }
             },
-            GaiaAuxCmd::Bank(cmd) => bank::aux::handle_aux_cmd(cmd)?,
+            GaiaAuxCmd::Bank(cmd) => {
+                bank::aux::handle_aux_cmd(cmd, "/app_state/bank/denom_metadata")?
+            }
         }
 
         Ok(NilAux)

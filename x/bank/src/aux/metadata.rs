@@ -20,6 +20,7 @@ pub fn add_coins_meta_to_genesis(
     dedup_input: bool,
     overwrite_dup: bool,
     dry: bool,
+    in_genesis_path: &str,
 ) -> anyhow::Result<()> {
     let metadata = {
         let mut metadata = metadata.into_iter().collect::<Vec<_>>();
@@ -39,9 +40,9 @@ pub fn add_coins_meta_to_genesis(
     let mut genesis = serde_json::from_slice::<serde_json::Value>(&std::fs::read(&genesis_path)?)?;
 
     let value = genesis
-        .pointer_mut("/app_state/bank/denom_metadata")
+        .pointer_mut(in_genesis_path)
         .ok_or(anyhow::anyhow!(
-            "`/app_state/bank/denom_metadata` not found. Check is genesis file is valid"
+            "`{in_genesis_path} not found. Check is genesis file is valid"
         ))?
         .take();
 
@@ -74,7 +75,7 @@ pub fn add_coins_meta_to_genesis(
 
     if !dry {
         *genesis
-            .pointer_mut("/app_state/bank/denom_metadata")
+            .pointer_mut(in_genesis_path)
             .expect("we checked that this exists") = serde_json::to_value(
             original_meta
                 .into_iter()
