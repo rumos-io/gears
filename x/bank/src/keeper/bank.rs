@@ -73,6 +73,7 @@ impl<
             // If no value found then new coin with zero balance, subtraction and call of set_supply which deletes coins with zero balance
             // We omitted it but if any issue arise be aware that maybe we should delete zero coins if we store any.
             if let Some(mut supply) = supply {
+                // TODO: overflow https://github.com/rumos-io/gears/issues/14
                 supply.amount.sub_assign(coin.amount);
                 self.set_supply(ctx, supply)?;
             }
