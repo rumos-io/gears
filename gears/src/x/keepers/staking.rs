@@ -229,8 +229,7 @@ pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
     ) -> Result<(), BankKeeperError>;
 
     /// Method undelegates the unbonding coins and transfers
-    /// them from a module account to the delegator account. It will panic if the
-    /// module account does not exist or is unauthorized.
+    /// them from a module account to the delegator account.
     fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
