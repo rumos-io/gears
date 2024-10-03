@@ -102,7 +102,7 @@ impl<
         self.bank_params_keeper.set(ctx, params);
 
         // TODO: This ordering is same as cosmos, but needs to add other constrains like `Coins` type, but with possible empty array
-        // Make sure that this 100% same as in cosmos(generally it should)
+        // TODO: check how it orders if balances are same
         balances.sort_by_key(|this| this.address.clone());
 
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
