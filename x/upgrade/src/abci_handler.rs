@@ -3,16 +3,21 @@ use std::marker::PhantomData;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo},
     baseapp::genesis::NullGenesis,
+    extensions::gas::GasResultExt,
     params::ParamsSubspaceKey,
     store::StoreKey,
     types::tx::NullTxMsg,
     x::module::Module,
 };
 
-use crate::types::query::{UpgradeQueryRequest, UpgradeQueryResponse};
+use crate::{
+    keeper::{downgrade_verified, set_downgrade_verified, UpgradeKeeper},
+    types::query::{UpgradeQueryRequest, UpgradeQueryResponse},
+};
 
 #[derive(Debug, Clone)]
 pub struct UpgradeAbciHandler<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, MI> {
+    keeper: UpgradeKeeper<SK, M>,
     _marker: PhantomData<(MI, SK, PSK, M)>,
 }
 
@@ -72,9 +77,22 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, MI: ModuleInfo> ABCIHandle
 
     fn begin_block<'a, DB: gears::store::database::Database>(
         &self,
-        _ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
+        ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         _request: gears::tendermint::request::RequestBeginBlock,
     ) {
+        let plan = self.keeper.upgrade_plan(ctx).unwrap_gas();
+
+        if !downgrade_verified() {
+            set_downgrade_verified(true);
+
+        }
+
+        let _plan = match plan {
+            Some(plan) => plan,
+            None => return,
+        };
+
+
     }
 
     fn end_block<'a, DB: gears::store::database::Database>(
