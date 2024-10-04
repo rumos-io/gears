@@ -9,7 +9,10 @@ use gears::{
 };
 use prost::bytes::Bytes;
 
-use crate::types::{plan::Plan, Upgrade};
+use crate::{
+    handler::UpgradeHandler,
+    types::{plan::Plan, Upgrade},
+};
 
 pub use downgrade_flag::*;
 
@@ -48,21 +51,33 @@ fn upgraded_const_state_key(height: u32) -> Vec<u8> {
 }
 
 #[derive(Debug, Clone)]
-pub struct UpgradeKeeper<SK, M> {
+pub struct UpgradeKeeper<SK, M, UH> {
     store_key: SK,
-    upgrade_handlers: HashMap<String, ()>,
+    upgrade_handlers: HashMap<String, UH>,
     skip_heights: HashSet<u32>, // TODO: source https://github.com/cosmos/gaia/blob/189b57be735d64d0dbf0945717b49017a1beb11e/cmd/gaiad/cmd/root.go#L192-L195
     _upgrade_mod: M,
 }
 
-impl<SK, M> UpgradeKeeper<SK, M> {
+impl<SK, M, UH> UpgradeKeeper<SK, M, UH> {
     pub fn new() {}
 }
 
-impl<SK: StoreKey, M: Module> UpgradeKeeper<SK, M> {
-    pub fn apply_upgrade<DB: Database, CTX: InfallibleContextMut<DB, SK>>(&self, ctx: &mut CTX, plan : &Plan)
-    {
+impl<SK: StoreKey, M: Module, UH: UpgradeHandler> UpgradeKeeper<SK, M, UH> {
+    pub fn apply_upgrade<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        plan: &Plan,
+    ) -> anyhow::Result<()> {
+        let handler = self
+            .upgrade_handlers
+            .get(&plan.name)
+            .ok_or(anyhow::anyhow!(
+                "Upgrade should never be called without first checking HasHandler"
+            ))?;
 
+        // let updated = handler.handle(ctx, plan, [()])?;
+
+        Ok(())
     }
 
     pub fn upgrade_plan<DB: Database, CTX: InfallibleContext<DB, SK>>(

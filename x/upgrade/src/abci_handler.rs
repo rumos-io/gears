@@ -12,13 +12,14 @@ use gears::{
 use tracing::info;
 
 use crate::{
+    handler::DummyHandler,
     keeper::{downgrade_verified, set_downgrade_verified, UpgradeKeeper},
     types::query::{UpgradeQueryRequest, UpgradeQueryResponse},
 };
 
 #[derive(Debug, Clone)]
 pub struct UpgradeAbciHandler<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, MI> {
-    keeper: UpgradeKeeper<SK, M>,
+    keeper: UpgradeKeeper<SK, M, DummyHandler>,
     _marker: PhantomData<(MI, SK, PSK, M)>,
 }
 
@@ -134,8 +135,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, MI: ModuleInfo> ABCIHandle
                 plan.height
             );
             // todo: why they need gas https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/upgrade/abci.go#L75
-            self.keeper.apply_upgrade(ctx, &plan);
-            return;
+            match self.keeper.apply_upgrade(ctx, &plan) {
+                Ok(_) => return,
+                Err(err) => panic!("{err}"),
+            }
         }
 
         if self.keeper.has_handler(&plan.name) {
