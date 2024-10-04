@@ -1,4 +1,5 @@
 use gears::{
+    context::QueryableContext,
     core::{errors::CoreError, Protobuf},
     error::ProtobufError,
 };
@@ -12,6 +13,15 @@ pub struct Plan {
     pub name: String,
     pub height: u32,
     pub info: String,
+}
+
+impl Plan {
+    pub fn should_execute<CTX: QueryableContext<DB, SK>, DB, SK>(&self, ctx: &CTX) -> bool {
+        match self.height > 0 {
+            true => self.height <= ctx.height(),
+            false => false,
+        }
+    }
 }
 
 impl From<Plan> for inner::Plan {

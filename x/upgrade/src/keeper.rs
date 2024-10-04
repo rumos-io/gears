@@ -1,9 +1,10 @@
+use std::collections::{HashMap, HashSet};
+
 use gears::{
-    context::QueryableContext,
+    context::{InfallibleContext, InfallibleContextMut},
     core::Protobuf,
     extensions::corruption::UnwrapCorrupt,
     store::{database::Database, StoreKey},
-    types::store::gas::errors::GasStoreErrors,
     x::module::Module,
 };
 use prost::bytes::Bytes;
@@ -12,12 +13,45 @@ use crate::types::{plan::Plan, Upgrade};
 
 pub use downgrade_flag::*;
 
-const PLAN_KEY: [u8; 1] = [0x0];
-const DONE_KEY: [u8; 1] = [0x1];
+/// specifies the Byte under which a pending upgrade plan is stored in the store
+const PLAN_PREFIX: [u8; 1] = [0x0];
+/// is a prefix for to look up completed upgrade plan by name
+const DONE_PREFIX: [u8; 1] = [0x1];
+/// is a prefix to look up module names (key) and versions (value)
+const _VERSION_MAP_PREFIX: [u8; 1] = [0x2];
+/// is a prefix to look up Protocol Version
+const _PROTOCOL_VERSION_BYTE_PREFIX: [u8; 1] = [0x3];
+
+/// is the key under which upgraded ibc state is stored in the upgrade store
+const UPGRADED_IBC_STATE_KEY: &[u8] = "upgradedIBCState".as_bytes();
+/// is the sub-key under which upgraded client state will be stored
+const UPGRADED_CLIENT_KEY: &[u8] = "upgradedClient".as_bytes();
+/// is the sub-key under which upgraded consensus state will be stored
+const UPGRADED_CONS_STATE_KEY: &[u8] = "upgradedConsState".as_bytes();
+
+fn upgraded_client_key(height: u32) -> Vec<u8> {
+    [
+        UPGRADED_IBC_STATE_KEY,
+        height.to_be_bytes().as_slice(), // TODO: Unsure in this
+        UPGRADED_CLIENT_KEY,
+    ]
+    .concat()
+}
+
+fn upgraded_const_state_key(height: u32) -> Vec<u8> {
+    [
+        UPGRADED_IBC_STATE_KEY,
+        height.to_be_bytes().as_slice(), // TODO: Unsure in this
+        UPGRADED_CONS_STATE_KEY,
+    ]
+    .concat()
+}
 
 #[derive(Debug, Clone)]
 pub struct UpgradeKeeper<SK, M> {
     store_key: SK,
+    upgrade_handlers: HashMap<String, ()>,
+    skip_heights: HashSet<u32>, // TODO: source https://github.com/cosmos/gaia/blob/189b57be735d64d0dbf0945717b49017a1beb11e/cmd/gaiad/cmd/root.go#L192-L195
     _upgrade_mod: M,
 }
 
@@ -26,31 +60,59 @@ impl<SK, M> UpgradeKeeper<SK, M> {
 }
 
 impl<SK: StoreKey, M: Module> UpgradeKeeper<SK, M> {
-    pub fn upgrade_plan<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> Result<Option<Plan>, GasStoreErrors> {
-        let store = ctx.kv_store(&self.store_key);
+    pub fn apply_upgrade<DB: Database, CTX: InfallibleContextMut<DB, SK>>(&self, ctx: &mut CTX, plan : &Plan)
+    {
 
-        Ok(store
-            .get(&PLAN_KEY)?
-            .map(|this| Protobuf::decode::<Bytes>(this.into()).unwrap_or_corrupt()))
     }
 
-    pub fn last_completed_upgrade<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn upgrade_plan<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<Option<Upgrade>, GasStoreErrors> {
+    ) -> Option<Plan> {
+        let store = ctx.infallible_store(&self.store_key);
+
+        store
+            .get(&PLAN_PREFIX)
+            .map(|this| Protobuf::decode::<Bytes>(this.into()).unwrap_or_corrupt())
+    }
+
+    pub fn delete_upgrade_plan<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+    ) -> bool {
+        let old_plan = self.upgrade_plan(ctx);
+        if let Some(old_plan) = old_plan {
+            self.clear_ibc_state(ctx, old_plan.height);
+        }
+
+        ctx.infallible_store_mut(&self.store_key)
+            .delete(&PLAN_PREFIX)
+            .is_some()
+    }
+
+    fn clear_ibc_state<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        last_height: u32,
+    ) {
+        let mut store = ctx.infallible_store_mut(&self.store_key);
+        store.delete(&upgraded_client_key(last_height));
+        store.delete(&upgraded_const_state_key(last_height));
+    }
+
+    pub fn last_completed_upgrade<DB: Database, CTX: InfallibleContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Option<Upgrade> {
         // TODO: When revertable iterator will be available use it
         let upgrade_bytes = ctx
-            .kv_store(&self.store_key)
-            .prefix_store(DONE_KEY)
+            .infallible_store(&self.store_key)
+            .prefix_store(DONE_PREFIX)
             .into_range(..);
 
         let mut found = false;
         let mut last_upgrade = Option::None;
-        for bytes in upgrade_bytes {
-            let (key, value) = bytes?;
+        for (key, value) in upgrade_bytes {
             let upgrade = Upgrade::try_new(key.as_slice(), value.as_slice()).unwrap_or_corrupt();
 
             if !found
@@ -65,7 +127,15 @@ impl<SK: StoreKey, M: Module> UpgradeKeeper<SK, M> {
             }
         }
 
-        Ok(last_upgrade)
+        last_upgrade
+    }
+
+    pub fn is_skip_height(&self, height: u32) -> bool {
+        self.skip_heights.contains(&height)
+    }
+
+    pub fn has_handler(&self, name: impl AsRef<str>) -> bool {
+        self.upgrade_handlers.contains_key(name.as_ref())
     }
 }
 
