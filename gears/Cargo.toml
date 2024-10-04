@@ -72,7 +72,7 @@ tower-layer = { workspace = true }
 http = { workspace = true }
 
 #cli
-clap = { workspace = true, optional = true }
+clap = { workspace = true, optional = true, features = ["env"] }
 clap_complete = { workspace = true, optional = true }
 
 # crypto

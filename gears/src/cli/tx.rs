@@ -24,7 +24,7 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
     home: PathBuf,
     /// <host>:<port> to Tendermint RPC interface for this chain
-    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = std::env::var("GEARS_NODE").map(|v| v.parse().expect("GEARS_NODE should be a valid http/https url")).unwrap_or(client_config(&T::home_dir()).node()))]
+    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, env = "GEARS_NODE", default_value_t = client_config(&T::home_dir()).node())]
     pub node: url::Url,
     /// the network chain-id
     #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = client_config(&T::home_dir()).chain_id())]
