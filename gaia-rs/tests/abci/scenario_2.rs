@@ -3,7 +3,7 @@ use std::path::Path;
 use gears::{
     tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
     types::uint::Uint256,
-    utils::node::generate_txs,
+    utils::node::generate_tx,
 };
 use staking::{CommissionRates, CreateValidator, Description, EditDescription};
 
@@ -56,10 +56,13 @@ fn scenario_2() {
             value: "10000uatom".parse().expect("hardcoded is valid"),
         }));
 
-    let txs = generate_txs([(0, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 0, &user_1, node.chain_id().clone());
 
     let app_hash = node
-        .step(txs, Timestamp::try_new(0, 0).expect("hardcoded is valid"))
+        .step(
+            vec![txs],
+            Timestamp::try_new(0, 0).expect("hardcoded is valid"),
+        )
         .app_hash;
     assert_eq!(
         hex::encode(app_hash),
@@ -84,11 +87,11 @@ fn scenario_2() {
         ),
     ));
 
-    let txs = generate_txs([(1, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 1, &user_1, node.chain_id().clone());
 
     let app_hash = node
         .step(
-            txs,
+            vec![txs],
             Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
         )
         .app_hash;
@@ -107,11 +110,11 @@ fn scenario_2() {
             delegator_address: user_1.address(),
         }));
 
-    let txs = generate_txs([(2, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 2, &user_1, node.chain_id().clone());
 
     let app_hash = node
         .step(
-            txs,
+            vec![txs],
             Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
         )
         .app_hash;
@@ -132,11 +135,11 @@ fn scenario_2() {
             amount: "500uatom".parse().expect("hardcoded is valid"),
         }));
 
-    let txs = generate_txs([(3, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 3, &user_1, node.chain_id().clone());
 
     let app_hash = node
         .step(
-            txs,
+            vec![txs],
             Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
         )
         .app_hash;
@@ -156,11 +159,11 @@ fn scenario_2() {
             delegator_address: user_1.address(),
         }));
 
-    let txs = generate_txs([(4, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 4, &user_1, node.chain_id().clone());
 
     let app_hash = node
         .step(
-            txs,
+            vec![txs],
             Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
         )
         .app_hash;

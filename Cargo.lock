@@ -461,6 +461,7 @@ dependencies = [
  "thiserror",
  "tonic",
  "tracing",
+ "vec1",
 ]
 
 [[package]]

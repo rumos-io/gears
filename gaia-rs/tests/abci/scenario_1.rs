@@ -1,7 +1,7 @@
 use gears::tendermint::types::time::timestamp::Timestamp;
 use gears::types::base::coins::Coins;
 use gears::types::msg::send::MsgSend;
-use gears::utils::node::generate_txs;
+use gears::utils::node::generate_tx;
 
 use crate::setup_mock_node;
 
@@ -31,9 +31,9 @@ fn scenario_1() {
         amount,
     }));
 
-    let txs = generate_txs([(0, msg)], &user, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 0, &user, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::UNIX_EPOCH).app_hash;
+    let app_hash = node.step(vec![txs], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
         "8eb5f41a3f77e034185be06e5385ff0d0a42f8d0f59171b1cc12b1ac6a66bbef"

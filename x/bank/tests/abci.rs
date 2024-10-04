@@ -14,7 +14,7 @@ use gears::{
         },
         msg::send::MsgSend,
     },
-    utils::node::{acc_address, generate_txs, init_node, GenesisSource, MockOptionsFormer},
+    utils::node::{acc_address, generate_tx, init_node, GenesisSource, MockOptionsFormer},
     x::{keepers::mocks::auth::MockAuthKeeper, module::Module},
 };
 
@@ -97,9 +97,9 @@ fn test_init_and_sending_tx() {
         amount,
     });
 
-    let txs = generate_txs([(0, msg)], &user, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 0, &user, node.chain_id().clone());
 
-    let app_hash = &node.step(txs, Timestamp::UNIX_EPOCH).app_hash;
+    let app_hash = &node.step(vec![txs], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
         "f9da1d84dcdbd650d3be54bb6fd02ce74c94667922aa9911bd96ca397f4d4e38"
