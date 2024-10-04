@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
 use gears::context::InfallibleContextMut;
 
@@ -9,8 +9,8 @@ pub trait UpgradeHandler: Debug + Clone + Send + Sync + 'static {
         &self,
         ctx: &mut CTX,
         plan: &Plan,
-        versions: impl IntoIterator<Item = M>,
-    ) -> anyhow::Result<()>;
+        versions: impl IntoIterator<Item = (M, u64)>,
+    ) -> anyhow::Result<HashMap<M, u64>>;
 }
 
 #[derive(Debug, Clone)]
@@ -21,8 +21,8 @@ impl UpgradeHandler for DummyHandler {
         &self,
         _ctx: &mut CTX,
         _plan: &Plan,
-        _versions: impl IntoIterator<Item = M>,
-    ) -> anyhow::Result<()> {
-        Ok(())
+        _versions: impl IntoIterator<Item = (M, u64)>,
+    ) -> anyhow::Result<HashMap<M, u64>> {
+        Ok(HashMap::new())
     }
 }

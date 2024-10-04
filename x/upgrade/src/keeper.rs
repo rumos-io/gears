@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::{Debug, Display},
+};
 
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
@@ -21,9 +24,9 @@ const PLAN_PREFIX: [u8; 1] = [0x0];
 /// is a prefix for to look up completed upgrade plan by name
 const DONE_PREFIX: [u8; 1] = [0x1];
 /// is a prefix to look up module names (key) and versions (value)
-const _VERSION_MAP_PREFIX: [u8; 1] = [0x2];
+const VERSION_MAP_PREFIX: [u8; 1] = [0x2];
 /// is a prefix to look up Protocol Version
-const _PROTOCOL_VERSION_BYTE_PREFIX: [u8; 1] = [0x3];
+const PROTOCOL_VERSION_BYTE_PREFIX: [u8; 1] = [0x3];
 
 /// is the key under which upgraded ibc state is stored in the upgrade store
 const UPGRADED_IBC_STATE_KEY: &[u8] = "upgradedIBCState".as_bytes();
@@ -62,11 +65,18 @@ impl<SK, M, UH> UpgradeKeeper<SK, M, UH> {
     pub fn new() {}
 }
 
-impl<SK: StoreKey, M: Module, UH: UpgradeHandler> UpgradeKeeper<SK, M, UH> {
+impl<
+        SK: StoreKey,
+        M: Module + TryFrom<Vec<u8>> + std::cmp::Eq + std::hash::Hash,
+        UH: UpgradeHandler,
+    > UpgradeKeeper<SK, M, UH>
+where
+    <M as TryFrom<Vec<u8>>>::Error: Display + Debug,
+{
     pub fn apply_upgrade<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        plan: &Plan,
+        plan: Plan,
     ) -> anyhow::Result<()> {
         let handler = self
             .upgrade_handlers
@@ -75,9 +85,28 @@ impl<SK: StoreKey, M: Module, UH: UpgradeHandler> UpgradeKeeper<SK, M, UH> {
                 "Upgrade should never be called without first checking HasHandler"
             ))?;
 
-        // let updated = handler.handle(ctx, plan, [()])?;
+        let versions = self.modules_version(ctx);
+
+        let updated = handler.handle(ctx, &plan, versions)?;
+
+        self.set_modules_version(ctx, updated);
+        self.set_protocol_version(ctx, self.protocol_version(ctx) + 1);
+
+        // TODO: protocol setter for baseapp https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/upgrade/keeper/keeper.go#L350-L353
+
+        self.clear_ibc_state(ctx, plan.height);
+        self.delete_upgrade_plan(ctx);
+        self.set_done(ctx, plan);
 
         Ok(())
+    }
+
+    fn set_done<DB: Database, CTX: InfallibleContextMut<DB, SK>>(&self, ctx: &mut CTX, plan: Plan) {
+        let height = ctx.height();
+
+        ctx.infallible_store_mut(&self.store_key)
+            .prefix_store_mut(DONE_PREFIX)
+            .set(plan.name.into_bytes(), height.to_be_bytes());
     }
 
     pub fn upgrade_plan<DB: Database, CTX: InfallibleContext<DB, SK>>(
@@ -143,6 +172,56 @@ impl<SK: StoreKey, M: Module, UH: UpgradeHandler> UpgradeKeeper<SK, M, UH> {
         }
 
         last_upgrade
+    }
+
+    fn modules_version<DB: Database, CTX: InfallibleContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> HashMap<M, u64> {
+        ctx.infallible_store(&self.store_key)
+            .prefix_store(VERSION_MAP_PREFIX)
+            .into_range(..)
+            .map(|(key, value)| {
+                (
+                    M::try_from(key.as_slice().to_vec()).expect("unknown module version saved"),
+                    u64::from_be_bytes(value.as_slice().try_into().ok().unwrap_or_corrupt()),
+                )
+            })
+            .collect::<HashMap<_, _>>()
+    }
+
+    fn set_modules_version<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        modules: impl IntoIterator<Item = (M, u64)>,
+    ) {
+        let modules = modules.into_iter().collect::<HashMap<_, _>>();
+
+        if modules.is_empty() {
+            let mut store = ctx
+                .infallible_store_mut(&self.store_key)
+                .prefix_store_mut(VERSION_MAP_PREFIX);
+
+            for (module, version) in modules {
+                store.set(module.name().into_bytes(), version.to_be_bytes().to_vec());
+            }
+        }
+    }
+
+    fn protocol_version<DB: Database, CTX: InfallibleContext<DB, SK>>(&self, ctx: &CTX) -> u64 {
+        ctx.infallible_store(&self.store_key)
+            .get(&PROTOCOL_VERSION_BYTE_PREFIX)
+            .map(|this| u64::from_be_bytes(this.as_slice().try_into().unwrap_or_corrupt()))
+            .unwrap_or_default()
+    }
+
+    fn set_protocol_version<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        version: u64,
+    ) {
+        ctx.infallible_store_mut(&self.store_key)
+            .set(PROTOCOL_VERSION_BYTE_PREFIX, version.to_be_bytes());
     }
 
     pub fn is_skip_height(&self, height: u32) -> bool {

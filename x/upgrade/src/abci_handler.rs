@@ -1,4 +1,7 @@
-use std::marker::PhantomData;
+use std::{
+    fmt::{Debug, Display},
+    marker::PhantomData,
+};
 
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo},
@@ -23,8 +26,14 @@ pub struct UpgradeAbciHandler<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, M
     _marker: PhantomData<(MI, SK, PSK, M)>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, MI: ModuleInfo> ABCIHandler
-    for UpgradeAbciHandler<SK, PSK, M, MI>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        M: Module + TryFrom<Vec<u8>> + std::cmp::Eq + std::hash::Hash,
+        MI: ModuleInfo,
+    > ABCIHandler for UpgradeAbciHandler<SK, PSK, M, MI>
+where
+    <M as TryFrom<Vec<u8>>>::Error: Display + Debug,
 {
     type Message = NullTxMsg;
 
@@ -77,7 +86,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, MI: ModuleInfo> ABCIHandle
         todo!()
     }
 
-    fn begin_block<'a, DB: gears::store::database::Database>(
+    fn begin_block<'b, DB: gears::store::database::Database>(
         &self,
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         _request: gears::tendermint::request::RequestBeginBlock,
@@ -135,7 +144,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, MI: ModuleInfo> ABCIHandle
                 plan.height
             );
             // todo: why they need gas https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/upgrade/abci.go#L75
-            match self.keeper.apply_upgrade(ctx, &plan) {
+            match self.keeper.apply_upgrade(ctx, plan) {
                 Ok(_) => return,
                 Err(err) => panic!("{err}"),
             }
@@ -152,7 +161,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, MI: ModuleInfo> ABCIHandle
         }
     }
 
-    fn end_block<'a, DB: gears::store::database::Database>(
+    fn end_block<'b, DB: gears::store::database::Database>(
         &self,
         _ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         _request: gears::tendermint::request::RequestEndBlock,
