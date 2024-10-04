@@ -1,5 +1,8 @@
-use crate::{commands::client::query::QueryCommand, config::DEFAULT_TENDERMINT_RPC_ADDRESS};
+use crate::{
+    application::ApplicationInfo, cli::config::client_config, commands::client::query::QueryCommand,
+};
 use clap::{ArgAction, Args, ValueHint};
+use std::marker::PhantomData;
 use tendermint::types::proto::block::Height;
 
 #[derive(Debug, Clone, strum::EnumString, strum::Display)]
@@ -32,9 +35,9 @@ pub struct TxsQueryCli {
 /// Query for a transaction by hash, "<addr>/<seq>" combination or comma-separated signatures
 /// in a committed block
 #[derive(Debug, Clone, ::clap::Args)]
-pub struct CliQueryTxCommand {
+pub struct CliQueryTxCommand<T: ApplicationInfo> {
     /// <host>:<port> to Tendermint RPC interface for this chain
-    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]
+    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = std::env::var("GEARS_NODE").map(|v| v.parse().expect("GEARS_NODE should be a valid http/https url")).unwrap_or(client_config(&T::home_dir()).node()))]
     pub node: url::Url,
     /// TODO
     #[arg(long, global = true)]
@@ -42,14 +45,18 @@ pub struct CliQueryTxCommand {
 
     #[command(flatten)]
     pub command: TxQueryCli,
+
+    #[arg(skip)]
+    _marker: PhantomData<T>,
 }
 
-impl From<CliQueryTxCommand> for QueryCommand<TxQueryCli> {
-    fn from(value: CliQueryTxCommand) -> Self {
+impl<T: ApplicationInfo> From<CliQueryTxCommand<T>> for QueryCommand<TxQueryCli> {
+    fn from(value: CliQueryTxCommand<T>) -> Self {
         let CliQueryTxCommand {
             node,
             height,
             command,
+            ..
         } = value;
 
         QueryCommand {
@@ -62,9 +69,9 @@ impl From<CliQueryTxCommand> for QueryCommand<TxQueryCli> {
 
 /// Query for paginated transactions that match a set of events
 #[derive(Debug, Clone, ::clap::Args)]
-pub struct CliQueryTxsCommand {
+pub struct CliQueryTxsCommand<T: ApplicationInfo> {
     /// <host>:<port> to Tendermint RPC interface for this chain
-    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]
+    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = std::env::var("GEARS_NODE").map(|v| v.parse().expect("GEARS_NODE should be a valid http/https url")).unwrap_or(client_config(&T::home_dir()).node()))]
     pub node: url::Url,
     /// TODO
     #[arg(long, global = true)]
@@ -72,14 +79,18 @@ pub struct CliQueryTxsCommand {
 
     #[command(flatten)]
     pub command: TxsQueryCli,
+
+    #[arg(skip)]
+    _marker: PhantomData<T>,
 }
 
-impl From<CliQueryTxsCommand> for QueryCommand<TxsQueryCli> {
-    fn from(value: CliQueryTxsCommand) -> Self {
+impl<T: ApplicationInfo> From<CliQueryTxsCommand<T>> for QueryCommand<TxsQueryCli> {
+    fn from(value: CliQueryTxsCommand<T>) -> Self {
         let CliQueryTxsCommand {
             node,
             height,
             command,
+            ..
         } = value;
 
         QueryCommand {

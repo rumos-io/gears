@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, path::PathBuf, str::FromStr};
+use std::{marker::PhantomData, path::PathBuf};
 
 use address::AccAddress;
 use clap::{ArgAction, Args, Subcommand, ValueEnum, ValueHint};
@@ -7,11 +7,11 @@ use tendermint::types::chain_id::ChainId;
 
 use crate::{
     application::ApplicationInfo,
+    cli::config::client_config,
     commands::client::{
         keys::KeyringBackend,
         tx::{AccountProvider, ClientTxContext, Keyring as TxKeyring, LocalInfo, TxCommand},
     },
-    config::DEFAULT_TENDERMINT_RPC_ADDRESS,
     types::{
         auth::{fee::Fee, gas::Gas},
         base::coins::UnsignedCoins,
@@ -24,10 +24,10 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
     home: PathBuf,
     /// <host>:<port> to Tendermint RPC interface for this chain
-    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]
+    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = std::env::var("GEARS_NODE").map(|v| v.parse().expect("GEARS_NODE should be a valid http/https url")).unwrap_or(client_config(&T::home_dir()).node()))]
     pub node: url::Url,
     /// the network chain-id
-    #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = ChainId::from_str( "test-chain" ).expect("unreachable: default should be valid"))]
+    #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = client_config(&T::home_dir()).chain_id())]
     pub chain_id: ChainId,
 
     #[command(flatten)]
@@ -38,7 +38,7 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
 
     #[command(flatten)]
     #[group(id = "local", conflicts_with = Keyring::Ledger, global = true)]
-    pub local: Option<Local>,
+    pub local: Option<Local<T>>,
 
     #[command(flatten)]
     #[group(id = "Broadcast mode", global = true)]
@@ -132,16 +132,19 @@ pub enum Keyring {
 }
 
 #[derive(Debug, Clone, ::clap::Args)]
-pub struct Local {
+pub struct Local<T: ApplicationInfo> {
     /// from key
     #[arg(long, short = 'f', global = true, required = false)]
     #[arg(help_heading = "Local signing options")]
     from_key: String,
 
     /// select keyring's backend
-    #[arg(long = "keyring-backend", short = 'b',  global = true, action = ArgAction::Set, default_value_t = KeyringBackend::File )]
+    #[arg(long = "keyring-backend", short = 'b',  global = true, action = ArgAction::Set, default_value_t = client_config(&T::home_dir()).keyring_backend() )]
     #[arg(help_heading = "Local signing options")]
     keyring_backend: KeyringBackend,
+
+    #[arg(skip)]
+    _marker: PhantomData<T>,
 }
 
 #[derive(Debug, Clone, ::clap::Args)]
@@ -183,6 +186,7 @@ where
                 let Local {
                     from_key,
                     keyring_backend,
+                    ..
                 } = local.ok_or(MissingCliOptions(
                     "local signing options: from-key".to_owned(),
                 ))?;

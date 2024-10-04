@@ -20,6 +20,7 @@ use self::{
 };
 
 pub mod aux;
+mod config;
 pub mod genesis;
 pub mod init;
 pub mod key;
@@ -114,6 +115,7 @@ where
 }
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
+#[allow(clippy::large_enum_variant)]
 pub enum CliCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
@@ -160,9 +162,9 @@ where
     #[command(flatten)]
     Aux(CliAUX),
     Tx(CliTxCommand<T, CliTX>),
-    Query(CliQueryCommand<CliQue>),
-    QueryTx(CliQueryTxCommand),
-    QueryTxs(CliQueryTxsCommand),
+    Query(CliQueryCommand<T, CliQue>),
+    QueryTx(CliQueryTxCommand<T>),
+    QueryTxs(CliQueryTxsCommand<T>),
     #[command(subcommand)]
     Keys(CliKeyCommand<T>),
 }
