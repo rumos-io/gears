@@ -13,7 +13,7 @@ pub trait AuthParams {
     fn tx_cost_per_byte(&self) -> u64;
 }
 
-pub trait AuthKeeper<SK: StoreKey, M: Module>: Clone {
+pub trait AuthKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     type Params: AuthParams;
 
     fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
