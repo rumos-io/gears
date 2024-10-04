@@ -16,6 +16,7 @@ thiserror = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true }
 nz = { workspace = true }
+strum = { workspace = true }
 
 #serialization
 serde = { workspace = true, default-features = false }

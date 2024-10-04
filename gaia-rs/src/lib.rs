@@ -156,6 +156,9 @@ impl AuxHandler for GaiaCore {
                     genutil::gentx::gentx_cmd(cmd, "bank", "staking", &EmptyNodeFetcher)?;
                 }
             },
+            GaiaAuxCmd::Bank(cmd) => {
+                bank::aux::handle_aux_cmd(cmd, "/app_state/bank/denom_metadata")?
+            }
         }
 
         Ok(NilAux)
@@ -166,6 +169,8 @@ impl AuxHandler for GaiaCore {
 pub enum GaiaAuxCli<AI: ApplicationInfo> {
     #[command(flatten)]
     Genutil(genutil::client::cli::GenesisCommands<AI>),
+    #[command(flatten)]
+    Bank(bank::aux::cli::BankAuxCliCommands<AI>),
 }
 
 impl<AI: ApplicationInfo> TryFrom<GaiaAuxCli<AI>> for GaiaAuxCmd {
@@ -176,12 +181,16 @@ impl<AI: ApplicationInfo> TryFrom<GaiaAuxCli<AI>> for GaiaAuxCmd {
             GaiaAuxCli::Genutil(var) => GaiaAuxCmd::Genutil(
                 genutil::client::cli::GenesisAuxCli { command: var }.try_into()?,
             ),
+            GaiaAuxCli::Bank(var) => {
+                GaiaAuxCmd::Bank(bank::aux::cli::BankAuxCli { command: var }.try_into()?)
+            }
         })
     }
 }
 
 pub enum GaiaAuxCmd {
     Genutil(genutil::cmd::GenesisCmd),
+    Bank(bank::aux::BankAuxCmd),
 }
 
 impl AuxHandler for GaiaCoreClient {
