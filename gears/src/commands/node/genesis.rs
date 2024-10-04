@@ -33,7 +33,7 @@ pub fn genesis_account_add<G: SDKGenesis>(cmd: GenesisCommand) -> Result<(), Gen
         coins,
     } = cmd;
 
-    let genesis_file_path = ConfigDirectory::GenesisFile.path_from_hone(&home);
+    let genesis_file_path = ConfigDirectory::GenesisFile.path_from_home(&home);
 
     let raw_genesis = std::fs::read_to_string(genesis_file_path.clone())?;
     let mut genesis: Genesis<G> = serde_json::from_str(&raw_genesis)?;

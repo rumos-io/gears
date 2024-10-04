@@ -28,14 +28,14 @@ pub fn add_coins_meta_to_genesis(
 
         metadata.dedup();
 
-        if !dedup_input && ((pre_dup_len != metadata.len()) == true) {
+        if !dedup_input && (pre_dup_len != metadata.len()) {
             Err(anyhow::anyhow!("Found duplicates in new list"))?
         }
 
         metadata
     };
 
-    let genesis_path = ConfigDirectory::GenesisFile.path_from_hone(&home);
+    let genesis_path = ConfigDirectory::GenesisFile.path_from_home(&home);
 
     let mut genesis = serde_json::from_slice::<serde_json::Value>(&std::fs::read(&genesis_path)?)?;
 
