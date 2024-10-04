@@ -1,3 +1,4 @@
+pub mod aux;
 mod abci_handler;
 mod client;
 pub mod errors;
