@@ -35,7 +35,14 @@ fn write_completions<G: Generator>(gen: G, cmd: &mut Command, buf: &mut dyn Writ
 }
 
 #[derive(Debug, Clone, ::clap::Parser)]
-#[command(name = T::APP_NAME, version = T::APP_VERSION)]
+#[command(name = T::APP_NAME, version = T::APP_VERSION, long_about =
+"Throughout this application variables are assigned values based on the following order of precedence:
+
+1. Argument passed on the command line
+2. Environment variable
+3. Config file value
+4. Default value"
+)]
 pub struct CliApplicationArgs<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
