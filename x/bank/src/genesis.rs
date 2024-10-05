@@ -29,25 +29,6 @@ impl Default for GenesisState {
                 default_send_enabled: true,
             },
             denom_metadata: vec![],
-            // denom_metadata: vec![Metadata {
-            //     description: String::new(),
-            //     denom_units: vec![
-            //         DenomUnit {
-            //             denom: "ATOM".parse().expect("hard coded value is valid"),
-            //             exponent: 6,
-            //             aliases: Vec::new(),
-            //         },
-            //         DenomUnit {
-            //             denom: "uatom".parse().expect("hard coded value is valid"),
-            //             exponent: 0,
-            //             aliases: Vec::new(),
-            //         },
-            //     ],
-            //     base: "uatom".into(),
-            //     display: "ATOM".into(),
-            //     name: String::new(),
-            //     symbol: String::new(),
-            // }],
         }
     }
 }
