@@ -95,14 +95,32 @@ where
 
         if !downgrade_verified() {
             set_downgrade_verified(true);
-            let _last_applied_plan = self.keeper.last_completed_upgrade(ctx);
+            let last_applied_plan = self.keeper.last_completed_upgrade(ctx);
 
+            let is_none = plan.is_none();
+            let should_execute = plan
+                .as_ref()
+                .map(|this| this.should_execute(ctx))
+                .unwrap_or_default();
+            
             // This check will make sure that we are using a valid binary.
             // It'll panic in these cases if there is no upgrade handler registered for the last applied upgrade.
             // 1. If there is no scheduled upgrade.
             // 2. If the plan is not ready.
             // 3. If the plan is ready and skip upgrade height is set for current height.
-            // TODO: implement this checks: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/upgrade/abci.go#L36-L40
+            if is_none
+                || !should_execute
+                || (should_execute && self.keeper.is_skip_height(ctx.height()))
+            {
+                match last_applied_plan {
+                    Some(upg) if self.keeper.has_handler(&upg.name) => panic!(
+                        "Wrong app version {}, upgrade handler is missing for {} upgrade plan",
+                        1, // TODO: consensus params should have version?
+                        upg.name,
+                    ),
+                    _ => (),
+                }
+            }
         }
 
         let plan = match plan {
