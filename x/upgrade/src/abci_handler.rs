@@ -102,7 +102,7 @@ where
                 .as_ref()
                 .map(|this| this.should_execute(ctx))
                 .unwrap_or_default();
-            
+
             // This check will make sure that we are using a valid binary.
             // It'll panic in these cases if there is no upgrade handler registered for the last applied upgrade.
             // 1. If there is no scheduled upgrade.
@@ -177,13 +177,5 @@ where
             tracing::error!("{log_msg}");
             panic!("{msg}");
         }
-    }
-
-    fn end_block<'b, DB: gears::store::database::Database>(
-        &self,
-        _ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
-        _request: gears::tendermint::request::RequestEndBlock,
-    ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        Vec::new()
     }
 }
