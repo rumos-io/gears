@@ -18,6 +18,7 @@ serde_json = { workspace = true }
 # utils
 anyhow = { workspace = true }
 tracing = { workspace = true }
+strum = { workspace = true }
 
 # nutypes
 ibc-proto = { workspace = true }

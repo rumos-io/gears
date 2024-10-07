@@ -10,28 +10,24 @@ use gears::{
     params::ParamsSubspaceKey,
     store::StoreKey,
     types::tx::NullTxMsg,
-    x::module::Module,
 };
 use tracing::info;
 
 use crate::{
-    handler::DummyHandler,
+    handler::UpgradeHandler,
     keeper::{downgrade_verified, set_downgrade_verified, UpgradeKeeper},
     types::query::{UpgradeQueryRequest, UpgradeQueryResponse},
+    Module,
 };
 
 #[derive(Debug, Clone)]
-pub struct UpgradeAbciHandler<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, MI> {
-    keeper: UpgradeKeeper<SK, M, DummyHandler>,
+pub struct UpgradeAbciHandler<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, UH, MI> {
+    keeper: UpgradeKeeper<SK, M, UH>,
     _marker: PhantomData<(MI, SK, PSK, M)>,
 }
 
-impl<
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        M: Module + TryFrom<Vec<u8>> + std::cmp::Eq + std::hash::Hash,
-        MI: ModuleInfo,
-    > ABCIHandler for UpgradeAbciHandler<SK, PSK, M, MI>
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, UH: UpgradeHandler, MI: ModuleInfo>
+    ABCIHandler for UpgradeAbciHandler<SK, PSK, M, UH, MI>
 where
     <M as TryFrom<Vec<u8>>>::Error: Display + Debug,
 {
@@ -89,7 +85,7 @@ where
     fn begin_block<'b, DB: gears::store::database::Database>(
         &self,
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
-        _request: gears::tendermint::request::RequestBeginBlock,
+        request: gears::tendermint::request::RequestBeginBlock,
     ) {
         let plan = self.keeper.upgrade_plan(ctx);
 
@@ -115,8 +111,7 @@ where
                 match last_applied_plan {
                     Some(upg) if self.keeper.has_handler(&upg.name) => panic!(
                         "Wrong app version {}, upgrade handler is missing for {} upgrade plan",
-                        1, // TODO: consensus params should have version?
-                        upg.name,
+                        request.header.version.app, upg.name,
                     ),
                     _ => (),
                 }
@@ -145,7 +140,6 @@ where
                 // TODO: store info https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/upgrade/keeper/keeper.go#L375-L396
 
                 // We don't have an upgrade handler for this upgrade name, meaning this software is out of date so shutdown
-                // "UPGRADE \"%s\" NEEDED at %s: %s", plan.Name, plan.DueAt(), plan.Info
                 let msg = format!(
                     "UPGRADE `{}` NEEDED at height: {}: {}",
                     plan.name, plan.height, plan.info
@@ -161,6 +155,7 @@ where
                 plan.name,
                 plan.height
             );
+
             // todo: why they need gas https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/upgrade/abci.go#L75
             match self.keeper.apply_upgrade(ctx, plan) {
                 Ok(_) => return,

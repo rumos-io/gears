@@ -5833,6 +5833,7 @@ dependencies = [
  "prost",
  "serde",
  "serde_json",
+ "strum",
  "tracing",
 ]
 

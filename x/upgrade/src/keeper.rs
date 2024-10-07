@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt::{Debug, Display},
+    marker::PhantomData,
 };
 
 use gears::{
@@ -8,13 +9,13 @@ use gears::{
     core::Protobuf,
     extensions::corruption::UnwrapCorrupt,
     store::{database::Database, StoreKey},
-    x::module::Module,
 };
 use prost::bytes::Bytes;
 
 use crate::{
     handler::UpgradeHandler,
     types::{plan::Plan, Upgrade},
+    Module,
 };
 
 pub use downgrade_flag::*;
@@ -56,20 +57,38 @@ fn upgraded_const_state_key(height: u32) -> Vec<u8> {
 #[derive(Debug, Clone)]
 pub struct UpgradeKeeper<SK, M, UH> {
     store_key: SK,
-    upgrade_handlers: HashMap<String, UH>,
+    upgrade_handlers: HashMap<&'static str, UH>,
     skip_heights: HashSet<u32>, // TODO: source https://github.com/cosmos/gaia/blob/189b57be735d64d0dbf0945717b49017a1beb11e/cmd/gaiad/cmd/root.go#L192-L195
-    _upgrade_mod: M,
+    _modules_marker: PhantomData<M>,
 }
 
-impl<SK, M, UH> UpgradeKeeper<SK, M, UH> {
-    pub fn new() {}
+impl<SK, M, UH: strum::IntoEnumIterator + UpgradeHandler> UpgradeKeeper<SK, M, UH> {
+    pub fn new(store_key: SK, skip_heights: impl IntoIterator<Item = u32>) -> Self {
+        Self {
+            store_key,
+            upgrade_handlers: UH::iter().map(|this| (this.name(), this)).collect(),
+            skip_heights: skip_heights.into_iter().collect(),
+            _modules_marker: PhantomData,
+        }
+    }
 }
 
-impl<
-        SK: StoreKey,
-        M: Module + TryFrom<Vec<u8>> + std::cmp::Eq + std::hash::Hash,
-        UH: UpgradeHandler,
-    > UpgradeKeeper<SK, M, UH>
+impl<SK, M, UH: UpgradeHandler> UpgradeKeeper<SK, M, UH> {
+    pub fn new_unverified(
+        store_key: SK,
+        upgrade_handlers: impl IntoIterator<Item = (&'static str, UH)>,
+        skip_heights: impl IntoIterator<Item = u32>,
+    ) -> Self {
+        Self {
+            store_key,
+            upgrade_handlers: upgrade_handlers.into_iter().collect(),
+            skip_heights: skip_heights.into_iter().collect(),
+            _modules_marker: PhantomData,
+        }
+    }
+}
+
+impl<SK: StoreKey, M: Module, UH: UpgradeHandler> UpgradeKeeper<SK, M, UH>
 where
     <M as TryFrom<Vec<u8>>>::Error: Display + Debug,
 {
@@ -80,7 +99,7 @@ where
     ) -> anyhow::Result<()> {
         let handler = self
             .upgrade_handlers
-            .get(&plan.name)
+            .get(plan.name.as_str())
             .ok_or(anyhow::anyhow!(
                 "Upgrade should never be called without first checking HasHandler"
             ))?;
@@ -203,7 +222,10 @@ where
                 .prefix_store_mut(VERSION_MAP_PREFIX);
 
             for (module, version) in modules {
-                store.set(module.name().into_bytes(), version.to_be_bytes().to_vec());
+                store.set(
+                    module.name().as_bytes().to_owned(),
+                    version.to_be_bytes().to_vec(),
+                );
             }
         }
     }
