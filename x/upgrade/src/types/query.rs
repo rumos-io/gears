@@ -1,13 +1,17 @@
 use gears::{
-    baseapp::{Query, QueryRequest, QueryResponse},
+    baseapp::QueryRequest,
     derive::{Protobuf, Query},
 };
 use serde::{Deserialize, Serialize};
 
 use super::{plan::Plan, ModuleVersion};
 
-#[derive(Debug, Clone)]
-pub enum UpgradeQueryRequest {}
+#[derive(Debug, Clone, Query)]
+pub enum UpgradeQueryRequest {
+    Plan(QueryCurrentPlanRequest),
+    Applied(QueryAppliedPlanRequest),
+    ModuleVersions(QueryModuleVersionsRequest),
+}
 
 impl QueryRequest for UpgradeQueryRequest {
     fn height(&self) -> u32 {
@@ -15,23 +19,11 @@ impl QueryRequest for UpgradeQueryRequest {
     }
 }
 
-impl Query for UpgradeQueryRequest {
-    fn query_url(&self) -> &'static str {
-        todo!()
-    }
-
-    fn into_bytes(self) -> Vec<u8> {
-        todo!()
-    }
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum UpgradeQueryResponse {}
-
-impl QueryResponse for UpgradeQueryResponse {
-    fn into_bytes(self) -> Vec<u8> {
-        todo!()
-    }
+#[derive(Debug, Clone, Query, serde::Serialize, serde::Deserialize)]
+pub enum UpgradeQueryResponse {
+    Plan(QueryCurrentPlanResponse),
+    Applied(QueryAppliedPlanResponse),
+    ModuleVersions(QueryModuleVersionsResponse),
 }
 
 mod inner {

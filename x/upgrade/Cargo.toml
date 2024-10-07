@@ -22,3 +22,6 @@ strum = { workspace = true }
 
 # nutypes
 ibc-proto = { workspace = true }
+
+#clients
+clap = { workspace = true }

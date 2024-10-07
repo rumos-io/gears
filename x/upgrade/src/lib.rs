@@ -1,3 +1,4 @@
+pub mod client;
 pub mod abci_handler;
 mod handler;
 pub mod keeper;
