@@ -1,23 +1,21 @@
 use bytes::Bytes;
-use gears::{core::errors::CoreError, core::Protobuf, params::ParamsSubspaceKey};
+use gears::{
+    core::{errors::CoreError, Protobuf},
+    derive::Raw,
+    params::ParamsSubspaceKey,
+};
 use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, PartialEq, Message, Serialize, Deserialize)]
-pub struct RawParamChange {
-    #[prost(string, tag = "1")]
-    pub subspace: String,
-    #[prost(bytes, tag = "2")]
-    pub key: Vec<u8>,
-    #[prost(bytes, tag = "3")]
-    pub value: Vec<u8>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Raw)]
+#[raw(derive(Serialize, Deserialize, Clone, PartialEq))]
 pub struct ParamChange<PSK> {
+    #[raw(kind(string), raw = String)]
     pub subspace: PSK,
+    #[raw(kind(bytes))]
     pub key: Vec<u8>,
+    #[raw(kind(bytes))]
     pub value: Vec<u8>,
 }
 
