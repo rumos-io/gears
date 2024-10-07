@@ -167,7 +167,9 @@ where
             if self.keeper.is_skip_height(ctx.height()) {
                 info!(
                     "UPGRADE `{}` SKIPPED at {}: {}",
-                    plan.name, plan.height, plan.info
+                    plan.name.as_ref(),
+                    plan.height,
+                    plan.info
                 );
 
                 self.keeper.delete_upgrade_plan(ctx);
@@ -180,7 +182,9 @@ where
                 // We don't have an upgrade handler for this upgrade name, meaning this software is out of date so shutdown
                 let msg = format!(
                     "UPGRADE `{}` NEEDED at height: {}: {}",
-                    plan.name, plan.height, plan.info
+                    plan.name.as_ref(),
+                    plan.height,
+                    plan.info
                 );
                 let log_msg = msg.clone();
 
@@ -190,7 +194,7 @@ where
 
             tracing::info!(
                 "applying upgrade `{}` at height: {}",
-                plan.name,
+                plan.name.as_ref(),
                 plan.height
             );
 
@@ -204,7 +208,7 @@ where
         if self.keeper.has_handler(&plan.name) {
             let msg = format!(
                 "BINARY UPDATED BEFORE TRIGGER! UPGRADE `{}` - in binary but not executed on chain",
-                plan.name
+                plan.name.as_ref()
             );
             let log_msg = msg.clone();
             tracing::error!("{log_msg}");

@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use gears::{
     context::QueryableContext,
     core::{errors::CoreError, Protobuf},
@@ -8,19 +10,22 @@ mod inner {
     pub use ibc_proto::cosmos::upgrade::v1beta1::Plan;
 }
 
+#[nutype::nutype(
+    validate(not_empty),
+    derive(Debug, Clone, Serialize, Deserialize, AsRef)
+)]
+pub struct PlanName(String);
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Plan {
-    pub name: String,
-    pub height: u32,
+    pub name: PlanName,
+    pub height: NonZero<u32>,
     pub info: String,
 }
 
 impl Plan {
     pub fn should_execute<CTX: QueryableContext<DB, SK>, DB, SK>(&self, ctx: &CTX) -> bool {
-        match self.height > 0 {
-            true => self.height <= ctx.height(),
-            false => false,
-        }
+        self.height.get() <= ctx.height()
     }
 }
 
@@ -28,9 +33,9 @@ impl From<Plan> for inner::Plan {
     fn from(Plan { name, height, info }: Plan) -> Self {
         #[allow(deprecated)]
         Self {
-            name,
+            name: name.into_inner(),
             time: None,
-            height: height.into(),
+            height: height.get().into(),
             info,
             upgraded_client_state: None,
         }
@@ -57,9 +62,11 @@ impl TryFrom<inner::Plan> for Plan {
         }
 
         Ok(Self {
-            name,
-            height: height
-                .try_into()
+            name: PlanName::try_new(name)
+                .map_err(|_| ProtobufError::MissingField("`name` is empty".to_owned()))?,
+            height: u32::try_from(height)
+                .map_err(|e| e.to_string())
+                .and_then(|this| NonZero::new(this).ok_or("height can't be zero".to_owned()))
                 .map_err(|e| CoreError::DecodeGeneral(format!("invalid `height`: {e}")))?,
             info,
         })

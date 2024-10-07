@@ -74,7 +74,7 @@ impl<SK, M, UH: strum::IntoEnumIterator + UpgradeHandler> UpgradeKeeper<SK, M, U
 }
 
 impl<SK, M, UH: UpgradeHandler> UpgradeKeeper<SK, M, UH> {
-    pub fn new_unverified(
+    pub fn new_unchecked(
         store_key: SK,
         upgrade_handlers: impl IntoIterator<Item = (&'static str, UH)>,
         skip_heights: impl IntoIterator<Item = u32>,
@@ -92,6 +92,49 @@ impl<SK: StoreKey, M: Module, UH: UpgradeHandler> UpgradeKeeper<SK, M, UH>
 where
     <M as TryFrom<Vec<u8>>>::Error: Display + Debug,
 {
+    pub fn schedule_upgrade<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        plan: Plan,
+        overwrite: bool,
+    ) -> anyhow::Result<Option<Plan>> {
+        if plan.height.get() <= ctx.height() {
+            Err(anyhow::anyhow!("upgrade cannot be scheduled in the past"))?
+        }
+
+        if self.done_height(ctx, &plan.name).is_some() {
+            Err(anyhow::anyhow!(
+                "upgrade with name {} has already been completed",
+                plan.name.as_ref()
+            ))?
+        }
+
+        let old_plan = match self.upgrade_plan(ctx) {
+            Some(old_plan) => match overwrite {
+                true => {
+                    self.clear_ibc_state(ctx, old_plan.height.get());
+
+                    ctx.infallible_store_mut(&self.store_key)
+                        .set(PLAN_PREFIX, plan.encode_vec());
+
+                    Some(old_plan)
+                }
+                false => Err(anyhow::anyhow!(
+                    "upgrade with name {} already exists",
+                    old_plan.name.as_ref()
+                ))?,
+            },
+            None => {
+                ctx.infallible_store_mut(&self.store_key)
+                    .set(PLAN_PREFIX, plan.encode_vec());
+
+                None
+            }
+        };
+
+        Ok(old_plan)
+    }
+
     pub fn apply_upgrade<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -99,7 +142,7 @@ where
     ) -> anyhow::Result<()> {
         let handler = self
             .upgrade_handlers
-            .get(plan.name.as_str())
+            .get(plan.name.as_ref())
             .ok_or(anyhow::anyhow!(
                 "Upgrade should never be called without first checking HasHandler"
             ))?;
@@ -113,7 +156,7 @@ where
 
         // TODO: protocol setter for baseapp https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/upgrade/keeper/keeper.go#L350-L353
 
-        self.clear_ibc_state(ctx, plan.height);
+        self.clear_ibc_state(ctx, plan.height.get());
         self.delete_upgrade_plan(ctx);
         self.set_done(ctx, plan);
 
@@ -138,7 +181,7 @@ where
 
         ctx.infallible_store_mut(&self.store_key)
             .prefix_store_mut(DONE_PREFIX)
-            .set(plan.name.into_bytes(), height.to_be_bytes());
+            .set(plan.name.into_inner().into_bytes(), height.to_be_bytes());
     }
 
     pub fn upgrade_plan<DB: Database, CTX: InfallibleContext<DB, SK>>(
@@ -158,7 +201,7 @@ where
     ) -> bool {
         let old_plan = self.upgrade_plan(ctx);
         if let Some(old_plan) = old_plan {
-            self.clear_ibc_state(ctx, old_plan.height);
+            self.clear_ibc_state(ctx, old_plan.height.get());
         }
 
         ctx.infallible_store_mut(&self.store_key)
