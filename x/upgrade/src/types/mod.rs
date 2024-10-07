@@ -16,7 +16,18 @@ impl Upgrade {
     }
 }
 
-#[derive(Debug, Clone, gears::derive::Protobuf, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Hash,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    gears::derive::Protobuf,
+    serde::Serialize,
+    serde::Deserialize,
+)]
 #[proto(raw = "ibc_proto::cosmos::upgrade::v1beta1::ModuleVersion")]
 pub struct ModuleVersion {
     pub name: String,

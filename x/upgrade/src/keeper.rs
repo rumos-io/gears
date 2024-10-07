@@ -120,6 +120,19 @@ where
         Ok(())
     }
 
+    pub fn done_height<DB: Database, CTX: InfallibleContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        name: impl AsRef<str>,
+    ) -> Option<u32> {
+        let height = ctx
+            .infallible_store(&self.store_key)
+            .get(name.as_ref().as_bytes())?;
+        let height = u32::from_be_bytes(height.try_into().ok().unwrap_or_corrupt());
+
+        Some(height)
+    }
+
     fn set_done<DB: Database, CTX: InfallibleContextMut<DB, SK>>(&self, ctx: &mut CTX, plan: Plan) {
         let height = ctx.height();
 
@@ -193,7 +206,7 @@ where
         last_upgrade
     }
 
-    fn modules_version<DB: Database, CTX: InfallibleContext<DB, SK>>(
+    pub fn modules_version<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> HashMap<M, u64> {

@@ -5,18 +5,28 @@ use std::{
 
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo},
-    baseapp::genesis::NullGenesis,
-    context::QueryableContext,
+    baseapp::{errors::QueryError, genesis::NullGenesis, QueryResponse},
+    context::{query::QueryContext, QueryableContext},
+    core::Protobuf,
     params::ParamsSubspaceKey,
-    store::StoreKey,
+    store::{database::Database, StoreKey},
+    tendermint::types::request::query::RequestQuery,
     types::tx::NullTxMsg,
 };
+use prost::bytes::Bytes;
 use tracing::info;
 
 use crate::{
     handler::UpgradeHandler,
     keeper::{downgrade_verified, set_downgrade_verified, UpgradeKeeper},
-    types::query::{UpgradeQueryRequest, UpgradeQueryResponse},
+    types::{
+        query::{
+            QueryAppliedPlanRequest, QueryAppliedPlanResponse, QueryCurrentPlanRequest,
+            QueryCurrentPlanResponse, QueryModuleVersionsRequest, QueryModuleVersionsResponse,
+            UpgradeQueryRequest, UpgradeQueryResponse,
+        },
+        ModuleVersion,
+    },
     Module,
 };
 
@@ -43,10 +53,18 @@ where
 
     fn typed_query<DB: gears::store::database::Database>(
         &self,
-        _ctx: &gears::context::query::QueryContext<DB, Self::StoreKey>,
-        _query: Self::QReq,
+        ctx: &gears::context::query::QueryContext<DB, Self::StoreKey>,
+        query: Self::QReq,
     ) -> Self::QRes {
-        todo!()
+        match query {
+            UpgradeQueryRequest::Plan(_) => Self::QRes::Plan(self.query_plan(ctx)),
+            UpgradeQueryRequest::Applied(query) => {
+                Self::QRes::Applied(self.query_applied(ctx, query))
+            }
+            UpgradeQueryRequest::ModuleVersions(query) => {
+                Self::QRes::ModuleVersions(self.query_module_versions(ctx, query))
+            }
+        }
     }
 
     fn run_ante_checks<DB: gears::store::database::Database>(
@@ -76,10 +94,30 @@ where
 
     fn query<DB: gears::store::database::Database + Send + Sync>(
         &self,
-        _ctx: &gears::context::query::QueryContext<DB, Self::StoreKey>,
-        _query: gears::tendermint::types::request::query::RequestQuery,
+        ctx: &gears::context::query::QueryContext<DB, Self::StoreKey>,
+        RequestQuery {
+            data,
+            path,
+            height: _,
+            prove: _,
+        }: RequestQuery,
     ) -> Result<Vec<u8>, gears::baseapp::errors::QueryError> {
-        todo!()
+        let bytes = Bytes::from(data);
+
+        let query = match path.as_str() {
+            QueryCurrentPlanRequest::QUERY_URL => {
+                Self::QReq::Plan(QueryCurrentPlanRequest::decode(bytes)?)
+            }
+            QueryAppliedPlanRequest::QUERY_URL => {
+                Self::QReq::Applied(QueryAppliedPlanRequest::decode(bytes)?)
+            }
+            QueryModuleVersionsRequest::QUERY_URL => {
+                Self::QReq::ModuleVersions(QueryModuleVersionsRequest::decode(bytes)?)
+            }
+            _ => Err(QueryError::PathNotFound)?,
+        };
+
+        Ok(ABCIHandler::typed_query(self, ctx, query).into_bytes())
     }
 
     fn begin_block<'b, DB: gears::store::database::Database>(
@@ -171,6 +209,67 @@ where
             let log_msg = msg.clone();
             tracing::error!("{log_msg}");
             panic!("{msg}");
+        }
+    }
+}
+
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, UH: UpgradeHandler, MI: ModuleInfo>
+    UpgradeAbciHandler<SK, PSK, M, UH, MI>
+where
+    <M as TryFrom<Vec<u8>>>::Error: Display + Debug,
+{
+    pub fn query_plan<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryCurrentPlanResponse {
+        QueryCurrentPlanResponse {
+            plan: self.keeper.upgrade_plan(ctx),
+        }
+    }
+
+    pub fn query_applied<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryAppliedPlanRequest { name }: QueryAppliedPlanRequest,
+    ) -> QueryAppliedPlanResponse {
+        QueryAppliedPlanResponse {
+            height: self.keeper.done_height(ctx, name).unwrap_or_default(),
+        }
+    }
+
+    pub fn query_module_versions<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryModuleVersionsRequest { module_name }: QueryModuleVersionsRequest,
+    ) -> QueryModuleVersionsResponse {
+        let mut list = match module_name.is_empty() {
+            true => self
+                .keeper
+                .modules_version(ctx)
+                .into_iter()
+                .map(|(key, version)| ModuleVersion {
+                    name: key.name().to_owned(),
+                    version,
+                })
+                .collect::<Vec<_>>(),
+            false => {
+                match self
+                    .keeper
+                    .modules_version(ctx)
+                    .into_iter()
+                    .find(|this| this.0.name() == &module_name)
+                {
+                    Some((key, version)) => [ModuleVersion {
+                        name: key.name().to_owned(),
+                        version,
+                    }]
+                    .to_vec(),
+                    None => Vec::new(),
+                }
+            }
+        };
+
+        list.sort();
+
+        QueryModuleVersionsResponse {
+            module_versions: list,
         }
     }
 }
