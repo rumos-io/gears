@@ -4,6 +4,7 @@ use clap::{ArgAction, ValueHint};
 
 use crate::{
     application::ApplicationInfo,
+    cli::config::client_config,
     commands::client::keys::{AddKeyCommand, KeyringBackend},
 };
 
@@ -19,7 +20,7 @@ pub struct CliAddKeyCommand<T: ApplicationInfo> {
     #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
     home: PathBuf,
     /// select keyring's backend
-    #[arg(long = "keyring-backend",  action = ArgAction::Set, default_value_t = KeyringBackend::File )]
+    #[arg(long = "keyring-backend",  action = ArgAction::Set, default_value_t = client_config(&T::home_dir()).keyring_backend())]
     keyring_backend: KeyringBackend,
 
     #[arg(skip)]

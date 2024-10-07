@@ -6,7 +6,7 @@ use gears::{
         proto::crypto::PublicKey, request::query::RequestQuery, time::timestamp::Timestamp,
     },
     types::uint::Uint256,
-    utils::node::generate_txs,
+    utils::node::generate_tx,
     x::types::validator::BondStatus,
 };
 use staking::{
@@ -62,9 +62,9 @@ fn scenario_3() {
             value: "10000uatom".parse().unwrap(),
         }));
 
-    let txs = generate_txs([(1, msg)], &user_0, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 1, &user_0, node.chain_id().clone());
 
-    let step_res = node.step(txs, Timestamp::try_new(0, 0).unwrap());
+    let step_res = node.step(vec![txs], Timestamp::try_new(0, 0).unwrap());
 
     assert!(
         step_res.tx_responses[0].log.contains("decode error: `error converting message type into domain type: error converting message type into domain type: decode error: `delegator address and validator address must be derived from the same public key"),
@@ -124,10 +124,13 @@ fn scenario_3() {
             value: "20000000000uatom".parse().expect("hardcoded is valid"),
         }));
 
-    let txs = generate_txs([(0, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 0, &user_1, node.chain_id().clone());
 
     let app_hash = node
-        .step(txs, Timestamp::try_new(0, 0).expect("hardcoded is valid"))
+        .step(
+            vec![txs],
+            Timestamp::try_new(0, 0).expect("hardcoded is valid"),
+        )
         .app_hash;
     assert_eq!(
         hex::encode(app_hash),
@@ -173,9 +176,9 @@ fn scenario_3() {
             amount: "15000000000uatom".parse().expect("hardcoded is valid"),
         }));
 
-    let txs = generate_txs([(1, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 1, &user_1, node.chain_id().clone());
 
-    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
+    let step_response = node.step(vec![txs], Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
 
     assert_eq!(
         hex::encode(step_response.app_hash),
@@ -193,9 +196,9 @@ fn scenario_3() {
             amount: "15000000000uatom".parse().expect("hardcoded is valid"),
         }));
 
-    let txs = generate_txs([(2, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 2, &user_1, node.chain_id().clone());
 
-    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
+    let step_response = node.step(vec![txs], Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
 
     assert_eq!("transitive redelegation", step_response.tx_responses[0].log);
 
@@ -216,9 +219,9 @@ fn scenario_3() {
             amount: "4000000000uatom".parse().expect("hardcoded is valid"),
         }));
 
-    let txs = generate_txs([(3, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 3, &user_1, node.chain_id().clone());
 
-    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
+    let step_response = node.step(vec![txs], Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
 
     assert_eq!(
         hex::encode(step_response.app_hash),
@@ -251,9 +254,9 @@ fn scenario_3() {
             amount: "31000000000uatom".parse().expect("hardcoded is valid"),
         }));
 
-    let txs = generate_txs([(4, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 4, &user_1, node.chain_id().clone());
 
-    let step_response = node.step(txs, Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
+    let step_response = node.step(vec![txs], Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
 
     assert_eq!(
         hex::encode(step_response.app_hash),
@@ -274,4 +277,28 @@ fn scenario_3() {
     let res = QueryValidatorsResponse::decode(res.value).unwrap();
     assert_eq!(res.validators.len(), 1);
     assert_eq!(res.validators[0].operator_address, user_1.address().into());
+
+    //----------------------------------------
+    // create two unbonding messages - this will check that we can read the unbonding queue
+
+    let msg =
+        gaia_rs::message::Message::Staking(staking::Message::Undelegate(staking::UndelegateMsg {
+            validator_address: user_1.address().into(),
+            amount: "1000000000uatom".parse().expect("hardcoded is valid"),
+            delegator_address: user_1.address(),
+        }));
+
+    let txs = generate_tx(
+        vec1::vec1![msg.clone(), msg],
+        5,
+        &user_1,
+        node.chain_id().clone(),
+    );
+
+    let step_response = node.step(vec![txs], Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
+
+    assert_eq!(
+        hex::encode(step_response.app_hash),
+        "a325bbcb004b826539708009c72531f8256c7a99d4627e18df189b0a318e484d"
+    );
 }

@@ -5,6 +5,7 @@ use crate::application::ApplicationInfo;
 pub const CONFIG_DIR: &str = "config";
 pub const GENESIS_FILE_NAME: &str = "genesis.json";
 pub const CONFIG_FILE_NAME: &str = "app.toml";
+pub const CLIENT_CONFIG_FILE_NAME: &str = "client.toml";
 
 pub const DEFAULT_DIR_NAME: &str = ".tendermint";
 

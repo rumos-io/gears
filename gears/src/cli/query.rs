@@ -1,12 +1,15 @@
-use crate::{commands::client::query::QueryCommand, config::DEFAULT_TENDERMINT_RPC_ADDRESS};
+use crate::{
+    application::ApplicationInfo, cli::config::client_config, commands::client::query::QueryCommand,
+};
 use clap::{ArgAction, Subcommand, ValueHint};
+use std::marker::PhantomData;
 use tendermint::types::proto::block::Height;
 
 /// Querying subcommands
 #[derive(Debug, Clone, ::clap::Args)]
-pub struct CliQueryCommand<C: Subcommand> {
+pub struct CliQueryCommand<T: ApplicationInfo, C: Subcommand> {
     /// <host>:<port> to Tendermint RPC interface for this chain
-    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]
+    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, env = "GEARS_NODE", default_value_t = client_config(&T::home_dir()).node())]
     pub node: url::Url,
     /// TODO
     #[arg(long, global = true)]
@@ -14,20 +17,25 @@ pub struct CliQueryCommand<C: Subcommand> {
 
     #[command(subcommand)]
     pub command: C,
+
+    #[arg(skip)]
+    _marker: PhantomData<T>,
 }
 
-impl<C, AC, ERR> TryFrom<CliQueryCommand<C>> for QueryCommand<AC>
+impl<T, C, AC, ERR> TryFrom<CliQueryCommand<T, C>> for QueryCommand<AC>
 where
+    T: ApplicationInfo,
     C: Subcommand,
     AC: TryFrom<C, Error = ERR>,
 {
     type Error = ERR;
 
-    fn try_from(value: CliQueryCommand<C>) -> Result<Self, Self::Error> {
+    fn try_from(value: CliQueryCommand<T, C>) -> Result<Self, Self::Error> {
         let CliQueryCommand {
             node,
             height,
             command,
+            ..
         } = value;
 
         Ok(QueryCommand {

@@ -461,6 +461,7 @@ dependencies = [
  "thiserror",
  "tonic",
  "tracing",
+ "vec1",
 ]
 
 [[package]]
@@ -5844,6 +5845,7 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]

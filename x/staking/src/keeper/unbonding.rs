@@ -179,8 +179,8 @@ impl<
     ) -> Result<Option<Vec<DvPair>>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(UNBONDING_QUEUE_KEY);
-        if let Some(bz) = store.get(&time.encode_vec())? {
-            Ok(serde_json::from_slice(&bz).unwrap_or_default())
+        if let Some(bz) = store.get(&time.format_bytes_rounded())? {
+            Ok(Some(DvPairs::decode_vec(&bz).unwrap_or_corrupt().pairs))
         } else {
             Ok(None)
         }
