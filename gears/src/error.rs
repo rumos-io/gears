@@ -73,3 +73,9 @@ impl From<std::convert::Infallible> for ProtobufError {
         unreachable!("who would return infallible error?")
     }
 }
+
+impl From<std::num::TryFromIntError> for ProtobufError {
+    fn from(value: std::num::TryFromIntError) -> Self {
+        Self::Custom(anyhow::anyhow!("{value}"))
+    }
+}

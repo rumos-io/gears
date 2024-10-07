@@ -15,3 +15,10 @@ impl Upgrade {
         Some(Self { name, block })
     }
 }
+
+#[derive(Debug, Clone, gears::derive::Protobuf, serde::Serialize, serde::Deserialize)]
+#[proto(raw = "ibc_proto::cosmos::upgrade::v1beta1::ModuleVersion")]
+pub struct ModuleVersion {
+    pub name: String,
+    pub version: u64,
+}

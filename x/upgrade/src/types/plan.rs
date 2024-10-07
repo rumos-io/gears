@@ -8,7 +8,7 @@ mod inner {
     pub use ibc_proto::cosmos::upgrade::v1beta1::Plan;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Plan {
     pub name: String,
     pub height: u32,
