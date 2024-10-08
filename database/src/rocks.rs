@@ -53,7 +53,7 @@ impl Database for RocksDB {
     fn prefix_iterator<'a>(
         &'a self,
         prefix: Vec<u8>,
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
         Box::new(
             self.db
                 .prefix_iterator(&prefix)

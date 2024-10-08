@@ -39,7 +39,7 @@ impl<T: Database> Database for PrefixDB<T> {
     fn prefix_iterator<'a>(
         &'a self,
         prefix: Vec<u8>,
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
         let prefix = [self.prefix.clone(), prefix].concat();
         let prefix_length = prefix.len();
 

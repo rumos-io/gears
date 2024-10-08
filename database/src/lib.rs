@@ -26,7 +26,7 @@ pub trait Database: Clone + Send + Sync + 'static {
     fn prefix_iterator<'a>(
         &'a self,
         prefix: Vec<u8>,
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a>;
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a;
 }
 
 pub trait DatabaseBuilder<DB> {

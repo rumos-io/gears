@@ -51,7 +51,7 @@ impl Database for MemDB {
     fn prefix_iterator<'a>(
         &'a self,
         prefix: Vec<u8>,
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
         let start = Bound::Included(prefix.clone());
         let end = prefix_end_bound(prefix);
 

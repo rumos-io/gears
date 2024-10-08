@@ -48,7 +48,7 @@ impl Database for SledDb {
     fn prefix_iterator<'a>(
         &'a self,
         prefix: Vec<u8>,
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
         Box::new(
             self.0
                 .scan_prefix(prefix)
