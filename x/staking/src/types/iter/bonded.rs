@@ -1,34 +1,37 @@
+use crate::{consts::keeper::VALIDATORS_KEY, Validator};
 use gears::{
+    core::Protobuf,
+    extensions::corruption::UnwrapCorrupt,
     store::database::Database,
     types::store::{gas::errors::GasStoreErrors, kv::Store},
     x::types::validator::BondStatus,
 };
 
-use crate::{
-    consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY},
-    Validator,
-};
-
 #[derive(Debug)]
-pub struct BoundedValidatorsIterator {
+pub struct BondedValidatorsIterator {
     inner: Vec<Result<Validator, GasStoreErrors>>, // TODO: we missing double ended iterator implementation currently so instead load all validators and read from end...
     position: usize,
     max_validator: u32,
 }
 
-impl BoundedValidatorsIterator {
-    pub fn new<DB: Database>(
-        store: Store<'_, DB>,
-        max_validator: u32,
-    ) -> BoundedValidatorsIterator {
-        BoundedValidatorsIterator {
+impl BondedValidatorsIterator {
+    pub fn new<DB: Database>(store: Store<'_, DB>, max_validator: u32) -> BondedValidatorsIterator {
+        BondedValidatorsIterator {
             inner: store
-                .prefix_store(VALIDATORS_BY_POWER_INDEX_KEY)
+                .prefix_store(VALIDATORS_KEY)
                 .into_range(..)
-                .map(|this| {
-                    this.map(|(_, value)| {
-                        serde_json::from_slice(&value).expect(SERDE_ENCODING_DOMAIN_TYPE)
-                    })
+                .filter_map(|this| {
+                    let mut is_bonded = false;
+                    let v = this.map(|(_, value)| {
+                        let validator = Validator::decode_vec(&value).unwrap_or_corrupt();
+                        is_bonded = validator.status == BondStatus::Bonded;
+                        validator
+                    });
+                    if is_bonded {
+                        Some(v)
+                    } else {
+                        None
+                    }
                 })
                 .collect(),
             position: 0,
@@ -37,7 +40,7 @@ impl BoundedValidatorsIterator {
     }
 }
 
-impl Iterator for BoundedValidatorsIterator {
+impl Iterator for BondedValidatorsIterator {
     type Item = Result<Validator, GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -70,6 +70,9 @@ fn scenario_3() {
         step_res.tx_responses[0].log.contains("decode error: `error converting message type into domain type: error converting message type into domain type: decode error: `delegator address and validator address must be derived from the same public key"),
         // TODO: error messages are too verbose
     );
+    assert!(step_res.tx_responses[0]
+        .log
+        .ends_with("flex-error-0.4.4/src/tracer_impl/eyre.rs:10:9`"),);
     assert_eq!(
         hex::encode(step_res.app_hash),
         "6d0b1e5f3f4f3759c05be2eabed1f4586d176ab36f76df7d9b874dbe850016c8"

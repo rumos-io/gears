@@ -1,17 +1,12 @@
 use super::*;
-use crate::{
-    DelegationResponse, QueryDelegationRequest, QueryDelegationResponse,
-    QueryDelegatorDelegationsRequest, QueryDelegatorDelegationsResponse,
-    QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorUnbondingDelegationsResponse,
-    QueryParamsResponse, QueryUnbondingDelegationRequest, QueryUnbondingDelegationResponse,
-    QueryValidatorRequest, QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
-};
+use crate::{DelegationResponse, IbcV046Validator};
 use gears::{
     baseapp::errors::QueryError,
     context::query::QueryContext,
     core::Protobuf,
     extensions::pagination::{IteratorPaginate, Pagination, PaginationResult},
-    types::pagination::response::PaginationResponse,
+    types::pagination::{request::PaginationRequest, response::PaginationResponse},
+    x::types::delegation::StakingDelegation,
 };
 
 impl<
@@ -23,23 +18,12 @@ impl<
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
-    pub fn query_validator<DB: Database>(
+    pub fn validators<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-        query: QueryValidatorRequest,
-    ) -> QueryValidatorResponse {
-        let validator = self
-            .validator(ctx, &query.validator_addr)
-            .unwrap_gas()
-            .map(Into::into);
-        QueryValidatorResponse { validator }
-    }
-
-    pub fn query_validators<DB: Database>(
-        &self,
-        ctx: &QueryContext<DB, SK>,
-        query: QueryValidatorsRequest,
-    ) -> QueryValidatorsResponse {
+        status: BondStatus,
+        pagination: Option<PaginationRequest>,
+    ) -> (Option<PaginationResponse>, Vec<IbcV046Validator>) {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(VALIDATORS_KEY);
 
@@ -51,10 +35,8 @@ impl<
             }
         });
 
-        let pagination = query
-            .pagination
-            .map(gears::extensions::pagination::Pagination::from);
-        let (validators, p_result) = if query.status == BondStatus::Unspecified {
+        let pagination = pagination.map(gears::extensions::pagination::Pagination::from);
+        let (validators, p_result) = if status == BondStatus::Unspecified {
             let (p_result, iterator) = iterator.maybe_paginate(pagination);
             (
                 iterator.map(|(_k, v)| v).map(Into::into).collect(),
@@ -62,7 +44,7 @@ impl<
             )
         } else {
             let (p_result, iterator) = iterator
-                .filter(|(_k, v)| v.status == query.status)
+                .filter(|(_k, v)| v.status == status)
                 .maybe_paginate(pagination);
             (
                 iterator.map(|(_k, v)| v).map(Into::into).collect(),
@@ -70,30 +52,26 @@ impl<
             )
         };
 
-        QueryValidatorsResponse {
-            validators,
-            pagination: p_result.map(PaginationResponse::from),
-        }
+        (p_result.map(PaginationResponse::from), validators)
     }
 
-    pub fn query_delegation<DB: Database>(
+    pub fn delegator_delegations<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-        query: QueryDelegationRequest,
-    ) -> QueryDelegationResponse {
-        if let Some(delegation) = self
-            .delegation(ctx, &query.delegator_addr, &query.validator_addr)
-            .unwrap_gas()
-        {
-            let delegation_response = self.delegation_to_delegation_response(ctx, delegation).ok();
-            QueryDelegationResponse {
-                delegation_response,
-            }
-        } else {
-            QueryDelegationResponse {
-                delegation_response: None,
-            }
-        }
+        delegator: &AccAddress,
+        pagination: Option<PaginationRequest>,
+    ) -> (Option<PaginationResponse>, Vec<DelegationResponse>) {
+        let store = ctx.kv_store(&self.store_key);
+        let key = [DELEGATION_KEY.as_slice(), &delegator.prefix_len_bytes()].concat();
+        let store = store.prefix_store(key);
+        let (p_result, iterator) = store
+            .into_range(..)
+            .maybe_paginate(pagination.map(gears::extensions::pagination::Pagination::from));
+        let delegations = iterator
+            .filter_map(|(_k, v)| Delegation::decode_vec(&v).ok())
+            .filter_map(|del| self.delegation_to_delegation_response(ctx, del).ok())
+            .collect();
+        (p_result.map(PaginationResponse::from), delegations)
     }
 
     pub fn delegation_to_delegation_response<DB: Database>(
@@ -118,62 +96,52 @@ impl<
         })
     }
 
-    pub fn query_delegator_delegations<DB: Database>(
+    pub fn validator_delegations<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-        query: QueryDelegatorDelegationsRequest,
-    ) -> QueryDelegatorDelegationsResponse {
+        validator: &ValAddress,
+        pagination: Option<PaginationRequest>,
+    ) -> (Option<PaginationResponse>, Vec<DelegationResponse>) {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(DELEGATION_KEY);
-        let key = query.delegator_addr.prefix_len_bytes();
-        let (p_result, iterator) = store.into_range(..).maybe_paginate(
-            query
-                .pagination
-                .map(gears::extensions::pagination::Pagination::from),
-        );
 
-        let delegation_responses = iterator
-            .filter_map(|(k, bytes)| {
-                if k.starts_with(&key) {
-                    Delegation::decode_vec(&bytes).ok()
+        // TODO: more complex logic with iterator and pagination
+        let delegations: Vec<_> = store
+            .into_range(..)
+            .filter_map(|(_k, bytes)| {
+                if let Ok(del) = Delegation::decode_vec(&bytes) {
+                    if del.validator() == validator {
+                        Some(del)
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
             })
             .filter_map(|del| self.delegation_to_delegation_response(ctx, del).ok())
             .collect();
+        let (p_res, iterator) = delegations
+            .into_iter()
+            .maybe_paginate(pagination.map(gears::extensions::pagination::Pagination::from));
 
-        QueryDelegatorDelegationsResponse {
-            delegation_responses,
-            pagination: p_result.map(PaginationResponse::from),
-        }
+        (p_res.map(PaginationResponse::from), iterator.collect())
     }
 
-    pub fn query_unbonding_delegation<DB: Database>(
+    pub fn unbonding_delegations<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-        query: QueryUnbondingDelegationRequest,
-    ) -> QueryUnbondingDelegationResponse {
-        QueryUnbondingDelegationResponse {
-            unbond: self
-                .unbonding_delegation(ctx, &query.delegator_addr, &query.validator_addr)
-                .unwrap_gas(),
-        }
-    }
-
-    pub fn query_unbonding_delegations<DB: Database>(
-        &self,
-        ctx: &QueryContext<DB, SK>,
-        query: QueryDelegatorUnbondingDelegationsRequest,
-    ) -> Result<QueryDelegatorUnbondingDelegationsResponse, QueryError> {
+        delegator: &AccAddress,
+        pagination: Option<PaginationRequest>,
+    ) -> Result<(Option<PaginationResponse>, Vec<UnbondingDelegation>), QueryError> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(UNBONDING_DELEGATION_KEY);
-        let key = query.delegator_addr.prefix_len_bytes();
-        let (p_result, iterator) = store.into_range(..).maybe_paginate(
-            query
-                .pagination
-                .map(gears::extensions::pagination::Pagination::from),
-        );
+        let key = delegator.prefix_len_bytes();
+
+        let (p_result, iterator) = store
+            .into_range(..)
+            .filter(|(k, _v)| k.starts_with(&key))
+            .maybe_paginate(pagination.map(gears::extensions::pagination::Pagination::from));
 
         let mut unbonding_responses = vec![];
         for (k, bytes) in iterator {
@@ -185,10 +153,7 @@ impl<
             }
         }
 
-        Ok(QueryDelegatorUnbondingDelegationsResponse {
-            unbonding_responses,
-            pagination: p_result.map(PaginationResponse::from),
-        })
+        Ok((p_result.map(PaginationResponse::from), unbonding_responses))
     }
 
     pub fn redelegations<DB: Database>(
@@ -228,10 +193,39 @@ impl<
         (p_result, iter.collect())
     }
 
-    pub fn query_params<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryParamsResponse {
-        let params = self.staking_params_keeper.get(ctx);
-        QueryParamsResponse {
-            params: Some(params),
+    pub fn delegator_validators<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        delegator: &AccAddress,
+        pagination: Option<PaginationRequest>,
+    ) -> (Option<PaginationResponse>, Vec<Validator>) {
+        let store = ctx.kv_store(&self.store_key);
+        let key = [DELEGATION_KEY.as_slice(), &delegator.prefix_len_bytes()].concat();
+        let delegator_store = store.prefix_store(key);
+
+        let (p_res, iter) = delegator_store
+            .into_range(..)
+            .maybe_paginate(pagination.map(gears::extensions::pagination::Pagination::from));
+        let pagination = p_res.map(PaginationResponse::from);
+
+        let mut validators = vec![];
+        for (_k, v) in iter {
+            let delegation = if let Ok(del) = Delegation::decode_vec(&v) {
+                del
+            } else {
+                return (pagination, vec![]);
+            };
+
+            if let Some(v) = self
+                .validator(ctx, &delegation.validator_address)
+                .unwrap_gas()
+            {
+                validators.push(v);
+            } else {
+                return (pagination, vec![]);
+            }
         }
+
+        (pagination, validators)
     }
 }

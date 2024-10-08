@@ -2,14 +2,14 @@ use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
     error::StakingGenesisError,
     Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Pool, Redelegation,
-    StakingParamsKeeper, UnbondingDelegation, Validator,
+    StakingParams, StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use anyhow::anyhow;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
-        block::BlockContext, init::InitContext, InfallibleContext, QueryableContext,
-        TransactionalContext,
+        block::BlockContext, init::InitContext, query::QueryContext, InfallibleContext,
+        QueryableContext, TransactionalContext,
     },
     extensions::gas::GasResultExt,
     params::ParamsSubspaceKey,
@@ -29,7 +29,10 @@ use gears::{
         uint::Uint256,
     },
     x::{
-        keepers::{auth::AuthKeeper, staking::KeeperHooks, staking::StakingBankKeeper},
+        keepers::{
+            auth::AuthKeeper,
+            staking::{KeeperHooks, StakingBankKeeper},
+        },
         module::Module,
         types::validator::BondStatus,
     },
@@ -605,6 +608,10 @@ impl<
             not_bonded_tokens: not_bonded_tokens.map(|t| t.amount).unwrap_or_default(),
             bonded_tokens: bonded_tokens.map(|t| t.amount).unwrap_or_default(),
         })
+    }
+
+    pub fn params<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> StakingParams {
+        self.staking_params_keeper.get(ctx)
     }
 }
 
