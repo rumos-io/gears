@@ -583,7 +583,7 @@ impl<
         &self,
         denom: &Denom,
     ) -> Result<Option<crate::types::tx::metadata::Metadata>, Self::Error> {
-        self.bank_keeper.get_denom_metadata(self.ctx, denom)
+        self.bank_keeper.denom_metadata(self.ctx, denom)
     }
 }
 

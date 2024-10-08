@@ -53,12 +53,12 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     let app_state = serde_json::to_value(app_genesis_state)?;
 
     // Create genesis file
-    let genesis_file_path = ConfigDirectory::GenesisFile.path_from_hone(&home);
+    let genesis_file_path = ConfigDirectory::GenesisFile.path_from_home(&home);
     let genesis_file =
         std::fs::File::create(&genesis_file_path).map_err(InitError::CreateGenesisFile)?;
 
     // Create config file
-    let cfg_file_path = ConfigDirectory::ConfigFile.path_from_hone(&home);
+    let cfg_file_path = ConfigDirectory::ConfigFile.path_from_home(&home);
     let cfg_file = std::fs::File::create(&cfg_file_path).map_err(InitError::CreateConfigFile)?;
 
     crate::config::Config::<AC>::write_default(cfg_file)

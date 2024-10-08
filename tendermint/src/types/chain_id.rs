@@ -28,6 +28,7 @@ pub enum ChainIdErrors {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[serde(try_from = "String")]
 pub struct ChainId {
     id: String,
     revision_number: u64,
@@ -237,6 +238,14 @@ impl FromStr for ChainId {
                 revision_number: 0,
             })
         }
+    }
+}
+
+impl TryFrom<String> for ChainId {
+    type Error = ChainIdErrors;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        ChainId::from_str(&value)
     }
 }
 

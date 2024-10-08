@@ -43,7 +43,7 @@ pub struct QueryDenomsMetadataRequest {
 
 /// QueryBalanceRequest is the request type for the Query/Balance RPC method.
 #[derive(Clone, PartialEq, Debug, Query, Protobuf)]
-#[query(url = "/cosmos.bank.v1beta1.Query/Balance")] // TODO: are u sure?
+#[query(url = "/cosmos.bank.v1beta1.Query/Balance")]
 #[proto(raw = "inner::QueryBalanceRequest")]
 pub struct QueryBalanceRequest {
     /// address is the address to query balances for.
@@ -65,7 +65,7 @@ pub struct QueryAllBalancesRequest {
 }
 
 #[derive(Clone, Debug, PartialEq, Query, Protobuf)]
-#[query(url = "/cosmos.bank.v1beta1.Query/DenomsMetadata")]
+#[query(url = "/cosmos.bank.v1beta1.Query/DenomMetadata")]
 #[proto(raw = "inner::QueryDenomMetadataRequest")]
 pub struct QueryDenomMetadataRequest {
     /// denom is the coin denom to query metadata for.

@@ -16,6 +16,7 @@ thiserror = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true }
 nz = { workspace = true }
+strum = { workspace = true }
 
 #serialization
 serde = { workspace = true, default-features = false }
@@ -30,6 +31,13 @@ axum = { workspace = true }
 tonic = { workspace = true }
 
 [dev-dependencies]
-gears = { path = "../../gears", features = ["cli", "xmods", "governance", "utils", "mocks"] }
+gears = { path = "../../gears", features = [
+    "cli",
+    "xmods",
+    "governance",
+    "utils",
+    "mocks",
+] }
 strum = { workspace = true }
 data-encoding = { workspace = true }
+vec1 = { workspace = true }

@@ -17,7 +17,10 @@ use crate::{
     },
 };
 
-use super::{auth::AuthKeeper, bank::BankKeeper};
+use super::{
+    auth::AuthKeeper,
+    bank::{BalancesKeeper, BankKeeper},
+};
 
 /// Delay, in blocks, between when validator updates are returned to the
 /// consensus-engine and when they are applied. For example, if
@@ -203,7 +206,7 @@ pub trait DistributionStakingKeeper<SK: StoreKey, M: Module>:
 
 /// StakingBankKeeper defines the expected interface needed to retrieve account balances.
 pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
-    Clone + Send + Sync + 'static + BankKeeper<SK, M>
+    BankKeeper<SK, M> + BalancesKeeper<SK, M> + Clone + Send + Sync + 'static
 {
     // GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
     // LockedCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
@@ -213,12 +216,10 @@ pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
     //
     // BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
 
-    fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        addr: AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors>;
-
+    /// Method delegates coins and transfers them from a
+    /// delegator account to a module account. It creates the module accounts if it don't exist.
+    /// It's safe operation because the modules are app generic parameter
+    /// which cannot be added in runtime.
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -227,6 +228,8 @@ pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
         amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError>;
 
+    /// Method undelegates the unbonding coins and transfers
+    /// them from a module account to the delegator account.
     fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,

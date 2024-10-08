@@ -1,6 +1,6 @@
 use gears::x::module::Module;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, strum::EnumIter)]
 pub enum GaiaModules {
     FeeCollector,
     BondedPool,

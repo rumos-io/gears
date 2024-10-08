@@ -176,6 +176,8 @@ pub enum BankKeeperError {
     AccountNotFound(#[from] AccountNotFound),
     #[error("account doesnt have enought permission")]
     AccountPermission,
+    #[error("{0} is not allowed to receive funds. Probably tried send to module as account")]
+    Blocked(AccAddress),
     #[error("{0}")]
     GasError(#[from] GasStoreErrors),
 }

@@ -304,7 +304,7 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(REDELEGATION_QUEUE_KEY);
 
-        let key = completion_time.format_bytes_rounded(); //TODO: check if this is correct
+        let key = completion_time.format_bytes_rounded();
         if let Some(bytes) = store.get(&key)? {
             Ok(DvvTriplets::decode_vec(&bytes).unwrap_or_corrupt().triplets)
         } else {

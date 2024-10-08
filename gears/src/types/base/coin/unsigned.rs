@@ -122,3 +122,9 @@ impl PaginationKey for UnsignedCoin {
         Cow::Borrowed(self.denom.as_ref())
     }
 }
+
+impl std::fmt::Display for UnsignedCoin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.amount.to_string(), self.denom.to_string())
+    }
+}

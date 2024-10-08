@@ -46,20 +46,6 @@ impl StakingDelegation for Delegation {
     }
 }
 
-impl TryFrom<Vec<u8>> for Delegation {
-    type Error = CoreError;
-
-    fn try_from(raw: Vec<u8>) -> Result<Self, Self::Error> {
-        Delegation::decode_vec(&raw).map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
-    }
-}
-
-impl From<Delegation> for Vec<u8> {
-    fn from(value: Delegation) -> Self {
-        value.encode_vec()
-    }
-}
-
 impl From<Delegation> for inner::Delegation {
     fn from(value: Delegation) -> Self {
         inner::Delegation {

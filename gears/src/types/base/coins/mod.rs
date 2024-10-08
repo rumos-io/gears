@@ -1,9 +1,12 @@
 use core_types::Protobuf;
-pub use decimal::*;
 use prost::Message;
+
+pub use decimal::*;
+pub use simple::*;
 pub use unsigned::*;
 
 mod decimal;
+mod simple;
 mod unsigned;
 
 use std::{marker::PhantomData, str::FromStr};
@@ -97,7 +100,7 @@ impl<T: ZeroNumeric, U: Coin<Amount = T>> Coins<T, U> {
     // denomination (i.e no duplicates). Otherwise, it returns an error.
     // A valid list of coins satisfies:
     // - Contains at least one coin
-    // - All amounts are positive
+    // - All amounts are positive(not zero)
     // - No duplicate denominations
     // - Sorted lexicographically
     pub fn new(coins: impl IntoIterator<Item = U>) -> Result<Self, CoinsError> {

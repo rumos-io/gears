@@ -14,7 +14,7 @@ use gears::store::StoreKey;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::pagination::response::PaginationResponse;
 use gears::x::keepers::auth::AuthKeeper;
-use gears::x::keepers::bank::BankKeeper;
+use gears::x::keepers::bank::{BalancesKeeper, BankKeeper};
 use gears::x::module::Module;
 use serde::Serialize;
 
@@ -75,7 +75,7 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M> + Send + Sync + 'static,
-        M: Module,
+        M: Module + strum::IntoEnumIterator,
         MI: ModuleInfo + Clone + Send + Sync + 'static,
     > ABCIHandler for BankABCIHandler<SK, PSK, AK, M, MI>
 {
@@ -109,10 +109,7 @@ impl<
                 BankNodeQueryResponse::DenomsMetadata(self.query_denoms(ctx, req))
             }
             BankNodeQueryRequest::DenomMetadata(req) => {
-                let metadata = self
-                    .keeper
-                    .get_denom_metadata(ctx, &req.denom)
-                    .expect("Query ctx doesn't have any gas");
+                let metadata = self.keeper.denom_metadata(ctx, &req.denom).unwrap_gas();
                 BankNodeQueryResponse::DenomMetadata(QueryDenomMetadataResponse { metadata })
             }
             BankNodeQueryRequest::Params(_req) => {
@@ -123,23 +120,9 @@ impl<
             BankNodeQueryRequest::SupplyOf(req) => {
                 BankNodeQueryResponse::SupplyOf(self.query_supply_of(ctx, req))
             }
-            BankNodeQueryRequest::Spendable(QuerySpendableBalancesRequest {
-                address,
-                pagination,
-            }) => {
-                // TODO: edit error "handling"
-                let (spendable, pagination_result) = self
-                    .keeper
-                    .spendable_coins(ctx, &address, pagination.map(Pagination::from))
-                    .map(|(spendable, _, pag)| {
-                        (spendable.map(Vec::from), pag.map(PaginationResponse::from))
-                    })
-                    .unwrap_or_default();
-
-                BankNodeQueryResponse::Spendable(QuerySpendableBalancesResponse {
-                    balances: spendable.unwrap_or_default(),
-                    pagination: pagination_result,
-                })
+            BankNodeQueryRequest::Spendable(req) => {
+                let balance = self.query_spendable(ctx, req);
+                BankNodeQueryResponse::Spendable(balance)
             }
         }
     }
@@ -170,9 +153,14 @@ impl<
     fn init_genesis<DB: Database>(
         &self,
         ctx: &mut InitContext<'_, DB, Self::StoreKey>,
-        genesis: Self::Genesis,
+        Self::Genesis {
+            balances,
+            params,
+            denom_metadata,
+        }: Self::Genesis,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        self.genesis(ctx, genesis);
+        self.keeper
+            .init_genesis(ctx, balances, params, denom_metadata);
 
         Vec::new()
     }
@@ -195,7 +183,7 @@ impl<
 
                 Ok(self.query_total_supply(ctx, req).encode_vec())
             }
-            "/cosmos.bank.v1beta1.Query/Balance" => {
+            QueryBalanceRequest::QUERY_URL => {
                 let req = QueryBalanceRequest::decode(query.data)?;
 
                 Ok(self.query_balance(ctx, req).encode_vec())
@@ -207,12 +195,12 @@ impl<
 
                 Ok(result)
             }
-            "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
+            QueryDenomMetadataRequest::QUERY_URL => {
                 let req = QueryDenomMetadataRequest::decode(query.data)?;
-                let metadata = self.keeper.get_denom_metadata(ctx, &req.denom).unwrap_gas();
+                let metadata = self.keeper.denom_metadata(ctx, &req.denom).unwrap_gas();
                 Ok(QueryDenomMetadataResponse { metadata }.encode_vec())
             }
-            "/cosmos.bank.v1beta1.Query/Params" => {
+            QueryParamsRequest::QUERY_URL => {
                 // a kind of type check
                 let _req = QueryParamsRequest::decode(query.data)?;
                 let params = self.keeper.params(ctx);
@@ -223,8 +211,13 @@ impl<
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI: ModuleInfo>
-    BankABCIHandler<SK, PSK, AK, M, MI>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
+        M: Module,
+        MI: ModuleInfo,
+    > BankABCIHandler<SK, PSK, AK, M, MI>
 {
     pub fn new(keeper: Keeper<SK, PSK, AK, M>) -> Self {
         BankABCIHandler {
@@ -233,8 +226,26 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
         }
     }
 
-    pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
-        self.keeper.init_genesis(ctx, genesis)
+    fn query_spendable<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QuerySpendableBalancesRequest {
+            address,
+            pagination,
+        }: QuerySpendableBalancesRequest,
+    ) -> QuerySpendableBalancesResponse {
+        let (spendable, pagination_result) = self
+            .keeper
+            .spendable_coins(ctx, &address, pagination.map(Pagination::from))
+            .map(|(spendable, _, pag)| {
+                (spendable.map(Vec::from), pag.map(PaginationResponse::from))
+            })
+            .unwrap_or_default();
+
+        QuerySpendableBalancesResponse {
+            balances: spendable.unwrap_or_default(),
+            pagination: pagination_result,
+        }
     }
 
     fn query_balances<DB: Database>(
@@ -247,7 +258,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
     ) -> QueryAllBalancesResponse {
         let (p_result, balances) = self
             .keeper
-            .all_balances(ctx, address, pagination.map(Pagination::from))
+            .balance_all(ctx, address, pagination.map(Pagination::from))
             .unwrap_gas();
 
         QueryAllBalancesResponse {

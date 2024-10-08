@@ -190,7 +190,7 @@ impl ABCIHandler for GaiaABCIHandler {
         ctx: &mut InitContext<'_, DB, GaiaStoreKey>,
         genesis: GenesisState,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        self.bank_abci_handler.genesis(ctx, genesis.bank);
+        self.bank_abci_handler.init_genesis(ctx, genesis.bank);
         let staking_updates = self.staking_abci_handler.genesis(ctx, genesis.staking);
         self.ibc_abci_handler.genesis(ctx, genesis.ibc);
         self.auth_abci_handler.init_genesis(ctx, genesis.auth);
