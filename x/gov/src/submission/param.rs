@@ -14,8 +14,10 @@ pub struct ParamChange<PSK> {
     #[raw(kind(string), raw = String)]
     pub subspace: PSK,
     #[raw(kind(bytes))]
+    // #[proto(repeated)]
     pub key: Vec<u8>,
     #[raw(kind(bytes))]
+    // #[proto(repeated)]
     pub value: Vec<u8>,
 }
 

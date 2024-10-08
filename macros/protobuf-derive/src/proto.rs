@@ -23,7 +23,14 @@ struct ProtobufAttr {
 
 pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let ProtobufArg { raw, gears } = ProtobufArg::from_derive_input(&input)?;
-    let DeriveInput { ident, data, .. } = input;
+    let DeriveInput {
+        ident,
+        data,
+        generics,
+        ..
+    } = input;
+
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let crate_prefix = match gears.is_present() {
         true => quote! { crate },
@@ -41,7 +48,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
     };
 
     let protobuf_trait_impl = quote! {
-        impl  #crate_prefix ::core::Protobuf<#raw> for #ident {}
+        impl #impl_generics #crate_prefix ::core::Protobuf<#raw> for #ident #ty_generics #where_clause  {}
     };
 
     match data {
@@ -124,8 +131,8 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
             };
 
             let from_impl = quote! {
-                impl ::std::convert::From<#ident> for #raw {
-                    fn from(value: #ident) -> Self {
+                impl #impl_generics ::std::convert::From<#ident #ty_generics > for #raw #where_clause {
+                    fn from(value: #ident #ty_generics) -> Self {
                         Self
                         {
                             #(#from_fields_iter_gen),*
@@ -198,7 +205,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
 
             let try_from = quote! {
 
-                impl TryFrom<#raw> for #ident {
+                impl #impl_generics TryFrom<#raw> for #ident #ty_generics #where_clause  {
                     type Error = #crate_prefix ::error::ProtobufError;
 
                     fn try_from(value: #raw) -> ::std::result::Result<Self, Self::Error> {
