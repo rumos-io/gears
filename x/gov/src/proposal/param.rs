@@ -76,6 +76,12 @@ impl From<RawParameterChangeProposal> for Any {
 #[derive(Debug)]
 pub struct ParamChangeProposalHandler<PK, SK, PSK>(PhantomData<(PK, SK, PSK)>);
 
+impl<PK, SK, PSK> Default for ParamChangeProposalHandler<PK, SK, PSK> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<PK, SK, PSK> ParamChangeProposalHandler<PK, SK, PSK> {
     pub fn new() -> Self {
         Self(PhantomData)
