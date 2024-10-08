@@ -1,5 +1,4 @@
-use crate::types::iter::balances::BalanceIterator;
-use crate::{BankParams, BankParamsKeeper, GenesisState};
+use crate::{Balance, BankParams, BankParamsKeeper};
 use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
@@ -15,7 +14,7 @@ use gears::store::StoreKey;
 use gears::tendermint::types::proto::event::{Event, EventAttribute};
 use gears::types::address::AccAddress;
 use gears::types::base::coin::UnsignedCoin;
-use gears::types::base::coins::UnsignedCoins;
+use gears::types::base::coins::{SimpleCoins, UnsignedCoins};
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
 use gears::types::store::gas::errors::GasStoreErrors;
@@ -24,13 +23,18 @@ use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
 use gears::x::errors::{AccountNotFound, BankCoinsError, BankKeeperError, InsufficientFundsError};
 use gears::x::keepers::auth::AuthKeeper;
-use gears::x::keepers::bank::BankKeeper;
+use gears::x::keepers::bank::{BalancesKeeper, BankKeeper};
 use gears::x::keepers::gov::GovernanceBankKeeper;
 use gears::x::keepers::staking::StakingBankKeeper;
 use gears::x::module::Module;
 use std::marker::PhantomData;
 use std::ops::SubAssign;
 use std::{collections::HashMap, str::FromStr};
+
+pub mod balances;
+pub mod bank;
+pub mod gov;
+pub mod staking;
 
 const SUPPLY_KEY: [u8; 1] = [0];
 const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
@@ -41,6 +45,19 @@ pub(crate) fn account_key(addr: &AccAddress) -> Vec<u8> {
         ADDRESS_BALANCES_STORE_PREFIX.as_slice(),
         &[addr.len()],
         addr.as_ref(),
+    ]
+    .concat()
+}
+
+fn denom_metadata_key(denom: String) -> Vec<u8> {
+    [DENOM_METADATA_PREFIX.to_vec(), denom.into_bytes()].concat()
+}
+
+fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
+    [
+        ADDRESS_BALANCES_STORE_PREFIX.to_vec(),
+        [addr.len()].to_vec(),
+        addr.into(),
     ]
     .concat()
 }
@@ -58,219 +75,7 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M> + Send + Sync + 'static,
         M: Module,
-    > BankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
-{
-    fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        from_address: AccAddress,
-        to_module: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        self.auth_keeper
-            .check_create_new_module_account(ctx, to_module)?;
-
-        let msg = MsgSend {
-            from_address,
-            to_address: to_module.get_address(),
-            amount,
-        };
-
-        self.send_coins(ctx, msg)?;
-
-        Ok(())
-    }
-
-    fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        base: &Denom,
-    ) -> Result<Option<Metadata>, GasStoreErrors> {
-        let bank_store = ctx.kv_store(&self.store_key);
-        let denom_metadata_store = bank_store.prefix_store(denom_metadata_key(base.to_string()));
-
-        Ok(denom_metadata_store
-            .get(&base.to_string().into_bytes())?
-            .map(|metadata| {
-                Metadata::decode::<&[u8]>(&metadata)
-                    .ok()
-                    .unwrap_or_corrupt()
-            }))
-    }
-
-    fn coins_burn<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        module: &M,
-        deposit: &UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        let module_acc_addr = module.get_address();
-
-        let account = self
-            .auth_keeper
-            .get_account(ctx, &module_acc_addr)?
-            .ok_or(AccountNotFound::new(module_acc_addr.to_string()))?;
-
-        match account.has_permissions("burner") {
-            true => Ok(()),
-            false => Err(BankKeeperError::AccountPermission),
-        }?;
-
-        self.sub_unlocked_coins(ctx, &module_acc_addr, deposit)?;
-
-        for coin in deposit.inner() {
-            let supply = self.supply(ctx, &coin.denom)?; // TODO: HOW TO HANDLE OPTION::NONE
-            if let Some(mut supply) = supply {
-                supply.amount.sub_assign(coin.amount);
-                self.set_supply(ctx, supply)?;
-            }
-        }
-
-        ctx.push_event(Event::new(
-            "burn",
-            vec![
-                EventAttribute::new(
-                    "burner".as_bytes().to_owned().into(),
-                    account.get_address().as_ref().to_owned().into(),
-                    false,
-                ),
-                EventAttribute::new(
-                    "amount".as_bytes().to_owned().into(),
-                    format!("{deposit:?}").into(),
-                    false,
-                ),
-            ],
-        ));
-
-        Ok(())
-    }
-
-    fn send_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        address: &AccAddress,
-        module: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        let module_address = module.get_address();
-
-        // TODO: what is blocked account and how to handle it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/keeper.go#L316-L318
-
-        self.send_coins(
-            ctx,
-            MsgSend {
-                from_address: module_address,
-                to_address: address.clone(),
-                amount,
-            },
-        )
-    }
-}
-
-impl<
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
-        M: Module,
-    > StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
-{
-    fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        addr: AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
-        let (_, result) = self.all_balances(ctx, addr, None)?;
-
-        Ok(result)
-    }
-
-    fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_pool: &M,
-        recepient_pool: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        self.send_coins_from_module_to_module(ctx, sender_pool, recepient_pool, amount)
-    }
-
-    fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_module: &M,
-        addr: AccAddress,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        self.undelegate_coins_from_module_to_account(ctx, sender_module, addr, amount)
-    }
-
-    fn delegate_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_addr: AccAddress,
-        recepient_module: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        self.delegate_coins_from_account_to_module(ctx, sender_addr, recepient_module, amount)
-    }
-}
-
-impl<
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
-        M: Module,
-    > GovernanceBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
-{
-    fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        address: &AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
-        let iterator = BalanceIterator::new(ctx.kv_store(&self.store_key), address)
-            .map(|this| this.map(|(_, val)| val));
-
-        let mut balances = Vec::<UnsignedCoin>::new();
-        for coin in iterator {
-            let coin = coin?;
-
-            balances.push(coin);
-        }
-
-        Ok(balances)
-    }
-
-    fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        address: &AccAddress,
-        denom: &Denom,
-    ) -> Result<UnsignedCoin, GasStoreErrors> {
-        let store = ctx
-            .kv_store(&self.store_key)
-            .prefix_store(account_key(address));
-
-        let coin_bytes = store.get(denom.as_str().as_bytes())?;
-        let coin = if let Some(coin_bytes) = coin_bytes {
-            UnsignedCoin {
-                denom: denom.to_owned(),
-                amount: Uint256::from_str(&String::from_utf8_lossy(&coin_bytes))
-                    .ok()
-                    .unwrap_or_corrupt(),
-            }
-        } else {
-            UnsignedCoin {
-                denom: denom.to_owned(),
-                amount: Uint256::zero(),
-            }
-        };
-
-        Ok(coin)
-    }
-}
-
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
-    Keeper<SK, PSK, AK, M>
+    > Keeper<SK, PSK, AK, M>
 {
     pub fn new(store_key: SK, params_subspace_key: PSK, auth_keeper: AK) -> Self {
         let bank_params_keeper = BankParamsKeeper {
@@ -287,16 +92,21 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     pub fn init_genesis<DB: Database>(
         &self,
         ctx: &mut InitContext<'_, DB, SK>,
-        genesis: GenesisState,
+        mut balances: Vec<Balance>,
+        params: BankParams,
+        denom_metadata: Vec<Metadata>,
     ) {
-        // TODO:
-        // 1. cosmos SDK sorts the balances first
-        // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
-        // 3. Need to set denom metadata
-        self.bank_params_keeper.set(ctx, genesis.params);
+        // 1. cosmos SDK sorts the balances first - Make sure that rust ordering gives same result
+        // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.) - Yes it does and our Coins type did it
+        // 3. Need to set denom metadata - dedicated cmd for it
+        self.bank_params_keeper.set(ctx, params);
+
+        // TODO: This ordering is same as cosmos, but needs to add other constrains like `Coins` type, but with possible empty array
+        // TODO: check how it orders if balances are same
+        balances.sort_by_key(|this| this.address.clone());
 
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
-        for balance in genesis.balances {
+        for balance in balances {
             let prefix = create_denom_balance_prefix(balance.address);
             let mut denom_balance_store =
                 ctx.kv_store_mut(&self.store_key).prefix_store_mut(prefix);
@@ -309,19 +119,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             }
         }
 
-        // TODO: does the SDK sort these?
-        for coin in total_supply {
-            self.set_supply(
-                ctx,
-                UnsignedCoin {
-                    denom: coin.0,
-                    amount: coin.1,
-                },
-            )
-            .unwrap_gas();
+        // does the SDK sort these?
+        // No. It uses ordering from balances https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/genesis.go#L32-L34
+        for (denom, amount) in total_supply {
+            self.set_supply(ctx, UnsignedCoin { denom, amount })
+                .unwrap_gas();
         }
 
-        for denom_metadata in genesis.denom_metadata {
+        for denom_metadata in denom_metadata {
             self.set_denom_metadata(ctx, denom_metadata);
         }
     }
@@ -397,40 +202,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                     String::from(address.clone()).into(),
                     true,
                 ),
-                // TODO: serialization of vector of coins
                 EventAttribute::new(
                     "amount".into(),
-                    serde_json::to_string(&amount)
-                        .unwrap_or(amount[0].amount.to_string())
-                        .into(),
+                    SimpleCoins::new(amount).to_string_bytes(),
                     true,
                 ),
             ],
         ));
         Ok(())
-    }
-
-    pub fn all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        addr: AccAddress,
-        pagination: Option<Pagination>,
-    ) -> Result<(Option<PaginationResult>, Vec<UnsignedCoin>), GasStoreErrors> {
-        let bank_store = ctx.kv_store(&self.store_key);
-        let prefix = create_denom_balance_prefix(addr);
-        let account_store = bank_store.prefix_store(prefix);
-
-        let mut balances = vec![];
-
-        let (p_result, iterator) = account_store.into_range(..).maybe_paginate(pagination);
-        for rcoin in iterator {
-            let (_, coin) = rcoin?;
-            let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
-                .ok()
-                .unwrap_or_corrupt();
-            balances.push(coin);
-        }
-        Ok((p_result, balances))
     }
 
     /// Gets the total supply of every denom
@@ -481,43 +260,19 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         Ok(())
     }
 
-    /// send_coins_from_module_to_module delegates coins and transfers them from a
-    /// delegator account to a module account. It creates the module accounts if it don't exist.
-    /// It's safe operation because the modules are app generic parameter
-    /// which cannot be added in runtime.
-    pub fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_pool: &M,
-        recepient_pool: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        self.auth_keeper
-            .check_create_new_module_account(ctx, recepient_pool)?;
-
-        let msg = MsgSend {
-            from_address: sender_pool.get_address(),
-            to_address: recepient_pool.get_address(),
-            amount,
-        };
-
-        self.send_coins(ctx, msg)
-    }
-
     fn send_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        msg: MsgSend,
+        MsgSend {
+            from_address,
+            to_address,
+            amount,
+        }: MsgSend,
     ) -> Result<(), BankKeeperError> {
-        // TODO: refactor this to subtract all amounts before adding all amounts
-
         let mut events = vec![];
 
-        let from_address = msg.from_address;
-        let to_address = msg.to_address;
-
-        for send_coin in msg.amount {
-            let mut from_account_store = self.get_address_balances_store(ctx, &from_address);
+        for send_coin in amount.inner() {
+            let mut from_account_store = self.address_balances_store(ctx, &from_address);
             let from_balance = from_account_store
                 .get(send_coin.denom.to_string().as_bytes())?
                 .ok_or(InsufficientFundsError::RequiredActual {
@@ -548,8 +303,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                     from_balance.encode_vec(),
                 )?;
             }
+        }
 
-            let mut to_account_store = self.get_address_balances_store(ctx, &to_address);
+        for send_coin in amount.inner() {
+            let mut to_account_store = self.address_balances_store(ctx, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes())?;
 
             let mut to_balance: UnsignedCoin = match to_balance {
@@ -597,15 +354,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         coin: UnsignedCoin,
     ) -> Result<(), GasStoreErrors> {
-        // TODO: need to delete coins with zero balance
-
         let bank_store = ctx.kv_store_mut(&self.store_key);
         let mut supply_store = bank_store.prefix_store_mut(SUPPLY_KEY);
 
-        supply_store.set(
-            coin.denom.to_string().into_bytes(),
-            coin.amount.to_string().into_bytes(),
-        )
+        match coin.amount.is_zero() {
+            true => supply_store
+                .delete(coin.denom.to_string().as_bytes())
+                .map(|_| ()),
+            false => supply_store.set(
+                coin.denom.to_string().into_bytes(),
+                coin.amount.to_string().into_bytes(),
+            ),
+        }
     }
 
     pub fn supply<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -628,7 +388,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         }
     }
 
-    fn get_address_balances_store<'a, DB: Database>(
+    fn address_balances_store<'a, DB: Database>(
         &'a self,
         ctx: &'a mut impl TransactionalContext<DB, SK>,
         address: &AccAddress,
@@ -679,33 +439,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         }
 
         (p_result, denoms_metadata)
-    }
-
-    pub fn delegate_coins_from_account_to_module<
-        DB: Database,
-        CTX: TransactionalContext<DB, SK>,
-    >(
-        &self,
-        ctx: &mut CTX,
-        sender_addr: AccAddress,
-        recepient_module: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        let recepient_module_addr = recepient_module.get_address();
-        self.auth_keeper
-            .check_create_new_module_account(ctx, recepient_module)?;
-
-        if !recepient_module
-            .get_permissions()
-            .iter()
-            .any(|p| p == "staking")
-        {
-            return Err(BankKeeperError::Permission(format!(
-                "module account {} does not have permissions to receive delegated coins",
-                recepient_module.get_name()
-            )));
-        }
-        self.delegate_coins(ctx, sender_addr, recepient_module_addr, amount)
     }
 
     /// delegate_coins performs delegation by deducting amt coins from an account with
@@ -760,48 +493,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             "coin_spent",
             [
                 EventAttribute::new("spender".into(), String::from(delegator_addr).into(), true),
-                // TODO: serialization of vector of coins
                 EventAttribute::new(
                     "amount".into(),
-                    serde_json::to_string(&amount)
-                        .unwrap_or(amount.inner()[0].amount.to_string())
-                        .into(),
+                    SimpleCoins::new(amount.clone()).to_string_bytes(),
                     true,
                 ),
             ],
         ));
 
         Ok(self.add_coins(ctx, &module_acc_addr, amount.into())?)
-    }
-
-    /// undelegate_coins_from_module_to_account undelegates the unbonding coins and transfers
-    /// them from a module account to the delegator account. It will panic if the
-    /// module account does not exist or is unauthorized.
-    pub fn undelegate_coins_from_module_to_account<
-        DB: Database,
-        CTX: TransactionalContext<DB, SK>,
-    >(
-        &self,
-        ctx: &mut CTX,
-        sender_module: &M,
-        addr: AccAddress,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        let sender_module_addr = sender_module.get_address();
-        self.auth_keeper
-            .check_create_new_module_account(ctx, sender_module)?;
-
-        if !sender_module
-            .get_permissions()
-            .iter()
-            .any(|p| p == "staking")
-        {
-            return Err(BankKeeperError::Permission(format!(
-                "module account {} does not have permissions to receive undelegate coins",
-                sender_module.get_name()
-            )));
-        }
-        self.undelegate_coins(ctx, sender_module_addr, addr, amount)
     }
 
     /// undelegate_coins performs undelegation by crediting amt coins to an account with
@@ -871,12 +571,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             "coin_spent",
             [
                 EventAttribute::new("spender".into(), String::from(addr.clone()).into(), true),
-                // TODO: serialization of vector of coins
                 EventAttribute::new(
                     "amount".into(),
-                    serde_json::to_string(&amount)
-                        .unwrap_or(amount.inner()[0].amount.to_string())
-                        .into(),
+                    SimpleCoins::new(amount.clone()).to_string_bytes(),
                     true,
                 ),
             ],
@@ -892,7 +589,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &CTX,
         addr: &AccAddress,
-        // TODO: consider to add struct Coins that can have empty coins list
     ) -> Result<Vec<UnsignedCoin>, BankKeeperError> {
         if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
             //     vacc, ok := acc.(vestexported.VestingAccount)
@@ -962,7 +658,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ),
         BankKeeperError,
     > {
-        let (pagination, total) = self.all_balances(ctx, addr.clone(), pagination)?;
+        let (pagination, total) = self.balance_all(ctx, addr.clone(), pagination)?;
         let locked = self.locked_coins(ctx, addr)?;
 
         let total = UnsignedCoins::new(total)?;
@@ -973,25 +669,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             Err(_) => Ok((None, total, pagination)),
         }
     }
-}
-
-fn denom_metadata_key(denom: String) -> Vec<u8> {
-    let mut key = Vec::new();
-    key.extend(DENOM_METADATA_PREFIX);
-    key.extend(denom.into_bytes());
-    key
-}
-
-fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
-    let addr_len = addr.len();
-    let mut addr: Vec<u8> = addr.into();
-    let mut prefix = Vec::new();
-
-    prefix.extend(ADDRESS_BALANCES_STORE_PREFIX);
-    prefix.push(addr_len);
-    prefix.append(&mut addr);
-
-    prefix
 }
 
 //TODO: copy tests across

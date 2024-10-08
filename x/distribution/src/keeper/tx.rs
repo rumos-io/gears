@@ -24,7 +24,7 @@ impl<
             attributes: vec![
                 EventAttribute {
                     key: "module".into(),
-                    value: self.distribution_module.get_name().into(),
+                    value: self.distribution_module.name().into(),
                     index: false,
                 },
                 EventAttribute {
@@ -42,7 +42,7 @@ impl<
                 attributes: vec![
                     EventAttribute {
                         key: "module".into(),
-                        value: self.distribution_module.get_name().into(),
+                        value: self.distribution_module.name().into(),
                         index: false,
                     },
                     EventAttribute {
@@ -69,7 +69,7 @@ impl<
             attributes: vec![
                 EventAttribute {
                     key: "module".into(),
-                    value: self.distribution_module.get_name().into(),
+                    value: self.distribution_module.name().into(),
                     index: false,
                 },
                 EventAttribute {
@@ -95,7 +95,7 @@ impl<
             attributes: vec![
                 EventAttribute {
                     key: "module".into(),
-                    value: self.distribution_module.get_name().into(),
+                    value: self.distribution_module.name().into(),
                     index: false,
                 },
                 EventAttribute {

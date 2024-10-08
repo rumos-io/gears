@@ -58,14 +58,14 @@ impl From<prost::DecodeError> for QueryError {
     }
 }
 
-impl From<crate::tendermint::error::proto::Error> for QueryError {
-    fn from(value: crate::tendermint::error::proto::Error) -> Self {
+impl From<tendermint::error::proto::Error> for QueryError {
+    fn from(value: tendermint::error::proto::Error) -> Self {
         Self::Proto(value.to_string())
     }
 }
 
-impl From<crate::core::errors::ibc::Error> for QueryError {
-    fn from(value: crate::core::errors::ibc::Error) -> Self {
+impl From<core_types::errors::ibc::Error> for QueryError {
+    fn from(value: core_types::errors::ibc::Error) -> Self {
         Self::Proto(value.to_string())
     }
 }

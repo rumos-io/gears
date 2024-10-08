@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use gears::baseapp::QueryResponse;
 use gears::extensions::gas::GasResultExt;
+use gears::tendermint::request::RequestEndBlock;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
     baseapp::errors::QueryError,
@@ -17,7 +18,7 @@ use gears::{
             event::{Event, EventAttribute},
             validator::ValidatorUpdate,
         },
-        request::{end_block::RequestEndBlock, query::RequestQuery},
+        request::query::RequestQuery,
     },
     types::tx::raw::TxWithRaw,
     x::{
@@ -97,10 +98,10 @@ impl<
 
     fn typed_query<DB: Database>(
         &self,
-        _ctx: &QueryContext<DB, Self::StoreKey>,
-        _query: Self::QReq,
+        ctx: &QueryContext<DB, Self::StoreKey>,
+        query: Self::QReq,
     ) -> Self::QRes {
-        todo!()
+        self.keeper.query(ctx, query).unwrap_gas()
     }
 
     fn run_ante_checks<DB: Database>(

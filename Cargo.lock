@@ -461,6 +461,7 @@ dependencies = [
  "thiserror",
  "tonic",
  "tracing",
+ "vec1",
 ]
 
 [[package]]
@@ -1419,10 +1420,12 @@ dependencies = [
  "bytes",
  "clap",
  "gears",
+ "ibc-proto 0.33.0",
  "prost",
  "serde",
  "serde_json",
  "thiserror",
+ "tonic",
  "tracing",
 ]
 
@@ -1590,6 +1593,7 @@ dependencies = [
  "bytes",
  "clap",
  "gears",
+ "ibc-proto 0.33.0",
  "prost",
  "serde",
  "serde_json",
@@ -2036,6 +2040,7 @@ name = "gov"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum",
  "bytes",
  "chrono",
  "clap",
@@ -2047,6 +2052,8 @@ dependencies = [
  "serde_json",
  "strum",
  "thiserror",
+ "tonic",
+ "tracing",
 ]
 
 [[package]]
@@ -4901,6 +4908,7 @@ dependencies = [
  "bytes",
  "clap",
  "gears",
+ "ibc-proto 0.33.0",
  "nz",
  "prost",
  "serde",
@@ -5828,6 +5836,7 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]

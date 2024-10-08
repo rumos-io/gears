@@ -5,6 +5,7 @@ use core_types::Protobuf as _;
 use extensions::infallible::UnwrapInfallible;
 use prost::Message;
 use tendermint::types::chain_id::ChainId;
+use vec1::Vec1;
 
 use crate::{
     crypto::info::SigningInfo,
@@ -23,11 +24,12 @@ pub fn acc_address() -> AccAddress {
     AccAddress::from_bech32(ACC_ADDRESS).expect("Default Address should be valid")
 }
 
-pub fn generate_txs<M: TxMessage>(
-    msgs: impl IntoIterator<Item = (u64, M)>,
+pub fn generate_tx<M: TxMessage>(
+    msgs: Vec1<M>,
+    sequence: u64,
     user: &User,
     chain_id: ChainId,
-) -> Vec<Bytes> {
+) -> Bytes {
     let fee = Fee {
         amount: Some(
             Coins::new(vec!["1uatom".parse().expect("hard coded coin is valid")])
@@ -40,41 +42,33 @@ pub fn generate_txs<M: TxMessage>(
         granter: "".into(),
     };
 
-    let mut result = Vec::new();
+    let signing_info = SigningInfo {
+        key: &user.key_pair,
+        sequence,
+        account_number: user.account_number,
+    };
 
-    for (sequence, msg) in msgs {
-        let signing_info = SigningInfo {
-            key: &user.key_pair,
-            sequence,
-            account_number: user.account_number,
-        };
+    let body = TxBody::new_with_defaults(msgs);
 
-        let body = TxBody::new_with_defaults(vec1::vec1![msg]);
+    let Tx {
+        body,
+        auth_info,
+        signatures,
+        signatures_data: _,
+    } = crate::crypto::info::create_signed_transaction_direct(
+        vec![signing_info],
+        chain_id.to_owned(),
+        fee.to_owned(),
+        None,
+        body,
+    )
+    .unwrap_infallible();
 
-        let Tx {
-            body,
-            auth_info,
-            signatures,
-            signatures_data: _,
-        } = crate::crypto::info::create_signed_transaction_direct(
-            vec![signing_info],
-            chain_id.to_owned(),
-            fee.to_owned(),
-            None,
-            body,
-        )
-        .unwrap_infallible();
-
-        result.push(
-            core_types::tx::raw::TxRaw {
-                body_bytes: body.encode_vec(),
-                auth_info_bytes: auth_info.encode_vec(),
-                signatures,
-            }
-            .encode_to_vec()
-            .into(),
-        )
+    core_types::tx::raw::TxRaw {
+        body_bytes: body.encode_vec(),
+        auth_info_bytes: auth_info.encode_vec(),
+        signatures,
     }
-
-    result
+    .encode_to_vec()
+    .into()
 }

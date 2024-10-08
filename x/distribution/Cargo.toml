@@ -9,8 +9,10 @@ axum = { workspace = true }
 bytes = { workspace = true }
 clap = { workspace = true }
 gears = { path = "../../gears", features = ["cli", "xmods"] }
+ibc-proto = { workspace = true }
 prost = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
+tonic = { workspace = true }

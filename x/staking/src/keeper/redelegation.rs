@@ -1,7 +1,8 @@
 use super::*;
 use crate::types::keys;
 use crate::{
-    length_prefixed_val_del_addrs_key, redelegation_time_key, DvvTriplets, RedelegationEntry,
+    redelegation_time_key, redelegations_by_delegator_to_validator_destination_index_key,
+    DvvTriplets, RedelegationEntry,
 };
 use gears::context::{InfallibleContext, InfallibleContextMut};
 use gears::core::Protobuf;
@@ -99,11 +100,11 @@ impl<
         let store = ctx.kv_store(&self.store_key);
 
         let mut prefix = REDELEGATION_BY_VAL_DST_INDEX_KEY.to_vec();
-        let postfix = length_prefixed_val_del_addrs_key(val_src_addr, del_addr);
+        let postfix =
+            redelegations_by_delegator_to_validator_destination_index_key(val_src_addr, del_addr);
         prefix.extend_from_slice(&postfix);
 
-        // TODO: check logic, can't find concrete implementation of method `Valid`
-        store.get(&prefix).map(|red| red.is_some())
+        Ok(store.prefix_store(prefix).into_range(..).next().is_some())
     }
 
     pub fn has_max_redelegation_entries<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -169,7 +170,7 @@ impl<
         val_dst_addr: &ValAddress,
     ) -> Result<Option<Redelegation>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
-        let key = keys::redelegation_key(&del_addr, &val_src_addr, &val_dst_addr);
+        let key = keys::redelegation_key(del_addr, val_src_addr, val_dst_addr);
         Ok(store
             .get(&key)?
             .map(|bytes| Redelegation::decode::<Bytes>(bytes.into()).unwrap_or_corrupt()))
@@ -303,9 +304,9 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(REDELEGATION_QUEUE_KEY);
 
-        let key = completion_time.format_bytes_rounded(); //TODO: check if this is correct
+        let key = completion_time.format_bytes_rounded();
         if let Some(bytes) = store.get(&key)? {
-            Ok(serde_json::from_slice(&bytes).unwrap_or_corrupt())
+            Ok(DvvTriplets::decode_vec(&bytes).unwrap_or_corrupt().triplets)
         } else {
             Ok(vec![])
         }

@@ -384,6 +384,18 @@ impl TryFrom<inner::MsgCreateValidator> for CreateValidator {
         let pubkey = gears::crypto::public::PublicKey::try_from(pubkey)
             .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
 
+        let delegator_address = AccAddress::from_bech32(&val.delegator_address)
+            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
+        let validator_address = ValAddress::from_bech32(&val.validator_address)
+            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
+
+        if delegator_address != validator_address.into() {
+            return Err(CoreError::DecodeGeneral(
+                "delegator address and validator address must be derived from the same public key"
+                    .into(),
+            ));
+        }
+
         Ok(CreateValidator {
             description: Description {
                 moniker: description.moniker,

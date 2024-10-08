@@ -10,15 +10,11 @@ use crate::{
     x::module::Module,
 };
 
-use super::bank::BankKeeper;
+use super::bank::{BalancesKeeper, BankKeeper};
 
-pub trait GovernanceBankKeeper<SK: StoreKey, M: Module>: BankKeeper<SK, M> {
-    fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        address: &AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors>;
-
+pub trait GovernanceBankKeeper<SK: StoreKey, M: Module>:
+    BankKeeper<SK, M> + BalancesKeeper<SK, M>
+{
     fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,

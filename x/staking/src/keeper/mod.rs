@@ -208,8 +208,9 @@ impl<
 
         let bonded_balance = self
             .bank_keeper
-            .get_all_balances::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.get_address())
-            .unwrap_gas();
+            .balance_all::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.address(), None)
+            .unwrap_gas()
+            .1;
 
         // there's a check in the cosmos SDK to ensure that a new module account is only created if the balance is zero
         // (the logic being that the module account will be set in the genesis file and created by the auth module
@@ -232,11 +233,9 @@ impl<
 
         let not_bonded_balance = self
             .bank_keeper
-            .get_all_balances::<DB, InitContext<'_, DB, SK>>(
-                ctx,
-                self.not_bonded_module.get_address(),
-            )
-            .unwrap_gas();
+            .balance_all::<DB, InitContext<'_, DB, SK>>(ctx, self.not_bonded_module.address(), None)
+            .unwrap_gas()
+            .1;
 
         // see comment above for the logic of creating a new module account
         self.auth_keeper
@@ -592,12 +591,14 @@ impl<
         let denom = self.staking_params_keeper.try_get(ctx)?.bond_denom;
         let not_bonded_tokens = self
             .bank_keeper
-            .get_all_balances(ctx, self.not_bonded_module.get_address())?
+            .balance_all(ctx, self.not_bonded_module.address(), None)?
+            .1
             .into_iter()
             .find(|e| e.denom == denom);
         let bonded_tokens = self
             .bank_keeper
-            .get_all_balances(ctx, self.bonded_module.get_address())?
+            .balance_all(ctx, self.bonded_module.address(), None)?
+            .1
             .into_iter()
             .find(|e| e.denom == denom);
         Ok(Pool {

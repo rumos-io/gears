@@ -2,7 +2,6 @@ use crate::{
     baseapp::Query,
     core::errors::CoreError,
     core::Protobuf,
-    tendermint::informal::Hash,
     types::{
         response::{
             tx::{TxResponse, TxResponseRaw},
@@ -14,6 +13,7 @@ use crate::{
 use protobuf_derive::Raw;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use tendermint::informal::Hash;
 
 mod inner {
     pub use ibc_proto::cosmos::tx::v1beta1::GetTxRequest;

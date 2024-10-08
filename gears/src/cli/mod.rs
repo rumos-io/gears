@@ -20,6 +20,7 @@ use self::{
 };
 
 pub mod aux;
+mod config;
 pub mod genesis;
 pub mod init;
 pub mod key;
@@ -34,7 +35,14 @@ fn write_completions<G: Generator>(gen: G, cmd: &mut Command, buf: &mut dyn Writ
 }
 
 #[derive(Debug, Clone, ::clap::Parser)]
-#[command(name = T::APP_NAME, version = T::APP_VERSION)]
+#[command(name = T::APP_NAME, version = T::APP_VERSION, long_about =
+"Throughout this application variables are assigned values based on the following order of precedence:
+
+1. Argument passed on the command line
+2. Environment variable
+3. Config file value
+4. Default value"
+)]
 pub struct CliApplicationArgs<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
@@ -114,6 +122,7 @@ where
 }
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
+#[allow(clippy::large_enum_variant)]
 pub enum CliCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
@@ -160,9 +169,9 @@ where
     #[command(flatten)]
     Aux(CliAUX),
     Tx(CliTxCommand<T, CliTX>),
-    Query(CliQueryCommand<CliQue>),
-    QueryTx(CliQueryTxCommand),
-    QueryTxs(CliQueryTxsCommand),
+    Query(CliQueryCommand<T, CliQue>),
+    QueryTx(CliQueryTxCommand<T>),
+    QueryTxs(CliQueryTxsCommand<T>),
     #[command(subcommand)]
     Keys(CliKeyCommand<T>),
 }

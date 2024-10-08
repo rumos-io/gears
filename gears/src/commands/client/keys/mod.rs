@@ -1,5 +1,6 @@
 use anyhow::Result;
 use bip32::Mnemonic;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use strum::Display;
 use text_io::read;
@@ -9,7 +10,7 @@ use crate::crypto::keys::ReadAccAddress;
 const KEYRING_SUB_DIR_FILE: &str = "keyring-file";
 const KEYRING_SUB_DIR_TEST: &str = "keyring-test";
 
-#[derive(Clone, Default, Debug, Display)]
+#[derive(Clone, Default, Debug, Display, Deserialize, Serialize)]
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
 pub enum KeyringBackend {
     #[default]

@@ -153,6 +153,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
 
+        ctx.multi_store_mut().upgrade_cache();
+
         let gas_wanted = ctx.gas_meter.borrow().limit();
         let gas_used = ctx.gas_meter.borrow().consumed_or_limit();
 

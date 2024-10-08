@@ -119,7 +119,7 @@ pub fn run<
         .build(db_dir.join("application.db"))
         .map_err(|e| RunError::Database(format!("{e:?}")))?;
 
-    let cfg_file_path = ConfigDirectory::ConfigFile.path_from_hone(&home);
+    let cfg_file_path = ConfigDirectory::ConfigFile.path_from_home(&home);
 
     let config: Config<AC> = Config::from_file(cfg_file_path)
         .map_err(|e| RunError::Custom(format!("Error reading config file: {:?}", e)))?;

@@ -10,7 +10,7 @@ use gears::{
     extensions::pagination::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::request::{begin_block::RequestBeginBlock, query::RequestQuery},
+    tendermint::{request::RequestBeginBlock, types::request::query::RequestQuery},
     types::pagination::response::PaginationResponse,
     x::{keepers::staking::SlashingStakingKeeper, module::Module},
 };

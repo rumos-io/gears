@@ -2,10 +2,7 @@
 
 use auth::cli::query::{AccountsCommand, AuthCommands, AuthQueryCli, AuthQueryResponse};
 use gaia_rs::{client::GaiaQueryCommands, query::GaiaQueryResponse};
-use gears::{
-    cli::pagination::CliPaginationRequest, extensions::testing::UnwrapTesting,
-    types::account::Account,
-};
+use gears::{extensions::testing::UnwrapTesting, types::account::Account};
 use utilities::GaiaNode;
 
 #[path = "./utilities.rs"]
@@ -16,13 +13,7 @@ fn module_accounts_query() -> anyhow::Result<()> {
     let gaia = GaiaNode::run()?;
 
     let cmd = GaiaQueryCommands::Auth(AuthQueryCli {
-        command: AuthCommands::Accounts(AccountsCommand {
-            pagination: CliPaginationRequest {
-                key: None,
-                offset: None,
-                limit: 100,
-            },
-        }),
+        command: AuthCommands::Accounts(AccountsCommand { pagination: None }),
     });
 
     let result = gaia.query(cmd)?;

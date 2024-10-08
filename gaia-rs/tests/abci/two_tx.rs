@@ -1,16 +1,16 @@
 use gears::types::base::coins::Coins;
 use gears::types::msg::send::MsgSend;
-use gears::utils::node::generate_txs;
+use gears::utils::node::generate_tx;
 use gears::{tendermint::types::time::timestamp::Timestamp, types::address::AccAddress};
 
 use crate::setup_mock_node;
 
 #[test]
-/// In this scenario, we test the initialization of the application and submit a balance transfer on block three in two different blocks
+/// In this scenario, we test the initialization of the application and submit a balance transfer on block three then another on block four
 fn two_tx_in_different_block() {
     let (mut node, user) = setup_mock_node(None::<&str>);
 
-    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
         "36fd98b5248f0e4bfa6ef4e311134403b1b3deb8865bdbba7187cf05e5644a83"
@@ -31,9 +31,9 @@ fn two_tx_in_different_block() {
         amount: amount.to_owned(),
     }));
 
-    let txs = generate_txs([(0, msg)], &user, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 0, &user, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
+    let app_hash = node.step(vec![txs], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
         "8eb5f41a3f77e034185be06e5385ff0d0a42f8d0f59171b1cc12b1ac6a66bbef"
@@ -45,9 +45,9 @@ fn two_tx_in_different_block() {
         amount,
     }));
 
-    let txs = generate_txs([(1, msg)], &user, node.chain_id().clone());
+    let txs = generate_tx(vec1::vec1![msg], 1, &user, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
+    let app_hash = node.step(vec![txs], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
         "8b8d21c8e981b475ae1ed9db0d17810c5828d16a03d902f5d79787a303f9cd33"
@@ -55,11 +55,12 @@ fn two_tx_in_different_block() {
 }
 
 #[test]
-/// In this scenario, we test the initialization of the application and submit a balance transfer on block three in single block with changed sequence
+/// In this scenario, we test the initialization of the application and submit a transaction on block three with two balance transfer messages
+/// from the same account. This tests that the sequence number is incremented correctly.
 fn two_tx_in_single_block() {
     let (mut node, user) = setup_mock_node(None::<&str>);
 
-    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
         "36fd98b5248f0e4bfa6ef4e311134403b1b3deb8865bdbba7187cf05e5644a83"
@@ -86,9 +87,10 @@ fn two_tx_in_single_block() {
         amount,
     }));
 
-    let txs = generate_txs([(0, msg1), (1, msg2)], &user, node.chain_id().clone());
+    let tx1 = generate_tx(vec1::vec1![msg1], 0, &user, node.chain_id().clone());
+    let tx2 = generate_tx(vec1::vec1![msg2], 1, &user, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
+    let app_hash = node.step(vec![tx1, tx2], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
         "1fa056a16da50831fe673b592ad83628a57d6a15cc8877edb9b85a0e9b5e1797"

@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tendermint::rpc::url::Url;
 
-use crate::defaults::{CONFIG_DIR, CONFIG_FILE_NAME, GENESIS_FILE_NAME};
+use crate::defaults::{CLIENT_CONFIG_FILE_NAME, CONFIG_DIR, CONFIG_FILE_NAME, GENESIS_FILE_NAME};
 use crate::types::base::min_gas::MinGasPrices;
 
 pub const DEFAULT_GRPC_LISTEN_ADDR: SocketAddr = socket_addr!(127, 0, 0, 1, 8080);
@@ -23,14 +23,18 @@ pub const DEFAULT_TENDERMINT_RPC_ADDRESS: &str = "http://localhost:26657";
 pub enum ConfigDirectory {
     GenesisFile,
     ConfigFile,
+    ClientConfigFile,
     ConfigDir,
 }
 
 impl ConfigDirectory {
-    pub fn path_from_hone(&self, home: &(impl AsRef<Path> + ?Sized)) -> PathBuf {
+    pub fn path_from_home(&self, home: &(impl AsRef<Path> + ?Sized)) -> PathBuf {
         match self {
             ConfigDirectory::GenesisFile => home.as_ref().join(CONFIG_DIR).join(GENESIS_FILE_NAME),
             ConfigDirectory::ConfigFile => home.as_ref().join(CONFIG_DIR).join(CONFIG_FILE_NAME),
+            ConfigDirectory::ClientConfigFile => {
+                home.as_ref().join(CONFIG_DIR).join(CLIENT_CONFIG_FILE_NAME)
+            }
             ConfigDirectory::ConfigDir => home.as_ref().join(CONFIG_DIR),
         }
     }
