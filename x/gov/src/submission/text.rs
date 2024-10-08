@@ -1,10 +1,9 @@
 use std::marker::PhantomData;
 
 use gears::{
-    application::keepers::params::ParamsKeeper,
     context::InfallibleContextMut,
     derive::{AppMessage, Protobuf},
-    params::ParamsSubspaceKey,
+    store::StoreKey,
 };
 use serde::{Deserialize, Serialize};
 
@@ -23,20 +22,18 @@ pub struct TextProposal {
 }
 
 #[derive(Debug, Default)]
-pub struct TextSubmissionHandler<PK>(PhantomData<PK>);
+pub struct TextSubmissionHandler<SK>(PhantomData<SK>);
 
-impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>> SubmissionHandler<PK, PSK, TextProposal>
-    for TextSubmissionHandler<PK>
-{
-    fn handle<
-        CTX: InfallibleContextMut<DB, SK>,
-        DB: gears::store::database::Database,
-        SK: gears::store::StoreKey,
-    >(
+impl<SK: StoreKey> SubmissionHandler<TextProposal, SK> for TextSubmissionHandler<SK> {
+    fn handle<CTX: InfallibleContextMut<DB, SK>, DB: gears::store::database::Database>(
+        &self,
         _proposal: TextProposal,
         _ctx: &mut CTX,
-        _keeper: &PSK,
     ) -> Result<(), SubmissionHandlingError> {
         Ok(())
+    }
+
+    fn check(_proposal: &TextProposal) -> bool {
+        true
     }
 }

@@ -135,7 +135,7 @@ where
         Ok(old_plan)
     }
 
-    pub fn apply_upgrade<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+    pub(crate) fn apply_upgrade<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         plan: Plan,
@@ -163,7 +163,7 @@ where
         Ok(())
     }
 
-    pub fn done_height<DB: Database, CTX: InfallibleContext<DB, SK>>(
+    pub(crate) fn done_height<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &CTX,
         name: impl AsRef<str>,

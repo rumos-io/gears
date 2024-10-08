@@ -20,7 +20,7 @@ use crate::{
 
 use super::GovClientHandler;
 
-impl TxHandler for GovClientHandler {
+impl<T> TxHandler for GovClientHandler<T> {
     type Message = GovMsg;
 
     type TxCommands = GovTxCli;

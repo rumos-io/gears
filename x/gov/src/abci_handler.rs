@@ -26,7 +26,9 @@ use gears::{
         module::Module,
     },
 };
+use serde::de::DeserializeOwned;
 
+use crate::submission::{ProposalModel, SubmissionHandler};
 use crate::{
     errors::GovTxError,
     genesis::GovGenesisState,
@@ -41,7 +43,6 @@ use crate::{
         GovQuery, GovQueryResponse,
     },
     types::proposal::Proposal,
-    ProposalHandler,
 };
 
 #[derive(Debug, Clone)]
@@ -51,10 +52,11 @@ pub struct GovAbciHandler<
     M: Module,
     BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
-    PH: ProposalHandler<PSK, Proposal>,
+    P,
+    PH: SubmissionHandler<Proposal<P>, SK>,
     MI,
 > {
-    keeper: GovKeeper<SK, PSK, M, BK, STK, PH>,
+    keeper: GovKeeper<SK, PSK, M, BK, STK, P, PH>,
     _marker: PhantomData<MI>,
 }
 
@@ -64,11 +66,12 @@ impl<
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
-        PH: ProposalHandler<PSK, Proposal>,
+        P,
+        PH: SubmissionHandler<Proposal<P>, SK>,
         MI: ModuleInfo,
-    > GovAbciHandler<SK, PSK, M, BK, STK, PH, MI>
+    > GovAbciHandler<SK, PSK, M, BK, STK, P, PH, MI>
 {
-    pub fn new(keeper: GovKeeper<SK, PSK, M, BK, STK, PH>) -> Self {
+    pub fn new(keeper: GovKeeper<SK, PSK, M, BK, STK, P, PH>) -> Self {
         Self {
             keeper,
             _marker: PhantomData,
@@ -82,19 +85,20 @@ impl<
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
-        PH: ProposalHandler<PSK, Proposal> + Clone + Send + Sync + 'static,
+        P: ProposalModel + DeserializeOwned,
+        PH: SubmissionHandler<Proposal<P>, SK> + Clone + Send + Sync + 'static,
         MI: ModuleInfo + Clone + Send + Sync + 'static,
-    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK, PH, MI>
+    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK, P, PH, MI>
 {
     type Message = GovMsg;
 
-    type Genesis = GovGenesisState;
+    type Genesis = GovGenesisState<P>;
 
     type StoreKey = SK;
 
     type QReq = GovQuery;
 
-    type QRes = GovQueryResponse;
+    type QRes = GovQueryResponse<P>;
 
     fn typed_query<DB: Database>(
         &self,

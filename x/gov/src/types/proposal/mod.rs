@@ -1,8 +1,9 @@
-use std::{str::FromStr, sync::OnceLock};
+use std::{marker::PhantomData, str::FromStr, sync::OnceLock};
 
 use chrono::{DateTime, SubsecRound, Utc};
 use gears::{
     core::{errors::CoreError, Protobuf},
+    error::ProtobufError,
     store::database::Database,
     tendermint::types::time::timestamp::Timestamp,
     types::{
@@ -11,10 +12,11 @@ use gears::{
         uint::Uint256,
     },
 };
-use ibc_proto::google::protobuf::Any;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{errors::SERDE_JSON_CONVERSION, keeper::KEY_PROPOSAL_PREFIX};
+use crate::{
+    errors::SERDE_JSON_CONVERSION, keeper::KEY_PROPOSAL_PREFIX, submission::ProposalModel,
+};
 
 pub mod active_iter;
 pub mod inactive_iter;
@@ -28,9 +30,9 @@ mod inner {
 const SORTABLE_DATE_TIME_FORMAT: &str = "%Y-%m-%dT&H:%M:%S.000000000";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Proposal {
+pub struct Proposal<T> {
     pub proposal_id: u64,
-    pub content: Any,
+    pub content: T,
     pub status: ProposalStatus,
     pub final_tally_result: Option<TallyResult>,
     pub submit_time: Timestamp,
@@ -40,8 +42,8 @@ pub struct Proposal {
     pub voting_end_time: Option<Timestamp>,
 }
 
-impl TryFrom<inner::Proposal> for Proposal {
-    type Error = CoreError;
+impl<T: ProposalModel> TryFrom<inner::Proposal> for Proposal<T> {
+    type Error = ProtobufError;
 
     fn try_from(
         inner::Proposal {
@@ -66,9 +68,11 @@ impl TryFrom<inner::Proposal> for Proposal {
 
         Ok(Self {
             proposal_id,
-            content: content.ok_or(CoreError::MissingField(
-                "Proposal: field `content`".to_owned(),
-            ))?,
+            content: content
+                .ok_or(CoreError::MissingField(
+                    "Proposal: field `content`".to_owned(),
+                ))?
+                .try_into()?,
             status: status.try_into()?,
             final_tally_result: match final_tally_result {
                 Some(var) => Some(var.try_into()?),
@@ -110,8 +114,7 @@ impl TryFrom<inner::Proposal> for Proposal {
     }
 }
 
-// TODO:
-impl From<Proposal> for inner::Proposal {
+impl<T: ProposalModel> From<Proposal<T>> for inner::Proposal {
     fn from(
         Proposal {
             proposal_id,
@@ -123,11 +126,11 @@ impl From<Proposal> for inner::Proposal {
             total_deposit,
             voting_start_time,
             voting_end_time,
-        }: Proposal,
+        }: Proposal<T>,
     ) -> Self {
         Self {
             proposal_id,
-            content: Some(content),
+            content: Some(content.into()),
             status: status as i32,
             final_tally_result: final_tally_result.map(|e| e.into()),
             submit_time: Some(ibc_proto::google::protobuf::Timestamp {
@@ -153,7 +156,7 @@ impl From<Proposal> for inner::Proposal {
     }
 }
 
-impl Protobuf<inner::Proposal> for Proposal {}
+impl<T: ProposalModel> Protobuf<inner::Proposal> for Proposal<T> {}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct TallyResult {
@@ -208,7 +211,7 @@ impl From<TallyResult> for inner::TallyResult {
 
 impl Protobuf<inner::TallyResult> for TallyResult {}
 
-impl Proposal {
+impl<T> Proposal<T> {
     const KEY_PREFIX: [u8; 1] = [0x00];
     const KEY_ACTIVE_QUEUE_PREFIX: [u8; 1] = [0x01];
     const KEY_INACTIVE_QUEUE_PREFIX: [u8; 1] = [0x02];
@@ -309,20 +312,22 @@ fn parse_proposal_key_bytes(bytes: impl AsRef<[u8]>) -> (u64, DateTime<Utc>) {
 }
 
 #[derive(Debug)]
-pub struct ProposalsIterator<'a, DB>(StoreRange<'a, DB>);
+pub struct ProposalsIterator<'a, DB, P>(StoreRange<'a, DB>, PhantomData<P>);
 
-impl<'a, DB: Database> ProposalsIterator<'a, DB> {
-    pub fn new(store: Store<'a, DB>) -> ProposalsIterator<'a, DB> {
-        let prefix = store.prefix_store(Proposal::KEY_PREFIX);
+impl<'a, DB: Database, P: ProposalModel> ProposalsIterator<'a, DB, P> {
+    pub fn new(store: Store<'a, DB>) -> ProposalsIterator<'a, DB, P> {
+        let prefix = store.prefix_store(Proposal::<P>::KEY_PREFIX);
 
         let range = prefix.into_range(..);
 
-        ProposalsIterator(range)
+        ProposalsIterator(range, PhantomData)
     }
 }
 
-impl<'a, DB: Database> Iterator for ProposalsIterator<'a, DB> {
-    type Item = Result<((u64, DateTime<Utc>), Proposal), GasStoreErrors>;
+impl<'a, DB: Database, P: ProposalModel + DeserializeOwned> Iterator
+    for ProposalsIterator<'a, DB, P>
+{
+    type Item = Result<((u64, DateTime<Utc>), Proposal<P>), GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(var) = self.0.next() {

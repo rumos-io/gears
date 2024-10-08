@@ -43,4 +43,6 @@ pub enum GovKeeperError {
     Gas(#[from] GasStoreErrors),
     #[error("{0}")]
     Time(String),
+    #[error("{0}")]
+    Custom(String),
 }

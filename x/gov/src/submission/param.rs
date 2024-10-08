@@ -1,10 +1,16 @@
+use std::marker::PhantomData;
+
 use gears::{
+    application::keepers::params::ParamsKeeper,
     derive::{AppMessage, Protobuf, Raw},
     params::ParamsSubspaceKey,
+    store::StoreKey,
 };
 use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
+
+use super::handler::{SubmissionHandler, SubmissionHandlingError};
 
 #[derive(Debug, Clone, PartialEq, Raw, Protobuf, AppMessage)]
 #[raw(derive(Serialize, Deserialize, Clone, PartialEq))]
@@ -64,5 +70,59 @@ impl From<RawParameterChangeProposal> for Any {
             type_url: "/cosmos.params.v1beta1/ParameterChangeProposal".to_owned(),
             value: msg.encode_to_vec(),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct ParamChangeSubmissionHandler<PK, SK, PSK>(PhantomData<(PK, SK, PSK)>);
+
+impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>, SK: StoreKey>
+    SubmissionHandler<ParameterChangeProposal<PSK>, SK>
+    for ParamChangeSubmissionHandler<PK, SK, PSK>
+{
+    fn handle<
+        CTX: gears::context::InfallibleContextMut<DB, SK>,
+        DB: gears::store::database::Database,
+    >(
+        &self,
+        ParameterChangeProposal {
+            title: _,
+            description: _,
+            changes,
+        }: ParameterChangeProposal<PSK>,
+        ctx: &mut CTX,
+    ) -> Result<(), super::handler::SubmissionHandlingError> {
+        for ParamChange {
+            subspace,
+            key,
+            value,
+        } in changes
+        {
+            if !PK::check_key(&key) {
+                Err(SubmissionHandlingError::KeyNotFound)?
+            }
+
+            if !PK::validate(&key, &value) {
+                Err(SubmissionHandlingError::InvalidProposal)?
+            }
+
+            let mut store = gears::params::gas::subspace_mut(ctx, &subspace);
+
+            store.raw_key_set(key, value)?;
+        }
+
+        Ok(())
+    }
+
+    fn check(
+        ParameterChangeProposal {
+            title: _,
+            description: _,
+            changes,
+        }: &ParameterChangeProposal<PSK>,
+    ) -> bool {
+        changes
+            .iter()
+            .all(|this| PK::check_key(&this.key) && PK::validate(&this.key, &this.value))
     }
 }

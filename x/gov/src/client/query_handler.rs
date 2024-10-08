@@ -1,18 +1,21 @@
 use bytes::Bytes;
 use gears::{application::handlers::client::QueryHandler, core::Protobuf};
 
-use crate::query::{
-    request::{
-        QueryAllParamsRequest, QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest,
-        QueryProposalRequest, QueryProposalsRequest, QueryProposerRequest, QueryTallyResultRequest,
-        QueryVoteRequest, QueryVotesRequest,
+use crate::{
+    query::{
+        request::{
+            QueryAllParamsRequest, QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest,
+            QueryProposalRequest, QueryProposalsRequest, QueryProposerRequest,
+            QueryTallyResultRequest, QueryVoteRequest, QueryVotesRequest,
+        },
+        response::{
+            QueryAllParamsResponse, QueryDepositResponse, QueryParamsResponse,
+            QueryProposalResponse, QueryProposalsResponse, QueryProposerResponse,
+            QueryTallyResultResponse, QueryVoteResponse, QueryVotesResponse,
+        },
+        GovQuery, GovQueryResponse,
     },
-    response::{
-        QueryAllParamsResponse, QueryDepositResponse, QueryParamsResponse, QueryProposalResponse,
-        QueryProposalsResponse, QueryProposerResponse, QueryTallyResultResponse, QueryVoteResponse,
-        QueryVotesResponse,
-    },
-    GovQuery, GovQueryResponse,
+    submission::ProposalModel,
 };
 
 use super::{
@@ -20,12 +23,12 @@ use super::{
     GovClientHandler,
 };
 
-impl QueryHandler for GovClientHandler {
+impl<T: ProposalModel> QueryHandler for GovClientHandler<T> {
     type QueryRequest = GovQuery;
 
     type QueryCommands = GovQueryCli;
 
-    type QueryResponse = GovQueryResponse;
+    type QueryResponse = GovQueryResponse<T>;
 
     fn prepare_query_request(
         &self,
