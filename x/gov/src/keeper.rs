@@ -26,7 +26,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use strum::IntoEnumIterator;
 
-use crate::proposal::{ProposalHandler, ProposalModel};
+use crate::proposal::{Proposal, ProposalHandler};
 use crate::{
     errors::{GovKeeperError, TallyError, SERDE_JSON_CONVERSION},
     genesis::GovGenesisState,
@@ -53,8 +53,8 @@ use crate::{
     types::{
         deposit_iter::DepositIterator,
         proposal::{
-            active_iter::ActiveProposalIterator, inactive_iter::InactiveProposalIterator, Proposal,
-            ProposalStatus, ProposalsIterator, TallyResult,
+            active_iter::ActiveProposalIterator, inactive_iter::InactiveProposalIterator,
+            ProposalModel, ProposalStatus, ProposalsIterator, TallyResult,
         },
         validator::ValidatorGovInfo,
         vote_iters::WeightedVoteIterator,
@@ -72,7 +72,7 @@ pub struct GovKeeper<
     BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     P,
-    PH: ProposalHandler<Proposal<P>, SK>,
+    PH: ProposalHandler<ProposalModel<P>, SK>,
 > {
     store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
@@ -90,8 +90,8 @@ impl<
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
-        P: ProposalModel + DeserializeOwned,
-        PH: ProposalHandler<Proposal<P>, SK>,
+        P: Proposal + DeserializeOwned,
+        PH: ProposalHandler<ProposalModel<P>, SK>,
     > GovKeeper<SK, PSK, M, BK, STK, P, PH>
 {
     pub fn new(
@@ -159,7 +159,7 @@ impl<
                 match proposal.status {
                     ProposalStatus::DepositPeriod => {
                         store_mut.set(
-                            Proposal::<P>::inactive_queue_key(
+                            ProposalModel::<P>::inactive_queue_key(
                                 proposal.proposal_id,
                                 &proposal.deposit_end_time,
                             ),
@@ -167,7 +167,7 @@ impl<
                         );
                     }
                     ProposalStatus::VotingPeriod => store_mut.set(
-                        Proposal::<P>::active_queue_key(
+                        ProposalModel::<P>::active_queue_key(
                             proposal.proposal_id,
                             &proposal.deposit_end_time,
                         ),
@@ -467,7 +467,7 @@ impl<
             .deposit
             .max_deposit_period;
 
-        let proposal = Proposal {
+        let proposal = ProposalModel {
             proposal_id,
             content: content
                 .try_into()
@@ -491,7 +491,10 @@ impl<
         let mut store = ctx.kv_store_mut(&self.store_key);
 
         store.set(
-            Proposal::<P>::inactive_queue_key(proposal.proposal_id, &proposal.deposit_end_time),
+            ProposalModel::<P>::inactive_queue_key(
+                proposal.proposal_id,
+                &proposal.deposit_end_time,
+            ),
             proposal.proposal_id.to_be_bytes(),
         )?;
 
@@ -585,7 +588,7 @@ impl<
 
                 proposal_set(ctx, &self.store_key, &proposal).unwrap_gas();
                 ctx.kv_store_mut(&self.store_key)
-                    .delete(&Proposal::<P>::active_queue_key(
+                    .delete(&ProposalModel::<P>::active_queue_key(
                         proposal.proposal_id,
                         &proposal.deposit_end_time,
                     ));
@@ -829,7 +832,7 @@ fn proposal_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>, P: De
     ctx: &CTX,
     store_key: &SK,
     proposal_id: u64,
-) -> Result<Option<Proposal<P>>, GasStoreErrors> {
+) -> Result<Option<ProposalModel<P>>, GasStoreErrors> {
     let key = [KEY_PROPOSAL_PREFIX.as_slice(), &proposal_id.to_be_bytes()].concat();
 
     let store = ctx.kv_store(store_key);
@@ -851,7 +854,7 @@ fn proposal_set<
 >(
     ctx: &mut CTX,
     store_key: &SK,
-    proposal: &Proposal<P>,
+    proposal: &ProposalModel<P>,
 ) -> Result<(), GasStoreErrors> {
     let mut store = ctx.kv_store_mut(store_key);
 
@@ -876,12 +879,12 @@ fn proposal_del<
     if let Some(proposal) = proposal {
         let mut store = ctx.kv_store_mut(store_key);
 
-        store.delete(&Proposal::<P>::inactive_queue_key(
+        store.delete(&ProposalModel::<P>::inactive_queue_key(
             proposal_id,
             &proposal.deposit_end_time,
         ))?;
 
-        store.delete(&Proposal::<P>::active_queue_key(
+        store.delete(&ProposalModel::<P>::active_queue_key(
             proposal_id,
             &proposal.deposit_end_time,
         ))?;
@@ -940,8 +943,8 @@ fn deposit_del<
     BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
-    P: ProposalModel,
-    PH: ProposalHandler<Proposal<P>, SK>,
+    P: Proposal,
+    PH: ProposalHandler<ProposalModel<P>, SK>,
 >(
     ctx: &mut CTX,
     keeper: &GovKeeper<SK, PSK, M, BK, STK, P, PH>,
@@ -974,8 +977,8 @@ fn deposit_refund<
     BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
-    P: ProposalModel,
-    PH: ProposalHandler<Proposal<P>, SK>,
+    P: Proposal,
+    PH: ProposalHandler<ProposalModel<P>, SK>,
 >(
     ctx: &mut CTX,
     keeper: &GovKeeper<SK, PSK, M, BK, STK, P, PH>,

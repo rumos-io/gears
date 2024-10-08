@@ -28,7 +28,7 @@ use gears::{
 };
 use serde::de::DeserializeOwned;
 
-use crate::proposal::{ProposalHandler, ProposalModel};
+use crate::proposal::{Proposal, ProposalHandler};
 use crate::{
     errors::GovTxError,
     genesis::GovGenesisState,
@@ -42,7 +42,7 @@ use crate::{
         },
         GovQuery, GovQueryResponse,
     },
-    types::proposal::Proposal,
+    types::proposal::ProposalModel,
 };
 
 #[derive(Debug, Clone)]
@@ -53,7 +53,7 @@ pub struct GovAbciHandler<
     BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     P,
-    PH: ProposalHandler<Proposal<P>, SK>,
+    PH: ProposalHandler<ProposalModel<P>, SK>,
     MI,
 > {
     keeper: GovKeeper<SK, PSK, M, BK, STK, P, PH>,
@@ -67,7 +67,7 @@ impl<
         BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         P,
-        PH: ProposalHandler<Proposal<P>, SK>,
+        PH: ProposalHandler<ProposalModel<P>, SK>,
         MI: ModuleInfo,
     > GovAbciHandler<SK, PSK, M, BK, STK, P, PH, MI>
 {
@@ -85,8 +85,8 @@ impl<
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
-        P: ProposalModel + DeserializeOwned,
-        PH: ProposalHandler<Proposal<P>, SK> + Clone + Send + Sync + 'static,
+        P: Proposal + DeserializeOwned,
+        PH: ProposalHandler<ProposalModel<P>, SK> + Clone + Send + Sync + 'static,
         MI: ModuleInfo + Clone + Send + Sync + 'static,
     > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK, P, PH, MI>
 {

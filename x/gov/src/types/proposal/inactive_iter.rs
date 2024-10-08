@@ -7,21 +7,21 @@ use gears::{
     types::store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
 };
 
-use crate::proposal::ProposalModel;
+use crate::proposal::Proposal;
 
-use super::{parse_proposal_key_bytes, Proposal};
+use super::{parse_proposal_key_bytes, ProposalModel};
 
 #[derive(Debug)]
 pub struct InactiveProposalIterator<'a, DB, P>(StoreRange<'a, DB>, PhantomData<P>);
 
-impl<'a, DB: Database, P: ProposalModel> InactiveProposalIterator<'a, DB, P> {
+impl<'a, DB: Database, P: Proposal> InactiveProposalIterator<'a, DB, P> {
     pub fn new(store: Store<'a, DB>, end_time: &Timestamp) -> InactiveProposalIterator<'a, DB, P> {
         Self(
             store.into_range((
-                Bound::Included(Proposal::<P>::KEY_INACTIVE_QUEUE_PREFIX.to_vec()),
+                Bound::Included(ProposalModel::<P>::KEY_INACTIVE_QUEUE_PREFIX.to_vec()),
                 Bound::Excluded(
                     [
-                        Proposal::<P>::KEY_INACTIVE_QUEUE_PREFIX.as_slice(),
+                        ProposalModel::<P>::KEY_INACTIVE_QUEUE_PREFIX.as_slice(),
                         end_time.format_bytes_rounded().as_slice(),
                     ]
                     .concat()
@@ -33,7 +33,7 @@ impl<'a, DB: Database, P: ProposalModel> InactiveProposalIterator<'a, DB, P> {
     }
 }
 
-impl<'a, DB: Database, P: ProposalModel> Iterator for InactiveProposalIterator<'a, DB, P> {
+impl<'a, DB: Database, P: Proposal> Iterator for InactiveProposalIterator<'a, DB, P> {
     type Item = Result<((u64, DateTime<Utc>), Cow<'a, Vec<u8>>), GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {

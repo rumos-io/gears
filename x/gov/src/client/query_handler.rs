@@ -15,7 +15,7 @@ use crate::{
         },
         GovQuery, GovQueryResponse,
     },
-    proposal::ProposalModel,
+    proposal::Proposal,
 };
 
 use super::{
@@ -23,7 +23,7 @@ use super::{
     GovClientHandler,
 };
 
-impl<T: ProposalModel> QueryHandler for GovClientHandler<T> {
+impl<T: Proposal> QueryHandler for GovClientHandler<T> {
     type QueryRequest = GovQuery;
 
     type QueryCommands = GovQueryCli;

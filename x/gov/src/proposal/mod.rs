@@ -7,7 +7,7 @@ use gears::error::ProtobufError;
 pub use handler::*;
 use ibc_proto::google::protobuf::Any;
 
-pub trait ProposalModel:
+pub trait Proposal:
     Clone
     + std::fmt::Debug
     + Send

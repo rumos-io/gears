@@ -8,21 +8,21 @@ use gears::{
 };
 use serde::de::DeserializeOwned;
 
-use crate::{errors::SERDE_JSON_CONVERSION, proposal::ProposalModel};
+use crate::{errors::SERDE_JSON_CONVERSION, proposal::Proposal};
 
-use super::{parse_proposal_key_bytes, Proposal};
+use super::{parse_proposal_key_bytes, ProposalModel};
 
 #[derive(Debug)]
 pub struct ActiveProposalIterator<'a, DB, P>(StoreRange<'a, DB>, PhantomData<P>);
 
-impl<'a, DB: Database, P: ProposalModel> ActiveProposalIterator<'a, DB, P> {
+impl<'a, DB: Database, P: Proposal> ActiveProposalIterator<'a, DB, P> {
     pub fn new(store: Store<'a, DB>, end_time: &Timestamp) -> ActiveProposalIterator<'a, DB, P> {
         Self(
             store.into_range((
-                Bound::Included(Proposal::<P>::KEY_ACTIVE_QUEUE_PREFIX.to_vec()),
+                Bound::Included(ProposalModel::<P>::KEY_ACTIVE_QUEUE_PREFIX.to_vec()),
                 Bound::Excluded(
                     [
-                        Proposal::<P>::KEY_ACTIVE_QUEUE_PREFIX.as_slice(),
+                        ProposalModel::<P>::KEY_ACTIVE_QUEUE_PREFIX.as_slice(),
                         end_time.format_bytes_rounded().as_slice(),
                     ]
                     .concat()
@@ -34,10 +34,10 @@ impl<'a, DB: Database, P: ProposalModel> ActiveProposalIterator<'a, DB, P> {
     }
 }
 
-impl<'a, DB: Database, P: ProposalModel + DeserializeOwned> Iterator
+impl<'a, DB: Database, P: Proposal + DeserializeOwned> Iterator
     for ActiveProposalIterator<'a, DB, P>
 {
-    type Item = Result<((u64, DateTime<Utc>), Proposal<P>), GasStoreErrors>;
+    type Item = Result<((u64, DateTime<Utc>), ProposalModel<P>), GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(var) = self.0.next() {

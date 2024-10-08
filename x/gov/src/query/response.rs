@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     msg::{deposit::Deposit, weighted_vote::MsgVoteWeighted},
     params::{DepositParams, TallyParams, VotingParams},
-    proposal::ProposalModel,
-    types::proposal::{Proposal, TallyResult},
+    proposal::Proposal,
+    types::proposal::{ProposalModel, TallyResult},
 };
 
 mod inner {
@@ -28,19 +28,19 @@ mod inner {
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
 #[proto(raw = "inner::QueryProposalResponse")]
-pub struct QueryProposalResponse<T: ProposalModel> {
+pub struct QueryProposalResponse<T: Proposal> {
     #[proto(optional)]
-    pub proposal: Option<Proposal<T>>,
+    pub proposal: Option<ProposalModel<T>>,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
 // #[query(raw = "inner::QueryProposalsResponse")]
-pub struct QueryProposalsResponse<T: ProposalModel> {
-    pub proposals: Vec<Proposal<T>>,
+pub struct QueryProposalsResponse<T: Proposal> {
+    pub proposals: Vec<ProposalModel<T>>,
     pub pagination: Option<PaginationResponse>,
 }
 
-impl<T: ProposalModel> TryFrom<inner::QueryProposalsResponse> for QueryProposalsResponse<T> {
+impl<T: Proposal> TryFrom<inner::QueryProposalsResponse> for QueryProposalsResponse<T> {
     type Error = ProtobufError;
 
     fn try_from(
@@ -64,7 +64,7 @@ impl<T: ProposalModel> TryFrom<inner::QueryProposalsResponse> for QueryProposals
     }
 }
 
-impl<T: ProposalModel> From<QueryProposalsResponse<T>> for inner::QueryProposalsResponse {
+impl<T: Proposal> From<QueryProposalsResponse<T>> for inner::QueryProposalsResponse {
     fn from(
         QueryProposalsResponse {
             proposals,
@@ -78,7 +78,7 @@ impl<T: ProposalModel> From<QueryProposalsResponse<T>> for inner::QueryProposals
     }
 }
 
-impl<T: ProposalModel> Protobuf<inner::QueryProposalsResponse> for QueryProposalsResponse<T> {}
+impl<T: Proposal> Protobuf<inner::QueryProposalsResponse> for QueryProposalsResponse<T> {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
 #[proto(raw = "inner::QueryVoteResponse")]
