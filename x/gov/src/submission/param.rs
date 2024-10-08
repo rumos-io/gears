@@ -1,65 +1,35 @@
 use bytes::Bytes;
 use gears::{
     core::{errors::CoreError, Protobuf},
-    derive::Raw,
+    derive::{Protobuf, Raw},
+    error::ProtobufError,
     params::ParamsSubspaceKey,
 };
 use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Raw)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Raw, Protobuf)]
 #[raw(derive(Serialize, Deserialize, Clone, PartialEq))]
-pub struct ParamChange<PSK> {
+pub struct ParamChange<PSK: ParamsSubspaceKey> {
     #[raw(kind(string), raw = String)]
+    #[proto(
+        from = "PSK::from_subspace_str",
+        from_ref,
+        into = "PSK::name",
+        into_ref
+    )]
     pub subspace: PSK,
     #[raw(kind(bytes))]
-    // #[proto(repeated)]
+    #[proto(repeated)]
     pub key: Vec<u8>,
     #[raw(kind(bytes))]
-    // #[proto(repeated)]
+    #[proto(repeated)]
     pub value: Vec<u8>,
 }
 
-impl<PSK> ParamChange<PSK> {
+impl<PSK: ParamsSubspaceKey> ParamChange<PSK> {
     pub const TYPE_URL: &'static str = "/cosmos.params.v1beta1/ParamChange";
-}
-
-impl<PSK: ParamsSubspaceKey> Protobuf<RawParamChange> for ParamChange<PSK> {}
-
-impl<PSK: ParamsSubspaceKey> TryFrom<RawParamChange> for ParamChange<PSK> {
-    type Error = CoreError;
-
-    fn try_from(
-        RawParamChange {
-            subspace,
-            key,
-            value,
-        }: RawParamChange,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            subspace: PSK::from_subspace_str(&subspace)
-                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
-            key,
-            value,
-        })
-    }
-}
-
-impl<PSK: ParamsSubspaceKey> From<ParamChange<PSK>> for RawParamChange {
-    fn from(
-        ParamChange {
-            subspace,
-            key,
-            value,
-        }: ParamChange<PSK>,
-    ) -> Self {
-        Self {
-            subspace: subspace.name().to_owned(),
-            key,
-            value,
-        }
-    }
 }
 
 impl<PSK: ParamsSubspaceKey> TryFrom<Any> for ParamChange<PSK> {
@@ -105,20 +75,20 @@ impl From<RawParameterChangeProposal> for Any {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ParameterChangeProposal<PSK> {
+pub struct ParameterChangeProposal<PSK: ParamsSubspaceKey> {
     pub title: String,
     pub description: String,
     pub changes: Vec<ParamChange<PSK>>,
 }
 
-impl<PSK> ParameterChangeProposal<PSK> {
+impl<PSK: ParamsSubspaceKey> ParameterChangeProposal<PSK> {
     pub const TYPE_URL: &'static str = "/cosmos.params.v1beta1/ParameterChangeProposal";
 }
 
 impl<PSK: ParamsSubspaceKey> Protobuf<RawParameterChangeProposal> for ParameterChangeProposal<PSK> {}
 
 impl<PSK: ParamsSubspaceKey> TryFrom<RawParameterChangeProposal> for ParameterChangeProposal<PSK> {
-    type Error = CoreError;
+    type Error = ProtobufError;
 
     fn try_from(
         RawParameterChangeProposal {

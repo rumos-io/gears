@@ -63,25 +63,26 @@ pub fn expand_params(input: DeriveInput) -> syn::Result<TokenStream> {
 
                 let _ = set.insert(to_string.clone());
 
-                enum_variants.push(quote! { Self::#ident => #to_string });
+                enum_variants
+                    .push(quote! { Self::#ident => ::std::borrow::ToOwned::to_owned(#to_string) });
                 from_str_impls.push(quote! { #to_string => Self::#ident });
             }
 
             let result = quote! {
                 impl #crate_prefix ::params::ParamsSubspaceKey for #ident
                 {
-                    fn name(&self) -> &'static str
+                    fn name(&self) -> String
                     {
                         match self{
                             #(#enum_variants),*
                         }
                     }
 
-                    fn from_subspace_str(val: &str) -> ::std::result::Result<Self, #crate_prefix::params::SubspaceParseError> {
-                        let result = match val
+                    fn from_subspace_str(val: impl ::std::convert::AsRef<str>) -> ::std::result::Result<Self, #crate_prefix::params::SubspaceParseError> {
+                        let result = match ::std::convert::AsRef::as_ref(&val)
                         {
                             #(#from_str_impls),*
-                            , _ => ::std::result::Result::Err(#crate_prefix::params::SubspaceParseError(::std::format!("missing valid key: {val} not found")))?,
+                            , _ => ::std::result::Result::Err(#crate_prefix::params::SubspaceParseError(::std::format!("missing valid key: {} not found", ::std::convert::AsRef::as_ref(&val) )))?,
                         };
 
                         ::std::result::Result::Ok(result)
