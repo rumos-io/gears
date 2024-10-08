@@ -1,4 +1,7 @@
-use crate::query::{GovQuery, GovQueryResponse};
+use crate::{
+    proposal::Proposal,
+    query::{GovQuery, GovQueryResponse},
+};
 use gears::baseapp::{NodeQueryHandler, QueryRequest, QueryResponse};
 use ibc_proto::cosmos::gov::v1beta1::{
     query_server::{Query, QueryServer},
@@ -15,9 +18,9 @@ use tracing::info;
 const ERROR_STATE_MSG: &str = "An internal error occurred while querying the application state.";
 
 #[derive(Debug, Default)]
-pub struct GovService<QH, QReq, QRes> {
+pub struct GovService<QH, QReq, QRes, P> {
     app: QH,
-    _phantom: PhantomData<(QReq, QRes)>,
+    _phantom: PhantomData<(QReq, QRes, P)>,
 }
 
 #[tonic::async_trait]
@@ -25,10 +28,11 @@ impl<
         QReq: Send + Sync + 'static,
         QRes: Send + Sync + 'static,
         QH: NodeQueryHandler<QReq, QRes>,
-    > Query for GovService<QH, QReq, QRes>
+        P: Proposal,
+    > Query for GovService<QH, QReq, QRes, P>
 where
     QReq: QueryRequest + From<GovQuery>,
-    QRes: QueryResponse + TryInto<GovQueryResponse, Error = Status>,
+    QRes: QueryResponse + TryInto<GovQueryResponse<P>, Error = Status>,
 {
     async fn proposal(
         &self,
@@ -36,7 +40,7 @@ where
     ) -> Result<Response<QueryProposalResponse>, Status> {
         info!("Received a gRPC request gov::proposal");
         let req = GovQuery::Proposal(request.into_inner().try_into()?);
-        let response: GovQueryResponse = self.app.typed_query(req)?.try_into()?;
+        let response: GovQueryResponse<P> = self.app.typed_query(req)?.try_into()?;
 
         if let GovQueryResponse::Proposal(response) = response {
             Ok(Response::new(response.into()))
@@ -51,7 +55,7 @@ where
     ) -> Result<Response<QueryProposalsResponse>, Status> {
         info!("Received a gRPC request gov::proposals");
         let req = GovQuery::Proposals(request.into_inner().try_into()?);
-        let response: GovQueryResponse = self.app.typed_query(req)?.try_into()?;
+        let response: GovQueryResponse<P> = self.app.typed_query(req)?.try_into()?;
 
         if let GovQueryResponse::Proposals(response) = response {
             Ok(Response::new(response.into()))
@@ -66,7 +70,7 @@ where
     ) -> Result<Response<QueryVoteResponse>, Status> {
         info!("Received a gRPC request gov::vote");
         let req = GovQuery::Vote(request.into_inner().try_into()?);
-        let response: GovQueryResponse = self.app.typed_query(req)?.try_into()?;
+        let response: GovQueryResponse<P> = self.app.typed_query(req)?.try_into()?;
 
         if let GovQueryResponse::Vote(response) = response {
             Ok(Response::new(response.into()))
@@ -81,7 +85,7 @@ where
     ) -> Result<Response<QueryVotesResponse>, Status> {
         info!("Received a gRPC request gov::votes");
         let req = GovQuery::Votes(request.into_inner().try_into()?);
-        let response: GovQueryResponse = self.app.typed_query(req)?.try_into()?;
+        let response: GovQueryResponse<P> = self.app.typed_query(req)?.try_into()?;
 
         if let GovQueryResponse::Votes(response) = response {
             Ok(Response::new(response.into()))
@@ -96,7 +100,7 @@ where
     ) -> Result<Response<QueryParamsResponse>, Status> {
         info!("Received a gRPC request gov::params");
         let req = GovQuery::Params(request.into_inner().try_into()?);
-        let response: GovQueryResponse = self.app.typed_query(req)?.try_into()?;
+        let response: GovQueryResponse<P> = self.app.typed_query(req)?.try_into()?;
 
         if let GovQueryResponse::Params(response) = response {
             Ok(Response::new(response.into()))
@@ -111,7 +115,7 @@ where
     ) -> Result<Response<QueryDepositResponse>, Status> {
         info!("Received a gRPC request gov::deposit");
         let req = GovQuery::Deposit(request.into_inner().try_into()?);
-        let response: GovQueryResponse = self.app.typed_query(req)?.try_into()?;
+        let response: GovQueryResponse<P> = self.app.typed_query(req)?.try_into()?;
 
         if let GovQueryResponse::Deposit(response) = response {
             Ok(Response::new(response.into()))
@@ -126,7 +130,7 @@ where
     ) -> Result<Response<QueryDepositsResponse>, Status> {
         info!("Received a gRPC request gov::deposits");
         let req = GovQuery::Deposits(request.into_inner().try_into()?);
-        let response: GovQueryResponse = self.app.typed_query(req)?.try_into()?;
+        let response: GovQueryResponse<P> = self.app.typed_query(req)?.try_into()?;
 
         if let GovQueryResponse::Deposits(response) = response {
             Ok(Response::new(response.into()))
@@ -141,7 +145,7 @@ where
     ) -> Result<Response<QueryTallyResultResponse>, Status> {
         info!("Received a gRPC request gov::tally_result");
         let req = GovQuery::Tally(request.into_inner().try_into()?);
-        let response: GovQueryResponse = self.app.typed_query(req)?.try_into()?;
+        let response: GovQueryResponse<P> = self.app.typed_query(req)?.try_into()?;
 
         if let GovQueryResponse::Tally(response) = response {
             Ok(Response::new(response.into()))
@@ -151,10 +155,10 @@ where
     }
 }
 
-pub fn new<QH, QReq, QRes>(app: QH) -> QueryServer<GovService<QH, QReq, QRes>>
+pub fn new<QH, QReq, QRes, P: Proposal>(app: QH) -> QueryServer<GovService<QH, QReq, QRes, P>>
 where
     QReq: QueryRequest + Send + Sync + 'static + From<GovQuery>,
-    QRes: QueryResponse + Send + Sync + 'static + TryInto<GovQueryResponse, Error = Status>,
+    QRes: QueryResponse + Send + Sync + 'static + TryInto<GovQueryResponse<P>, Error = Status>,
     QH: NodeQueryHandler<QReq, QRes>,
 {
     let gov_service = GovService {
