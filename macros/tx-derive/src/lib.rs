@@ -64,7 +64,12 @@ mod inner {
             url,
             amino_url,
         } = MessageArg::from_derive_input(&input)?;
-        let DeriveInput { ident, data, .. } = input;
+        let DeriveInput {
+            ident,
+            data,
+            generics,
+            ..
+        } = input;
 
         let crate_prefix = match gears.is_present() {
             true => quote! { crate },
@@ -73,9 +78,9 @@ mod inner {
 
         match data {
             syn::Data::Struct(data) => {
-                struct_impl::expand_macro(data, ident, crate_prefix, url, amino_url)
+                struct_impl::expand_macro(data, ident, generics, crate_prefix, url, amino_url)
             }
-            syn::Data::Enum(data) => enum_impl::expand_macro(data, ident, crate_prefix),
+            syn::Data::Enum(data) => enum_impl::expand_macro(data, ident, generics, crate_prefix),
             syn::Data::Union(_) => Err(syn::Error::new(
                 proc_macro2::Span::call_site(),
                 "TODO can't be derived for `Union`",

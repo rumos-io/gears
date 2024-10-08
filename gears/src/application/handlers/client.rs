@@ -174,11 +174,11 @@ pub trait TxHandler {
 
 /// Handles query request, serialization and displaying it as `String`
 pub trait QueryHandler {
-    /// Query request which contains all information needed for request
-    type QueryRequest: Query;
     /// Additional context to use. \
     /// In most cases you would expect this to be some sort of cli command
     type QueryCommands;
+    /// Query request which contains all information needed for request
+    type QueryRequest: Query;
     /// Serialized response from query request
     type QueryResponse: Serialize;
 
