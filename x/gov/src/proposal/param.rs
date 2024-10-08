@@ -10,7 +10,7 @@ use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-use super::handler::{ProposalHandler, SubmissionHandlingError};
+use super::handler::{ProposalHandler, ProposalHandlingError};
 
 #[derive(Debug, Clone, PartialEq, Raw, Protobuf, AppMessage)]
 #[raw(derive(Serialize, Deserialize, Clone, PartialEq))]
@@ -91,7 +91,7 @@ impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>, SK: StoreKey>
             changes,
         }: ParameterChangeProposal<PSK>,
         ctx: &mut CTX,
-    ) -> Result<(), super::handler::SubmissionHandlingError> {
+    ) -> Result<(), super::handler::ProposalHandlingError> {
         for ParamChange {
             subspace,
             key,
@@ -99,11 +99,11 @@ impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>, SK: StoreKey>
         } in changes
         {
             if !PK::check_key(&key) {
-                Err(SubmissionHandlingError::KeyNotFound)?
+                Err(ProposalHandlingError::KeyNotFound)?
             }
 
             if !PK::validate(&key, &value) {
-                Err(SubmissionHandlingError::InvalidProposal)?
+                Err(ProposalHandlingError::InvalidProposal)?
             }
 
             let mut store = gears::params::gas::subspace_mut(ctx, &subspace);

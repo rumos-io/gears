@@ -9,13 +9,13 @@ pub trait ProposalHandler<P, SK: StoreKey> {
         &self,
         proposal: P,
         ctx: &mut CTX,
-    ) -> Result<(), SubmissionHandlingError>;
+    ) -> Result<(), ProposalHandlingError>;
 
     fn check(proposal: &P) -> bool;
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum SubmissionHandlingError {
+pub enum ProposalHandlingError {
     #[error("Can't handle this proposal: decoding error")]
     Decode(#[from] CoreError),
     #[error("Can't handle this proposal: not supported subspace")]

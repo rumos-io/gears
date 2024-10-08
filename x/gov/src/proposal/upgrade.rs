@@ -6,7 +6,7 @@ use gears::{
 use serde::{Deserialize, Serialize};
 use upgrade::{keeper::UpgradeKeeper, types::plan::Plan, Module, UpgradeHandler};
 
-use super::handler::{ProposalHandler, SubmissionHandlingError};
+use super::handler::{ProposalHandler, ProposalHandlingError};
 
 mod inner {
 
@@ -88,10 +88,10 @@ where
             description: _,
         }: SoftwareUpgradeProposal,
         ctx: &mut CTX,
-    ) -> Result<(), SubmissionHandlingError> {
+    ) -> Result<(), ProposalHandlingError> {
         self.keeper
             .schedule_upgrade(ctx, plan, true)
-            .map_err(|e| SubmissionHandlingError::Other(e.to_string()))?;
+            .map_err(|e| ProposalHandlingError::Other(e.to_string()))?;
 
         Ok(())
     }
@@ -101,8 +101,8 @@ where
     }
 }
 
-impl<SK: StoreKey, M: Module, UH: UpgradeHandler>
-    ProposalHandler<CancelSoftwareUpgradeProposal, SK> for UpgradeSubmissionHandler<SK, M, UH>
+impl<SK: StoreKey, M: Module, UH: UpgradeHandler> ProposalHandler<CancelSoftwareUpgradeProposal, SK>
+    for UpgradeSubmissionHandler<SK, M, UH>
 where
     <M as TryFrom<Vec<u8>>>::Error: std::fmt::Display + std::fmt::Debug,
 {
@@ -113,7 +113,7 @@ where
             description: _,
         }: CancelSoftwareUpgradeProposal,
         ctx: &mut CTX,
-    ) -> Result<(), SubmissionHandlingError> {
+    ) -> Result<(), ProposalHandlingError> {
         self.keeper.delete_upgrade_plan(ctx);
 
         Ok(())

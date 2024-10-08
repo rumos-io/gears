@@ -7,7 +7,7 @@ use gears::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::handler::{ProposalHandler, SubmissionHandlingError};
+use super::handler::{ProposalHandler, ProposalHandlingError};
 
 mod inner {
     pub use ibc_proto::cosmos::gov::v1beta1::TextProposal;
@@ -29,7 +29,7 @@ impl<SK: StoreKey> ProposalHandler<TextProposal, SK> for TextSubmissionHandler<S
         &self,
         _proposal: TextProposal,
         _ctx: &mut CTX,
-    ) -> Result<(), SubmissionHandlingError> {
+    ) -> Result<(), ProposalHandlingError> {
         Ok(())
     }
 
