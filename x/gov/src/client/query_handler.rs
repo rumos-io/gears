@@ -2,6 +2,7 @@ use bytes::Bytes;
 use gears::{application::handlers::client::QueryHandler, core::Protobuf};
 
 use crate::{
+    proposal::Proposal,
     query::{
         request::{
             QueryAllParamsRequest, QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest,
@@ -15,7 +16,6 @@ use crate::{
         },
         GovQuery, GovQueryResponse,
     },
-    proposal::Proposal,
 };
 
 use super::{

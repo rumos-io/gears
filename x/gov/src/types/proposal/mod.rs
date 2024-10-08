@@ -322,9 +322,7 @@ impl<'a, DB: Database, P: Proposal> ProposalsIterator<'a, DB, P> {
     }
 }
 
-impl<'a, DB: Database, P: Proposal + DeserializeOwned> Iterator
-    for ProposalsIterator<'a, DB, P>
-{
+impl<'a, DB: Database, P: Proposal + DeserializeOwned> Iterator for ProposalsIterator<'a, DB, P> {
     type Item = Result<((u64, DateTime<Utc>), ProposalModel<P>), GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {

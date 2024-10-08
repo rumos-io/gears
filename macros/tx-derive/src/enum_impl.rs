@@ -85,7 +85,7 @@ pub fn expand_macro(
         }
 
         impl #impl_generics From<#type_ident #ty_generics> for #crate_prefix::core::any::google::Any #where_clause {
-            fn from(msg: #type_ident) -> Self {
+            fn from(msg: #type_ident #ty_generics) -> Self {
                 match msg {
                     #(#into_any),*
                 }

@@ -65,18 +65,18 @@ pub struct SoftwareUpgradeProposal {
 }
 
 #[derive(Debug)]
-pub struct UpgradeSubmissionHandler<SK, M, UH> {
+pub struct UpgradeProposalHandler<SK, M, UH> {
     keeper: UpgradeKeeper<SK, M, UH>,
 }
 
-impl<SK, M, UH> UpgradeSubmissionHandler<SK, M, UH> {
+impl<SK, M, UH> UpgradeProposalHandler<SK, M, UH> {
     pub fn new(keeper: UpgradeKeeper<SK, M, UH>) -> Self {
         Self { keeper }
     }
 }
 
 impl<SK: StoreKey, M: Module, UH: UpgradeHandler> ProposalHandler<SoftwareUpgradeProposal, SK>
-    for UpgradeSubmissionHandler<SK, M, UH>
+    for UpgradeProposalHandler<SK, M, UH>
 where
     <M as TryFrom<Vec<u8>>>::Error: std::fmt::Display + std::fmt::Debug,
 {
@@ -102,7 +102,7 @@ where
 }
 
 impl<SK: StoreKey, M: Module, UH: UpgradeHandler> ProposalHandler<CancelSoftwareUpgradeProposal, SK>
-    for UpgradeSubmissionHandler<SK, M, UH>
+    for UpgradeProposalHandler<SK, M, UH>
 where
     <M as TryFrom<Vec<u8>>>::Error: std::fmt::Display + std::fmt::Debug,
 {

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, marker::PhantomData, ops::Mul};
 
-use gears::error::ProtobufError;
+use gears::core::errors::CoreError;
 use gears::extensions::gas::GasResultExt;
 use gears::{
     application::keepers::params::ParamsKeeper,
@@ -471,7 +471,7 @@ impl<
             proposal_id,
             content: content
                 .try_into()
-                .map_err(|e: ProtobufError| GovKeeperError::Custom(e.to_string()))?,
+                .map_err(|e: CoreError| GovKeeperError::Custom(e.to_string()))?,
             status: ProposalStatus::DepositPeriod,
             final_tally_result: None,
             submit_time,

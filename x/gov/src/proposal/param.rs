@@ -74,11 +74,16 @@ impl From<RawParameterChangeProposal> for Any {
 }
 
 #[derive(Debug)]
-pub struct ParamChangeSubmissionHandler<PK, SK, PSK>(PhantomData<(PK, SK, PSK)>);
+pub struct ParamChangeProposalHandler<PK, SK, PSK>(PhantomData<(PK, SK, PSK)>);
+
+impl<PK, SK, PSK> ParamChangeProposalHandler<PK, SK, PSK> {
+    pub fn new() -> Self {
+        Self(PhantomData)
+    }
+}
 
 impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>, SK: StoreKey>
-    ProposalHandler<ParameterChangeProposal<PSK>, SK>
-    for ParamChangeSubmissionHandler<PK, SK, PSK>
+    ProposalHandler<ParameterChangeProposal<PSK>, SK> for ParamChangeProposalHandler<PK, SK, PSK>
 {
     fn handle<
         CTX: gears::context::InfallibleContextMut<DB, SK>,
