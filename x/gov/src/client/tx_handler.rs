@@ -15,7 +15,7 @@ use crate::{
         deposit::Deposit, proposal::MsgSubmitProposal, vote::Vote, weighted_vote::MsgVoteWeighted,
         GovMsg,
     },
-    submission::{param::RawParameterChangeProposal, text::TextProposal},
+    proposal::{param::RawParameterChangeProposal, text::TextProposal},
 };
 
 use super::GovClientHandler;

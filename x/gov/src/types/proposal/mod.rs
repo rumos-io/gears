@@ -15,7 +15,7 @@ use gears::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
-    errors::SERDE_JSON_CONVERSION, keeper::KEY_PROPOSAL_PREFIX, submission::ProposalModel,
+    errors::SERDE_JSON_CONVERSION, keeper::KEY_PROPOSAL_PREFIX, proposal::ProposalModel,
 };
 
 pub mod active_iter;

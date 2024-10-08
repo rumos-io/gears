@@ -7,7 +7,7 @@ use gears::{
     types::store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
 };
 
-use crate::submission::ProposalModel;
+use crate::proposal::ProposalModel;
 
 use super::{parse_proposal_key_bytes, Proposal};
 

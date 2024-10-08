@@ -4,7 +4,7 @@ use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::types::store::gas::errors::GasStoreErrors;
 
-pub trait SubmissionHandler<P, SK: StoreKey> {
+pub trait ProposalHandler<P, SK: StoreKey> {
     fn handle<CTX: InfallibleContextMut<DB, SK>, DB: Database>(
         &self,
         proposal: P,

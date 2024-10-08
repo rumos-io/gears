@@ -15,7 +15,7 @@ use crate::{
         },
         GovQuery, GovQueryResponse,
     },
-    submission::ProposalModel,
+    proposal::ProposalModel,
 };
 
 use super::{

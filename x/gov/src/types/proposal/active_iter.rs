@@ -8,7 +8,7 @@ use gears::{
 };
 use serde::de::DeserializeOwned;
 
-use crate::{errors::SERDE_JSON_CONVERSION, submission::ProposalModel};
+use crate::{errors::SERDE_JSON_CONVERSION, proposal::ProposalModel};
 
 use super::{parse_proposal_key_bytes, Proposal};
 

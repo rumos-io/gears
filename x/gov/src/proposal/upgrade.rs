@@ -6,7 +6,7 @@ use gears::{
 use serde::{Deserialize, Serialize};
 use upgrade::{keeper::UpgradeKeeper, types::plan::Plan, Module, UpgradeHandler};
 
-use super::handler::{SubmissionHandler, SubmissionHandlingError};
+use super::handler::{ProposalHandler, SubmissionHandlingError};
 
 mod inner {
 
@@ -75,7 +75,7 @@ impl<SK, M, UH> UpgradeSubmissionHandler<SK, M, UH> {
     }
 }
 
-impl<SK: StoreKey, M: Module, UH: UpgradeHandler> SubmissionHandler<SoftwareUpgradeProposal, SK>
+impl<SK: StoreKey, M: Module, UH: UpgradeHandler> ProposalHandler<SoftwareUpgradeProposal, SK>
     for UpgradeSubmissionHandler<SK, M, UH>
 where
     <M as TryFrom<Vec<u8>>>::Error: std::fmt::Display + std::fmt::Debug,
@@ -102,7 +102,7 @@ where
 }
 
 impl<SK: StoreKey, M: Module, UH: UpgradeHandler>
-    SubmissionHandler<CancelSoftwareUpgradeProposal, SK> for UpgradeSubmissionHandler<SK, M, UH>
+    ProposalHandler<CancelSoftwareUpgradeProposal, SK> for UpgradeSubmissionHandler<SK, M, UH>
 where
     <M as TryFrom<Vec<u8>>>::Error: std::fmt::Display + std::fmt::Debug,
 {

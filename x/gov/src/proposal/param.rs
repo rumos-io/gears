@@ -10,7 +10,7 @@ use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-use super::handler::{SubmissionHandler, SubmissionHandlingError};
+use super::handler::{ProposalHandler, SubmissionHandlingError};
 
 #[derive(Debug, Clone, PartialEq, Raw, Protobuf, AppMessage)]
 #[raw(derive(Serialize, Deserialize, Clone, PartialEq))]
@@ -77,7 +77,7 @@ impl From<RawParameterChangeProposal> for Any {
 pub struct ParamChangeSubmissionHandler<PK, SK, PSK>(PhantomData<(PK, SK, PSK)>);
 
 impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>, SK: StoreKey>
-    SubmissionHandler<ParameterChangeProposal<PSK>, SK>
+    ProposalHandler<ParameterChangeProposal<PSK>, SK>
     for ParamChangeSubmissionHandler<PK, SK, PSK>
 {
     fn handle<

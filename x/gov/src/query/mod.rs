@@ -11,7 +11,7 @@ use response::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::submission::ProposalModel;
+use crate::proposal::ProposalModel;
 
 pub mod request;
 pub mod response;

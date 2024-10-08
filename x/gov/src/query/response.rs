@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     msg::{deposit::Deposit, weighted_vote::MsgVoteWeighted},
     params::{DepositParams, TallyParams, VotingParams},
-    submission::ProposalModel,
+    proposal::ProposalModel,
     types::proposal::{Proposal, TallyResult},
 };
 

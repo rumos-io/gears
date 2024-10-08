@@ -26,7 +26,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use strum::IntoEnumIterator;
 
-use crate::submission::{ProposalModel, SubmissionHandler};
+use crate::proposal::{ProposalHandler, ProposalModel};
 use crate::{
     errors::{GovKeeperError, TallyError, SERDE_JSON_CONVERSION},
     genesis::GovGenesisState,
@@ -72,7 +72,7 @@ pub struct GovKeeper<
     BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     P,
-    PH: SubmissionHandler<Proposal<P>, SK>,
+    PH: ProposalHandler<Proposal<P>, SK>,
 > {
     store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
@@ -91,7 +91,7 @@ impl<
         BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         P: ProposalModel + DeserializeOwned,
-        PH: SubmissionHandler<Proposal<P>, SK>,
+        PH: ProposalHandler<Proposal<P>, SK>,
     > GovKeeper<SK, PSK, M, BK, STK, P, PH>
 {
     pub fn new(
@@ -941,7 +941,7 @@ fn deposit_del<
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
     P: ProposalModel,
-    PH: SubmissionHandler<Proposal<P>, SK>,
+    PH: ProposalHandler<Proposal<P>, SK>,
 >(
     ctx: &mut CTX,
     keeper: &GovKeeper<SK, PSK, M, BK, STK, P, PH>,
@@ -975,7 +975,7 @@ fn deposit_refund<
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
     P: ProposalModel,
-    PH: SubmissionHandler<Proposal<P>, SK>,
+    PH: ProposalHandler<Proposal<P>, SK>,
 >(
     ctx: &mut CTX,
     keeper: &GovKeeper<SK, PSK, M, BK, STK, P, PH>,

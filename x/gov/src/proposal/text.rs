@@ -7,7 +7,7 @@ use gears::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::handler::{SubmissionHandler, SubmissionHandlingError};
+use super::handler::{ProposalHandler, SubmissionHandlingError};
 
 mod inner {
     pub use ibc_proto::cosmos::gov::v1beta1::TextProposal;
@@ -24,7 +24,7 @@ pub struct TextProposal {
 #[derive(Debug, Default)]
 pub struct TextSubmissionHandler<SK>(PhantomData<SK>);
 
-impl<SK: StoreKey> SubmissionHandler<TextProposal, SK> for TextSubmissionHandler<SK> {
+impl<SK: StoreKey> ProposalHandler<TextProposal, SK> for TextSubmissionHandler<SK> {
     fn handle<CTX: InfallibleContextMut<DB, SK>, DB: gears::store::database::Database>(
         &self,
         _proposal: TextProposal,
