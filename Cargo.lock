@@ -2039,6 +2039,7 @@ name = "gov"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum",
  "bytes",
  "chrono",
  "clap",
@@ -2050,6 +2051,8 @@ dependencies = [
  "serde_json",
  "strum",
  "thiserror",
+ "tonic",
+ "tracing",
 ]
 
 [[package]]
