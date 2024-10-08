@@ -162,15 +162,6 @@ impl From<PartSetHeader> for inner::PartSetHeader {
 }
 
 pub(crate) mod inner {
-    pub use ibc_proto::cosmos::staking::v1beta1::Validator;
     pub use tendermint_proto::types::Header;
     pub use tendermint_proto::types::PartSetHeader;
-}
-
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct HistoricalInfo {
-    #[prost(message, optional, tag = "1")]
-    pub header: Option<inner::Header>,
-    #[prost(message, repeated, tag = "2")]
-    pub validators: Vec<inner::Validator>,
 }

@@ -79,6 +79,29 @@ pub fn redelegations_by_val_dst_index_key(val_dst_addr: &ValAddress) -> Vec<u8> 
     .concat()
 }
 
+/// get_ubd_key_from_val_index_key rearranges the ValIndexKey to get the UBDKey
+pub fn get_ubd_key_from_val_index_key(index_key: &[u8]) -> Vec<u8> {
+    assert!(index_key.len() >= 2);
+    let addrs = &index_key[1..];
+    let val_addr_len = addrs[0] as usize;
+    assert!(addrs.len() >= 2 + val_addr_len);
+    let val_addr = &addrs[1..1 + val_addr_len];
+    assert!(addrs.len() >= 3 + val_addr_len);
+    let del_addr = &addrs[2 + val_addr_len..];
+
+    // TODO: consider to create type IndexKey and move logic for it's construction
+    get_ubd_key(
+        &del_addr
+            .to_vec()
+            .try_into()
+            .expect("index key contains valid delegation address"),
+        &val_addr
+            .to_vec()
+            .try_into()
+            .expect("index key contains valid delegation address"),
+    )
+}
+
 /// Creates the key for an unbonding delegation by delegator and validator addr
 /// VALUE: staking/UnbondingDelegation
 pub fn get_ubd_key(del_addr: &AccAddress, val_addr: &ValAddress) -> Vec<u8> {
@@ -109,7 +132,7 @@ pub fn get_ubd_by_val_index_key(del_addr: &AccAddress, val_addr: &ValAddress) ->
 }
 
 /// Creates the prefix keyspace for the indexes of unbonding delegations for a validator
-fn get_ubds_by_val_index_key(val_addr: &ValAddress) -> Vec<u8> {
+pub fn get_ubds_by_val_index_key(val_addr: &ValAddress) -> Vec<u8> {
     [
         &UNBONDING_DELEGATION_BY_VAL_INDEX_KEY,
         val_addr.prefix_len_bytes().as_slice(),

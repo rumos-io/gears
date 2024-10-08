@@ -102,10 +102,10 @@ impl<
 
     fn typed_query<DB: Database>(
         &self,
-        _ctx: &QueryContext<DB, Self::StoreKey>,
-        _query: Self::QReq,
+        ctx: &QueryContext<DB, Self::StoreKey>,
+        query: Self::QReq,
     ) -> Self::QRes {
-        todo!()
+        self.keeper.query(ctx, query).unwrap_gas()
     }
 
     fn run_ante_checks<DB: Database>(

@@ -8,17 +8,20 @@ gears = { path = "../../gears", features = ["cli", "xmods", "governance" ] }
 upgrade = { path = "../upgrade" }
 
 # unsorted
+anyhow = { workspace = true }
+axum = { workspace = true }
+bytes = { workspace = true }
+chrono = { workspace = true, features = [ "serde" ] }
+clap = { workspace = true }
 ibc-proto = { workspace = true }
+nz = { workspace = true }
+prost = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-chrono = { workspace = true, features = [ "serde" ] }
-anyhow = { workspace = true }
-thiserror = { workspace = true }
-bytes = { workspace = true }
-prost = { workspace = true }
 strum = { workspace = true }
-clap = { workspace = true }
-nz = { workspace = true }
+thiserror = { workspace = true }
+tonic = { workspace = true }
+tracing = { workspace = true }
 
 [lints]
 workspace = true
