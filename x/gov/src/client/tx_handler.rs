@@ -15,10 +15,17 @@ use crate::{
         deposit::Deposit, proposal::MsgSubmitProposal, vote::Vote, weighted_vote::MsgVoteWeighted,
         GovMsg,
     },
-    proposal::{param::RawParameterChangeProposal, text::TextProposal},
+    proposal::{
+        param::RawParameterChangeProposal,
+        text::TextProposal,
+        upgrade::{CancelSoftwareUpgradeProposal, SoftwareUpgradeProposal},
+    },
 };
 
-use super::GovClientHandler;
+use super::{
+    cli::tx::{CancelSoftwareUpgradeProposalCliCommand, SoftwareUpgradeProposalCliCommand},
+    GovClientHandler,
+};
 
 impl<T> TxHandler for GovClientHandler<T> {
     type Message = GovMsg;
@@ -79,6 +86,23 @@ impl<T> TxHandler for GovClientHandler<T> {
                         proposer: pubkey.get_address(),
                     })
                 }
+                ProposalCliSubcommand::SoftwareUpgrade(SoftwareUpgradeProposalCliCommand {
+                    file,
+                }) => GovMsg::Proposal(MsgSubmitProposal {
+                    content: serde_json::from_slice::<SoftwareUpgradeProposal>(&std::fs::read(
+                        file,
+                    )?)?
+                    .into(),
+                    initial_deposit,
+                    proposer: pubkey.get_address(),
+                }),
+                ProposalCliSubcommand::CancelSoftwareUpgrade(
+                    CancelSoftwareUpgradeProposalCliCommand { title, description },
+                ) => GovMsg::Proposal(MsgSubmitProposal {
+                    content: CancelSoftwareUpgradeProposal { title, description }.into(),
+                    initial_deposit,
+                    proposer: pubkey.get_address(),
+                }),
             },
         };
         Ok(command.into())

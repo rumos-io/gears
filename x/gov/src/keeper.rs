@@ -471,7 +471,7 @@ impl<
             proposal_id,
             content: content
                 .try_into()
-                .map_err(|e: CoreError| GovKeeperError::Custom(e.to_string()))?,
+                .map_err(|e: CoreError| GovKeeperError::Custom(e.to_string()))?, // TODO: Better way. Generic or smth else
             status: ProposalStatus::DepositPeriod,
             final_tally_result: None,
             submit_time,

@@ -56,6 +56,8 @@ pub struct ProposalCliCommand<T: Subcommand> {
 pub enum ProposalCliSubcommand {
     Text(TextProposalCliCommand),
     ParamChange(ParamChangeProposalCliCommand),
+    SoftwareUpgrade(SoftwareUpgradeProposalCliCommand),
+    CancelSoftwareUpgrade(CancelSoftwareUpgradeProposalCliCommand),
 }
 
 #[derive(Args, Debug, Clone)]
@@ -67,4 +69,15 @@ pub struct TextProposalCliCommand {
 #[derive(Args, Debug, Clone)]
 pub struct ParamChangeProposalCliCommand {
     pub file: PathBuf,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct SoftwareUpgradeProposalCliCommand {
+    pub file: PathBuf,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CancelSoftwareUpgradeProposalCliCommand {
+    pub title: String,
+    pub description: String,
 }
