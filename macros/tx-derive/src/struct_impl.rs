@@ -1,12 +1,13 @@
 use darling::FromAttributes;
 use quote::quote;
-use syn::{spanned::Spanned, DataStruct, Field, Ident};
+use syn::{spanned::Spanned, DataStruct, Field, Generics, Ident};
 
 use crate::MessageAttr;
 
 pub fn expand_macro(
     DataStruct { fields, .. }: DataStruct,
     type_ident: Ident,
+    generics: Generics,
     crate_prefix: proc_macro2::TokenStream,
     url: String,
     amino_url: Option<String>,
@@ -33,19 +34,22 @@ pub fn expand_macro(
         None => (quote! {}, true),
     };
 
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     let type_url_impl = quote! {
-        impl #type_ident
+        impl #impl_generics #type_ident #ty_generics #where_clause
         {
            pub const TYPE_URL : &'static str = #url;
            #amino_url
         }
     };
 
+    let ty_generics_fish = ty_generics.as_turbofish();
     let from_msg_to_any_impl = quote! {
-        impl ::std::convert::From<#type_ident> for  #crate_prefix::core::any::google::Any  {
-            fn from(msg: #type_ident) -> Self {
+        impl #impl_generics ::std::convert::From<#type_ident #ty_generics> for  #crate_prefix::core::any::google::Any #where_clause {
+            fn from(msg: #type_ident #ty_generics) -> Self {
                 #crate_prefix::core::any::google::Any {
-                    type_url: #type_ident::TYPE_URL.to_string(),
+                    type_url: #type_ident #ty_generics_fish ::TYPE_URL.to_string(),
                     value: #crate_prefix::core::Protobuf::encode_vec(&msg),
                 }
             }
@@ -53,7 +57,7 @@ pub fn expand_macro(
     };
 
     let try_from_any_to_msg_impl = quote! {
-        impl TryFrom<#crate_prefix::core::any::google::Any> for #type_ident {
+        impl #impl_generics TryFrom<#crate_prefix::core::any::google::Any> for #type_ident #ty_generics #where_clause {
             type Error = #crate_prefix::core::errors::CoreError;
 
             fn try_from(value: #crate_prefix::core::any::google::Any) -> ::std::result::Result<Self, Self::Error> {
@@ -109,7 +113,7 @@ pub fn expand_macro(
     };
 
     let tx_message_impl = quote! {
-        impl #crate_prefix::types::tx::TxMessage for #type_ident
+        impl #impl_generics #crate_prefix::types::tx::TxMessage for #type_ident #ty_generics #where_clause
         {
             #signers_impl
 

@@ -1,12 +1,13 @@
 use darling::FromAttributes;
 use quote::quote;
-use syn::{DataEnum, Ident};
+use syn::{DataEnum, Generics, Ident};
 
 use crate::MessageAttr;
 
 pub fn expand_macro(
     DataEnum { variants, .. }: DataEnum,
     type_ident: Ident,
+    generics: Generics,
     crate_prefix: proc_macro2::TokenStream,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let get_signers = variants.iter().map(|v| v.clone().ident).map(|i| {
@@ -57,8 +58,10 @@ pub fn expand_macro(
         })
     }
 
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     let gen = quote! {
-        impl  #crate_prefix::types::tx::TxMessage for #type_ident {
+        impl #impl_generics  #crate_prefix::types::tx::TxMessage for #type_ident #ty_generics #where_clause {
 
             fn get_signers(&self) -> Vec<&#crate_prefix::types::address::AccAddress> {
 
@@ -81,7 +84,7 @@ pub fn expand_macro(
 
         }
 
-        impl From<#type_ident> for #crate_prefix::core::any::google::Any {
+        impl #impl_generics From<#type_ident #ty_generics> for #crate_prefix::core::any::google::Any #where_clause {
             fn from(msg: #type_ident) -> Self {
                 match msg {
                     #(#into_any),*
@@ -89,7 +92,7 @@ pub fn expand_macro(
             }
         }
 
-        impl TryFrom<#crate_prefix::core::any::google::Any> for #type_ident {
+        impl #impl_generics TryFrom<#crate_prefix::core::any::google::Any> for #type_ident #ty_generics #where_clause {
             type Error = #crate_prefix::core::errors::CoreError;
 
             fn try_from(value: #crate_prefix::core::any::google::Any) -> Result<Self, Self::Error> {

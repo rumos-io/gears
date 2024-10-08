@@ -1,16 +1,14 @@
-use bytes::Bytes;
 use gears::{
-    core::{errors::CoreError, Protobuf},
-    derive::{Protobuf, Raw},
-    error::ProtobufError,
+    derive::{AppMessage, Protobuf, Raw},
     params::ParamsSubspaceKey,
 };
 use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Raw, Protobuf)]
+#[derive(Debug, Clone, PartialEq, Raw, Protobuf, AppMessage)]
 #[raw(derive(Serialize, Deserialize, Clone, PartialEq))]
+#[msg(url = "/cosmos.params.v1beta1/ParamChange")]
 pub struct ParamChange<PSK: ParamsSubspaceKey> {
     #[raw(kind(string), raw = String)]
     #[proto(
@@ -28,41 +26,36 @@ pub struct ParamChange<PSK: ParamsSubspaceKey> {
     pub value: Vec<u8>,
 }
 
-impl<PSK: ParamsSubspaceKey> ParamChange<PSK> {
-    pub const TYPE_URL: &'static str = "/cosmos.params.v1beta1/ParamChange";
-}
-
-impl<PSK: ParamsSubspaceKey> TryFrom<Any> for ParamChange<PSK> {
-    type Error = CoreError;
-
-    fn try_from(value: Any) -> Result<Self, Self::Error> {
-        if value.type_url != Self::TYPE_URL {
-            Err(CoreError::DecodeGeneral(
-                "message type not recognized".into(),
-            ))?
-        }
-        ParamChange::decode::<Bytes>(value.value.into())
-            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
+// Serde macro slightly dumb for such cases so I did it myself
+impl<PSK: ParamsSubspaceKey> serde::Serialize for ParamChange<PSK> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        RawParamChange::from(self.clone()).serialize(serializer)
     }
 }
 
-impl<PSK: ParamsSubspaceKey> From<ParamChange<PSK>> for Any {
-    fn from(msg: ParamChange<PSK>) -> Self {
-        Any {
-            type_url: ParamChange::<PSK>::TYPE_URL.to_string(),
-            value: msg.encode_vec(),
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Message, Serialize, Deserialize)]
-pub struct RawParameterChangeProposal {
-    #[prost(string, tag = "1")]
+#[derive(Debug, Clone, PartialEq, Raw, Protobuf, AppMessage)]
+#[raw(derive(Serialize, Deserialize, Clone, PartialEq))]
+#[msg(url = "/cosmos.params.v1beta1/ParameterChangeProposal")]
+pub struct ParameterChangeProposal<PSK: ParamsSubspaceKey> {
+    #[raw(kind(string), raw = String)]
     pub title: String,
-    #[prost(string, tag = "2")]
+    #[raw(kind(string), raw = String)]
     pub description: String,
-    #[prost(repeated, message, tag = "3")]
-    pub changes: Vec<RawParamChange>,
+    #[raw(kind(message), raw = RawParamChange, repeated)]
+    #[proto(repeated)]
+    pub changes: Vec<ParamChange<PSK>>,
+}
+
+impl<PSK: ParamsSubspaceKey> Serialize for ParameterChangeProposal<PSK> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        RawParameterChangeProposal::from(self.clone()).serialize(serializer)
+    }
 }
 
 impl From<RawParameterChangeProposal> for Any {
@@ -70,82 +63,6 @@ impl From<RawParameterChangeProposal> for Any {
         Any {
             type_url: "/cosmos.params.v1beta1/ParameterChangeProposal".to_owned(),
             value: msg.encode_to_vec(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ParameterChangeProposal<PSK: ParamsSubspaceKey> {
-    pub title: String,
-    pub description: String,
-    pub changes: Vec<ParamChange<PSK>>,
-}
-
-impl<PSK: ParamsSubspaceKey> ParameterChangeProposal<PSK> {
-    pub const TYPE_URL: &'static str = "/cosmos.params.v1beta1/ParameterChangeProposal";
-}
-
-impl<PSK: ParamsSubspaceKey> Protobuf<RawParameterChangeProposal> for ParameterChangeProposal<PSK> {}
-
-impl<PSK: ParamsSubspaceKey> TryFrom<RawParameterChangeProposal> for ParameterChangeProposal<PSK> {
-    type Error = ProtobufError;
-
-    fn try_from(
-        RawParameterChangeProposal {
-            title,
-            description,
-            changes,
-        }: RawParameterChangeProposal,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            title,
-            description,
-            changes: {
-                let mut result = Vec::with_capacity(changes.len());
-                for change in changes {
-                    result.push(change.try_into()?)
-                }
-                result
-            },
-        })
-    }
-}
-
-impl<PSK: ParamsSubspaceKey> From<ParameterChangeProposal<PSK>> for RawParameterChangeProposal {
-    fn from(
-        ParameterChangeProposal {
-            title,
-            description,
-            changes,
-        }: ParameterChangeProposal<PSK>,
-    ) -> Self {
-        Self {
-            title,
-            description,
-            changes: changes.into_iter().map(|e| e.into()).collect(),
-        }
-    }
-}
-
-impl<PSK: ParamsSubspaceKey> TryFrom<Any> for ParameterChangeProposal<PSK> {
-    type Error = CoreError;
-
-    fn try_from(value: Any) -> Result<Self, Self::Error> {
-        if value.type_url != Self::TYPE_URL {
-            Err(CoreError::DecodeGeneral(
-                "message type not recognized".into(),
-            ))?
-        }
-        Self::decode::<Bytes>(value.value.into())
-            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
-    }
-}
-
-impl<PSK: ParamsSubspaceKey> From<ParameterChangeProposal<PSK>> for Any {
-    fn from(msg: ParameterChangeProposal<PSK>) -> Self {
-        Any {
-            type_url: ParameterChangeProposal::<PSK>::TYPE_URL.to_string(),
-            value: msg.encode_vec(),
         }
     }
 }
