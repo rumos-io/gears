@@ -15,6 +15,7 @@ integer-encoding = { workspace = true }
 nutype = { workspace = true }
 sha2 = { workspace = true }
 thiserror = {workspace = true}
+hex = { workspace = true }
 
 #serialization
 
@@ -24,7 +25,6 @@ caches = "0.2.4"
 [dev-dependencies]
 criterion = "0.5.1"
 handlebars = { workspace = true }
-hex = { workspace = true }
 pprof = { version = "0.13.0", features = ["flamegraph", "criterion"] }
 rand = { workspace = true }
 serde = { workspace = true }
