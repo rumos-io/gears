@@ -20,7 +20,7 @@ use staking::StakingParamsKeeper;
 
 use crate::store_keys::GaiaParamsStoreKey;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GaiaProposalHandler;
 
 impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaProposalHandler {
@@ -58,6 +58,7 @@ impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaProposalHandler {
                         ),
                         GaiaParamsStoreKey::IBC => Err(SubmissionHandlingError::Subspace),
                         GaiaParamsStoreKey::Capability => Err(SubmissionHandlingError::Subspace),
+                        GaiaParamsStoreKey::Gov => todo!(), //TODO: Implement governance
                     }?;
                 }
 
@@ -114,6 +115,7 @@ impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaProposalHandler {
                                 }
                                 GaiaParamsStoreKey::IBC => false,
                                 GaiaParamsStoreKey::Capability => false,
+                                GaiaParamsStoreKey::Gov => false,
                             } {
                                 return false;
                             }

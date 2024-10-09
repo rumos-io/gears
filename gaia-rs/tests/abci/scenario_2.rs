@@ -14,13 +14,13 @@ use crate::{setup_mock_node, USER_0, USER_1};
 fn scenario_2() {
     let genesis_path = Path::new("./tests/abci/assets/scenario_2_genesis.json");
     let (mut node, _) = setup_mock_node(Some(genesis_path));
-    let user_0 = crate::user(4, USER_0);
-    let user_1 = crate::user(5, USER_1);
+    let user_0 = crate::user(5, USER_0);
+    let user_1 = crate::user(6, USER_1);
 
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
-        "e6e9ca71bd1f2c472018e02306c70b7058196e4211f62c93803a6e6c74922711"
+        "87308fa82b6de74ed14ac1e701aeb66e7844494ba1713c37328cca3ce7884bf0"
     );
 
     //----------------------------------------
@@ -58,15 +58,14 @@ fn scenario_2() {
 
     let txs = generate_tx(vec1::vec1![msg], 0, &user_1, node.chain_id().clone());
 
-    let app_hash = node
-        .step(
-            vec![txs],
-            Timestamp::try_new(0, 0).expect("hardcoded is valid"),
-        )
-        .app_hash;
+    let step_response = node.step(
+        vec![txs],
+        Timestamp::try_new(0, 0).expect("hardcoded is valid"),
+    );
+    assert_eq!(step_response.tx_responses[0].code, 0);
     assert_eq!(
-        hex::encode(app_hash),
-        "6f02c4708c36481eeb65acf704340d906af5737702dbf05fc8bf4dd29a92f16e"
+        hex::encode(step_response.app_hash),
+        "7134aa05a768927784a369aecdc42bd1c77c01c41e6bbf861cb52edefd2f6ff5"
     );
 
     //----------------------------------------
@@ -89,15 +88,14 @@ fn scenario_2() {
 
     let txs = generate_tx(vec1::vec1![msg], 1, &user_1, node.chain_id().clone());
 
-    let app_hash = node
-        .step(
-            vec![txs],
-            Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
-        )
-        .app_hash;
+    let step_response = node.step(
+        vec![txs],
+        Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
+    );
+    assert_eq!(step_response.tx_responses[0].code, 0);
     assert_eq!(
-        hex::encode(app_hash),
-        "68f309714a2273b0f8ad93f318bc5a0dd418bd2bdd1431a6a848ae104c98a39b"
+        hex::encode(step_response.app_hash),
+        "661cf36acf893031c237cb8381845211fa8ee59160e4e0bd0c86f56e17d8f0d5"
     );
 
     //----------------------------------------
@@ -112,16 +110,15 @@ fn scenario_2() {
 
     let txs = generate_tx(vec1::vec1![msg], 2, &user_1, node.chain_id().clone());
 
-    let app_hash = node
-        .step(
-            vec![txs],
-            Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
-        )
-        .app_hash;
+    let step_response = node.step(
+        vec![txs],
+        Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
+    );
+    assert_eq!(step_response.tx_responses[0].code, 0);
 
     assert_eq!(
-        hex::encode(app_hash),
-        "2511608d208a0a99b5761f3820f8719ae71c6b67b577961caa993389d94985e7"
+        hex::encode(step_response.app_hash),
+        "86995fd7296fa474c6b2fcead1ac40b36b5b69e03e97bd47e0549157719535f0"
     );
 
     //----------------------------------------
@@ -137,16 +134,15 @@ fn scenario_2() {
 
     let txs = generate_tx(vec1::vec1![msg], 3, &user_1, node.chain_id().clone());
 
-    let app_hash = node
-        .step(
-            vec![txs],
-            Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
-        )
-        .app_hash;
+    let step_response = node.step(
+        vec![txs],
+        Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
+    );
+    assert_eq!(step_response.tx_responses[0].code, 0);
 
     assert_eq!(
-        hex::encode(app_hash),
-        "0cd0c37bfd4457d991ef5a694b3d903dc673a4836632147ba8ff1177c8d9632a"
+        hex::encode(step_response.app_hash),
+        "02347e5bb6d59518bed1c73cbbbf22025c242f01332d5101aa1310080dfe243a"
     );
 
     //----------------------------------------
@@ -161,16 +157,15 @@ fn scenario_2() {
 
     let txs = generate_tx(vec1::vec1![msg], 4, &user_1, node.chain_id().clone());
 
-    let app_hash = node
-        .step(
-            vec![txs],
-            Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
-        )
-        .app_hash;
+    let step_response = node.step(
+        vec![txs],
+        Timestamp::try_new(60 * 60 * 24, 0).expect("hardcoded is valid"),
+    );
+    assert_eq!(step_response.tx_responses[0].code, 0);
 
     assert_eq!(
-        hex::encode(app_hash),
-        "faf91423473800d139357be23c124a6d3b2919e9859e81d4b86a8c8f44d33b3d"
+        hex::encode(step_response.app_hash),
+        "9ebdae93785523a55178ede198f70adfbc86126b7fffda4f95c784a2f8cd2960"
     );
 
     //----------------------------------------
@@ -181,6 +176,6 @@ fn scenario_2() {
         .app_hash; // 30 days which is greater than the unbonding time
     assert_eq!(
         hex::encode(app_hash),
-        "3d8b7d855a8728d93c1a3918774cfdbf093b3263fdcdba1e1a0a9093466b43e9"
+        "ef1d229776930752d005278738ea2ceab02dc184e4a0795e4f8dd503bc2a87d6"
     );
 }

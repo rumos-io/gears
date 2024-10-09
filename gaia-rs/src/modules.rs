@@ -5,6 +5,7 @@ pub enum GaiaModules {
     FeeCollector,
     BondedPool,
     NotBondedPool,
+    Gov,
 }
 
 impl Module for GaiaModules {
@@ -13,6 +14,7 @@ impl Module for GaiaModules {
             GaiaModules::FeeCollector => "fee_collector".into(),
             GaiaModules::BondedPool => staking::BONDED_POOL_NAME.into(),
             GaiaModules::NotBondedPool => staking::NOT_BONDED_POOL_NAME.into(),
+            GaiaModules::Gov => "gov".into(),
         }
     }
 
@@ -21,6 +23,7 @@ impl Module for GaiaModules {
             GaiaModules::FeeCollector => vec![],
             GaiaModules::BondedPool => vec!["burner".into(), "staking".into()],
             GaiaModules::NotBondedPool => vec!["burner".into(), "staking".into()],
+            GaiaModules::Gov => vec!["burner".into()],
         }
     }
 }

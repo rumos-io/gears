@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use gears::baseapp::QueryResponse;
 use gears::extensions::gas::GasResultExt;
 use gears::tendermint::request::RequestEndBlock;
+use gears::x::keepers::auth::AuthKeeper;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
     baseapp::errors::QueryError,
@@ -50,11 +51,12 @@ pub struct GovAbciHandler<
     PSK: ParamsSubspaceKey,
     M: Module,
     BK: GovernanceBankKeeper<SK, M>,
+    AK: AuthKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     PH: ProposalHandler<PSK, Proposal>,
     MI,
 > {
-    keeper: GovKeeper<SK, PSK, M, BK, STK, PH>,
+    keeper: GovKeeper<SK, PSK, M, BK, AK, STK, PH>,
     _marker: PhantomData<MI>,
 }
 
@@ -63,12 +65,13 @@ impl<
         PSK: ParamsSubspaceKey,
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
+        AK: AuthKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         PH: ProposalHandler<PSK, Proposal>,
         MI: ModuleInfo,
-    > GovAbciHandler<SK, PSK, M, BK, STK, PH, MI>
+    > GovAbciHandler<SK, PSK, M, BK, AK, STK, PH, MI>
 {
-    pub fn new(keeper: GovKeeper<SK, PSK, M, BK, STK, PH>) -> Self {
+    pub fn new(keeper: GovKeeper<SK, PSK, M, BK, AK, STK, PH>) -> Self {
         Self {
             keeper,
             _marker: PhantomData,
@@ -81,10 +84,11 @@ impl<
         PSK: ParamsSubspaceKey,
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
+        AK: AuthKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         PH: ProposalHandler<PSK, Proposal> + Clone + Send + Sync + 'static,
         MI: ModuleInfo + Clone + Send + Sync + 'static,
-    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK, PH, MI>
+    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, AK, STK, PH, MI>
 {
     type Message = GovMsg;
 

@@ -16,6 +16,8 @@ pub enum GaiaStoreKey {
     IBC,
     #[skey(to_string = "capability")]
     Capability,
+    #[skey(to_string = "gov")]
+    Gov,
 }
 
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys)]
@@ -32,4 +34,6 @@ pub enum GaiaParamsStoreKey {
     IBC,
     #[pkey(to_string = "capability/")]
     Capability,
+    #[pkey(to_string = "gov/")]
+    Gov,
 }

@@ -2048,6 +2048,7 @@ dependencies = [
  "prost",
  "serde",
  "serde_json",
+ "serde_with",
  "strum",
  "thiserror",
 ]

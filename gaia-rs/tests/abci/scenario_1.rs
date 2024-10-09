@@ -1,3 +1,7 @@
+use bank::types::query::{QueryBalanceRequest, QueryBalanceResponse};
+use gears::core::Protobuf;
+use gears::extensions::testing::UnwrapTesting;
+use gears::tendermint::types::request::query::RequestQuery;
 use gears::tendermint::types::time::timestamp::Timestamp;
 use gears::types::base::coins::Coins;
 use gears::types::msg::send::MsgSend;
@@ -13,7 +17,7 @@ fn scenario_1() {
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
-        "36fd98b5248f0e4bfa6ef4e311134403b1b3deb8865bdbba7187cf05e5644a83"
+        "76db0b7e8c2bbe8340719649cd7ceb18490a2789908634da1433f22493dcec5d"
     );
 
     node.step(vec![], Timestamp::UNIX_EPOCH);
@@ -33,9 +37,27 @@ fn scenario_1() {
 
     let txs = generate_tx(vec1::vec1![msg], 0, &user, node.chain_id().clone());
 
-    let app_hash = node.step(vec![txs], Timestamp::UNIX_EPOCH).app_hash;
+    let step_response = node.step(vec![txs], Timestamp::UNIX_EPOCH);
+
     assert_eq!(
-        hex::encode(app_hash),
-        "8eb5f41a3f77e034185be06e5385ff0d0a42f8d0f59171b1cc12b1ac6a66bbef"
+        hex::encode(step_response.app_hash),
+        "6276d7ba6271d98a204f58873797954a267bba87e3e9749fab630009a7df1c8d"
+    );
+
+    // check user balance
+    let query = QueryBalanceRequest {
+        address: user.address().into(),
+        denom: "uatom".try_into().unwrap_test(),
+    };
+    let res = node.query(RequestQuery {
+        data: query.encode_vec().into(),
+        path: "/cosmos.bank.v1beta1.Query/Balance".to_string(),
+        height: 0,
+        prove: false,
+    });
+    let res = QueryBalanceResponse::decode(res.value).unwrap();
+    assert_eq!(
+        res.balance,
+        Some("23uatom".parse().expect("hard coded coin is valid"))
     );
 }
