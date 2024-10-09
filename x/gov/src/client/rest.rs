@@ -1,9 +1,12 @@
-use crate::query::{
-    request::{
-        ParamsQuery, QueryDepositsRequest, QueryParamsRequest, QueryProposalRequest,
-        QueryProposalsRequest, QueryTallyResultRequest, QueryVoteRequest, QueryVotesRequest,
+use crate::{
+    proposal::Proposal,
+    query::{
+        request::{
+            ParamsQuery, QueryDepositsRequest, QueryParamsRequest, QueryProposalRequest,
+            QueryProposalsRequest, QueryTallyResultRequest, QueryVoteRequest, QueryVotesRequest,
+        },
+        GovQuery, GovQueryResponse,
     },
-    GovQuery, GovQueryResponse,
 };
 use axum::{
     extract::{Path, Query, State},
@@ -18,8 +21,9 @@ use gears::{
 
 pub async fn proposals<
     QReq: QueryRequest + From<GovQuery>,
-    QRes: QueryResponse + TryInto<GovQueryResponse>,
+    QRes: QueryResponse + TryInto<GovQueryResponse<P>>,
     App: NodeQueryHandler<QReq, QRes>,
+    P: Proposal,
 >(
     Query(pagination): Query<Pagination>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
@@ -36,8 +40,9 @@ pub async fn proposals<
 
 pub async fn proposals_proposal_id<
     QReq: QueryRequest + From<GovQuery>,
-    QRes: QueryResponse + TryInto<GovQueryResponse>,
+    QRes: QueryResponse + TryInto<GovQueryResponse<P>>,
     App: NodeQueryHandler<QReq, QRes>,
+    P: Proposal,
 >(
     Path(proposal_id): Path<u64>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
@@ -49,8 +54,9 @@ pub async fn proposals_proposal_id<
 
 pub async fn proposals_deposits<
     QReq: QueryRequest + From<GovQuery>,
-    QRes: QueryResponse + TryInto<GovQueryResponse>,
+    QRes: QueryResponse + TryInto<GovQueryResponse<P>>,
     App: NodeQueryHandler<QReq, QRes>,
+    P: Proposal,
 >(
     Path(proposal_id): Path<u64>,
     Query(pagination): Query<Pagination>,
@@ -66,8 +72,9 @@ pub async fn proposals_deposits<
 
 pub async fn proposals_tally<
     QReq: QueryRequest + From<GovQuery>,
-    QRes: QueryResponse + TryInto<GovQueryResponse>,
+    QRes: QueryResponse + TryInto<GovQueryResponse<P>>,
     App: NodeQueryHandler<QReq, QRes>,
+    P: Proposal,
 >(
     Path(proposal_id): Path<u64>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
@@ -79,8 +86,9 @@ pub async fn proposals_tally<
 
 pub async fn proposals_votes<
     QReq: QueryRequest + From<GovQuery>,
-    QRes: QueryResponse + TryInto<GovQueryResponse>,
+    QRes: QueryResponse + TryInto<GovQueryResponse<P>>,
     App: NodeQueryHandler<QReq, QRes>,
+    P: Proposal,
 >(
     Path(proposal_id): Path<u64>,
     Query(pagination): Query<Pagination>,
@@ -96,8 +104,9 @@ pub async fn proposals_votes<
 
 pub async fn proposals_votes_voter<
     QReq: QueryRequest + From<GovQuery>,
-    QRes: QueryResponse + TryInto<GovQueryResponse>,
+    QRes: QueryResponse + TryInto<GovQueryResponse<P>>,
     App: NodeQueryHandler<QReq, QRes>,
+    P: Proposal,
 >(
     Path((proposal_id, voter)): Path<(u64, AccAddress)>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
@@ -109,8 +118,9 @@ pub async fn proposals_votes_voter<
 
 pub async fn params_voting<
     QReq: QueryRequest + From<GovQuery>,
-    QRes: QueryResponse + TryInto<GovQueryResponse>,
+    QRes: QueryResponse + TryInto<GovQueryResponse<P>>,
     App: NodeQueryHandler<QReq, QRes>,
+    P: Proposal,
 >(
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
@@ -123,8 +133,9 @@ pub async fn params_voting<
 
 pub async fn params_tally<
     QReq: QueryRequest + From<GovQuery>,
-    QRes: QueryResponse + TryInto<GovQueryResponse>,
+    QRes: QueryResponse + TryInto<GovQueryResponse<P>>,
     App: NodeQueryHandler<QReq, QRes>,
+    P: Proposal,
 >(
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
@@ -137,8 +148,9 @@ pub async fn params_tally<
 
 pub async fn params_deposit<
     QReq: QueryRequest + From<GovQuery>,
-    QRes: QueryResponse + TryInto<GovQueryResponse>,
+    QRes: QueryResponse + TryInto<GovQueryResponse<P>>,
     App: NodeQueryHandler<QReq, QRes>,
+    P: Proposal,
 >(
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
@@ -151,8 +163,9 @@ pub async fn params_deposit<
 
 pub fn get_router<
     QReq: QueryRequest + From<GovQuery>,
-    QRes: QueryResponse + TryInto<GovQueryResponse>,
+    QRes: QueryResponse + TryInto<GovQueryResponse<P>>,
     App: NodeQueryHandler<QReq, QRes>,
+    P: Proposal,
 >() -> Router<RestState<QReq, QRes, App>> {
     Router::new()
         .route("/v1beta1/proposals", get(proposals))

@@ -19,11 +19,22 @@ struct ProtobufAttr {
     name: Option<syn::Ident>,
     #[darling(flatten, default)]
     opt: OptionalOrRepeated,
+    from: Option<syn::TypePath>,
+    from_ref: Flag,
+    into: Option<syn::TypePath>,
+    into_ref: Flag,
 }
 
 pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let ProtobufArg { raw, gears } = ProtobufArg::from_derive_input(&input)?;
-    let DeriveInput { ident, data, .. } = input;
+    let DeriveInput {
+        ident,
+        data,
+        generics,
+        ..
+    } = input;
+
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let crate_prefix = match gears.is_present() {
         true => quote! { crate },
@@ -41,14 +52,21 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
     };
 
     let protobuf_trait_impl = quote! {
-        impl  #crate_prefix ::core::Protobuf<#raw> for #ident {}
+        impl #impl_generics #crate_prefix ::core::Protobuf<#raw> for #ident #ty_generics #where_clause  {}
     };
 
     match data {
         syn::Data::Struct(DataStruct { fields, .. }) => {
             let mut raw_fields = Vec::new();
             for field in fields {
-                let ProtobufAttr { name, opt } = ProtobufAttr::from_attributes(&field.attrs)?;
+                let ProtobufAttr {
+                    name,
+                    opt,
+                    from,
+                    into,
+                    from_ref,
+                    into_ref,
+                } = ProtobufAttr::from_attributes(&field.attrs)?;
 
                 let field_indent = field.ident.clone().ok_or(syn::Error::new(
                     field.span(),
@@ -62,18 +80,38 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
                     field_indent,
                     FieldWrapper::from_type(&field.ty)?,
                     opt.kind(),
+                    (from, from_ref),
+                    (into, into_ref),
                 ))
             }
 
             let from_fields_iter_gen = {
                 let mut from_fields = Vec::with_capacity(raw_fields.len());
 
-                for (other_name, field_ident, field_kind, other_field_kind) in &raw_fields {
+                for (
+                    other_name,
+                    field_ident,
+                    field_kind,
+                    other_field_kind,
+                    _from,
+                    (into, into_ref),
+                ) in &raw_fields
+                {
+                    let into_method = match into.as_ref() {
+                        Some(var) => quote! { #var },
+                        None => quote! { ::std::convert::Into::into },
+                    };
+
+                    let value_prefix = match into_ref.is_present() {
+                        true => quote! { & },
+                        false => quote! {},
+                    };
+
                     let result = match (field_kind, other_field_kind) {
                         (FieldWrapper::Optional, FieldWrapper::Optional) => quote! {
                             #other_name : match value.#field_ident
                             {
-                                ::std::option::Option::Some(var) => ::std::option::Option::Some( ::std::convert::Into::into(var)),
+                                ::std::option::Option::Some(var) => ::std::option::Option::Some( #into_method ( #value_prefix var)),
                                 ::std::option::Option::None => ::std::option::Option::None,
                             }
                         },
@@ -95,7 +133,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
 
                                 for field in value.#field_ident
                                 {
-                                    buffer.push( ::std::convert::Into::into(field) );
+                                    buffer.push( #into_method ( #value_prefix field) );
                                 }
 
                                 buffer
@@ -106,14 +144,14 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
                             "Can't cast Vec to field",
                         ))?,
                         (FieldWrapper::None, FieldWrapper::Optional) => quote! {
-                            #other_name : ::std::option::Option::Some(::std::convert::Into::into(value.#field_ident))
+                            #other_name : ::std::option::Option::Some( #into_method ( #value_prefix value.#field_ident))
                         },
                         (FieldWrapper::None, FieldWrapper::Vec) => Err(syn::Error::new_spanned(
                             field_ident,
                             "Can't cast Vec to field",
                         ))?,
                         (FieldWrapper::None, FieldWrapper::None) => quote! {
-                            #other_name : ::std::convert::Into::into(value.#field_ident)
+                            #other_name : #into_method (#value_prefix value.#field_ident)
                         },
                     };
 
@@ -124,8 +162,8 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
             };
 
             let from_impl = quote! {
-                impl ::std::convert::From<#ident> for #raw {
-                    fn from(value: #ident) -> Self {
+                impl #impl_generics ::std::convert::From<#ident #ty_generics > for #raw #where_clause {
+                    fn from(value: #ident #ty_generics) -> Self {
                         Self
                         {
                             #(#from_fields_iter_gen),*
@@ -137,11 +175,29 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
             let try_from_fields_iter_gen = {
                 let mut from_fields = Vec::with_capacity(raw_fields.len());
 
-                for (other_name, field_ident, field_kind, other_field_kind) in raw_fields {
+                for (
+                    other_name,
+                    field_ident,
+                    field_kind,
+                    other_field_kind,
+                    (from, from_ref),
+                    _into,
+                ) in raw_fields
+                {
+                    let from_method = match from.as_ref() {
+                        Some(var) => quote! { #var },
+                        None => quote! { ::std::convert::TryFrom::try_from },
+                    };
+
+                    let value_prefix = match from_ref.is_present() {
+                        true => quote! { & },
+                        false => quote! {},
+                    };
+
                     let result = match (field_kind, other_field_kind) {
                         (FieldWrapper::Optional, FieldWrapper::Optional) => quote! {
                             #field_ident : match value.#other_name {
-                                Some(var) => Some(::std::convert::TryFrom::try_from(var)?),
+                                Some(var) => Some( #from_method (#value_prefix var)?),
                                 None => None,
                             }
                         },
@@ -149,18 +205,18 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
                             syn::Error::new_spanned(field_ident, "Can't cast Vec to Option"),
                         )?,
                         (FieldWrapper::Optional, FieldWrapper::None) => quote! {
-                            #field_ident : ::std::option::Option::Some(::std::convert::TryFrom::try_from(value.#other_name))
+                            #field_ident : ::std::option::Option::Some( #from_method (#value_prefix value.#other_name))
                         },
                         (FieldWrapper::Vec, FieldWrapper::Optional) => Err(
                             syn::Error::new_spanned(field_ident, "Can't cast Vec to Option"),
                         )?,
                         (FieldWrapper::Vec, FieldWrapper::Vec) => quote! {
                             #field_ident : {
-                                let mut buffer = std::vec::Vec::with_capacity(value.#other_name.len());
+                                let mut buffer = std::vec::Vec::with_capacity(#value_prefix value.#other_name.len());
 
                                 for field in value.#other_name
                                 {
-                                    buffer.push( ::std::convert::TryFrom::try_from(field)?);
+                                    buffer.push( #from_method (field)?);
                                 }
 
                                 buffer
@@ -176,7 +232,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
                             quote! {
                                 #field_ident : match value.#other_name
                                 {
-                                    ::std::option::Option::Some(var) => ::std::result::Result::Ok( ::std::convert::TryFrom::try_from(var)?),
+                                    ::std::option::Option::Some(var) => ::std::result::Result::Ok( #from_method (#value_prefix var)?),
                                     ::std::option::Option::None => ::std::result::Result::Err( #crate_prefix ::error::ProtobufError::MissingField( ::std::format!( "Missing field: {}", #other_name_str ))),
                                 }?
                             }
@@ -186,7 +242,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
                             "Can't cast Vec to field",
                         ))?,
                         (FieldWrapper::None, FieldWrapper::None) => quote! {
-                            #field_ident : ::std::convert::TryFrom::try_from(value.#other_name)?
+                            #field_ident : #from_method (#value_prefix value.#other_name)?
                         },
                     };
 
@@ -198,7 +254,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
 
             let try_from = quote! {
 
-                impl TryFrom<#raw> for #ident {
+                impl #impl_generics TryFrom<#raw> for #ident #ty_generics #where_clause  {
                     type Error = #crate_prefix ::error::ProtobufError;
 
                     fn try_from(value: #raw) -> ::std::result::Result<Self, Self::Error> {

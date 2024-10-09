@@ -1,7 +1,7 @@
 use gears::{
-    core::errors::CoreError,
-    core::Protobuf,
+    core::{errors::CoreError, Protobuf},
     derive::{Protobuf, Query},
+    error::ProtobufError,
     types::{address::AccAddress, pagination::response::PaginationResponse},
 };
 use serde::{Deserialize, Serialize};
@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     msg::{deposit::Deposit, weighted_vote::MsgVoteWeighted},
     params::{DepositParams, TallyParams, VotingParams},
-    types::proposal::{Proposal, TallyResult},
+    proposal::Proposal,
+    types::proposal::{ProposalModel, TallyResult},
 };
 
 mod inner {
@@ -27,20 +28,20 @@ mod inner {
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
 #[proto(raw = "inner::QueryProposalResponse")]
-pub struct QueryProposalResponse {
+pub struct QueryProposalResponse<T: Proposal> {
     #[proto(optional)]
-    pub proposal: Option<Proposal>,
+    pub proposal: Option<ProposalModel<T>>,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
 // #[query(raw = "inner::QueryProposalsResponse")]
-pub struct QueryProposalsResponse {
-    pub proposals: Vec<Proposal>,
+pub struct QueryProposalsResponse<T: Proposal> {
+    pub proposals: Vec<ProposalModel<T>>,
     pub pagination: Option<PaginationResponse>,
 }
 
-impl TryFrom<inner::QueryProposalsResponse> for QueryProposalsResponse {
-    type Error = CoreError;
+impl<T: Proposal> TryFrom<inner::QueryProposalsResponse> for QueryProposalsResponse<T> {
+    type Error = ProtobufError;
 
     fn try_from(
         inner::QueryProposalsResponse {
@@ -63,12 +64,12 @@ impl TryFrom<inner::QueryProposalsResponse> for QueryProposalsResponse {
     }
 }
 
-impl From<QueryProposalsResponse> for inner::QueryProposalsResponse {
+impl<T: Proposal> From<QueryProposalsResponse<T>> for inner::QueryProposalsResponse {
     fn from(
         QueryProposalsResponse {
             proposals,
             pagination,
-        }: QueryProposalsResponse,
+        }: QueryProposalsResponse<T>,
     ) -> Self {
         Self {
             proposals: proposals.into_iter().map(|this| this.into()).collect(),
@@ -77,7 +78,7 @@ impl From<QueryProposalsResponse> for inner::QueryProposalsResponse {
     }
 }
 
-impl Protobuf<inner::QueryProposalsResponse> for QueryProposalsResponse {}
+impl<T: Proposal> Protobuf<inner::QueryProposalsResponse> for QueryProposalsResponse<T> {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
 #[proto(raw = "inner::QueryVoteResponse")]

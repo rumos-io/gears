@@ -53,7 +53,12 @@ pub fn message_derive(input: TokenStream) -> TokenStream {
 }
 
 fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
-    let DeriveInput { ident, data, .. } = &input;
+    let DeriveInput {
+        ident,
+        data,
+        generics,
+        ..
+    } = &input;
     let QueryAttr { kind, url, gears } = QueryAttr::from_derive_input(&input)?;
 
     let crate_prefix = match gears.is_present() {
@@ -83,12 +88,14 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
         }
     };
 
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     match data {
         syn::Data::Struct(_) => match kind {
             Kind::Request => {
                 let url = match url {
                     Some(url) => quote! {
-                        impl #ident
+                        impl #impl_generics #ident #ty_generics #where_clause
                         {
                            pub const QUERY_URL : &'static str = #url;
                         }
@@ -100,7 +107,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 };
 
                 let query_trait = quote! {
-                    impl  #crate_prefix ::baseapp::Query for #ident {
+                    impl #impl_generics #crate_prefix ::baseapp::Query for #ident #ty_generics #where_clause {
                         fn query_url(&self) -> &'static str  {
                             Self::QUERY_URL
                         }
@@ -122,7 +129,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
             Kind::Response => {
                 let url = match url {
                     Some(_) => quote! {
-                        impl #ident
+                        impl #impl_generics #ident #ty_generics #where_clause
                         {
                            pub const QUERY_URL : &'static str = #url;
                         }
@@ -131,7 +138,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 };
 
                 let trait_impl = quote! {
-                    impl  #crate_prefix ::baseapp::QueryResponse for #ident {
+                    impl #impl_generics #crate_prefix ::baseapp::QueryResponse for #ident #ty_generics #where_clause {
                         fn into_bytes(self) -> std::vec::Vec<u8> {
                             #crate_prefix ::core::Protobuf::encode_vec(&self)
                         }
@@ -176,7 +183,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                     });
 
                     let gen = quote! {
-                        impl  #crate_prefix ::baseapp::Query for #ident {
+                        impl #impl_generics  #crate_prefix ::baseapp::Query for #ident #ty_generics #where_clause {
                             fn query_url(&self) -> &'static str  {
                                 match self {
                                     #(#query_url),*
@@ -201,7 +208,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                     });
 
                     let gen = quote! {
-                        impl  #crate_prefix ::baseapp::QueryResponse for #ident {
+                        impl  #impl_generics #crate_prefix ::baseapp::QueryResponse for #ident #ty_generics #where_clause {
                             fn into_bytes(self) -> std::vec::Vec<u8> {
                                 match self {
                                     #(#into_bytes),*

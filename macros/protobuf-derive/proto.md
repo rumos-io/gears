@@ -19,7 +19,11 @@ _Example_: `RawProto` or `inner::RawProto`
 **name** : _optional_, name of field that you want to use in raw structure.
 If not specified tries to use structure with name `Raw{NameOfStructure}` \
 **optional** : _flag_ indicates that raw structure field type of `Option<T>`. Exclusive to `repeated` flag. \
-**repeated** : _flag_ indicates that raw structure filed type of `Vec<T>`. Exclusive to `optional` flag.
+**repeated** : _flag_ indicates that raw structure filed type of `Vec<T>`. Exclusive to `optional` flag. \
+**from** : _optional_ path to `fn` use to parse value *from* raw. \
+**from_ref** : _optional_ indicates that value should be passed by ref to parsing `fn`. Note makes no sense without `from` flag. \
+**into** : _optional_ path to `fn` use to parse value *into* raw. \
+**into_ref** : _optional_ indicates that value should be passed by ref to parsing `fn`. Note makes no sense without `into` flag. 
 
 ## Example
 

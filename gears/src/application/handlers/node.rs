@@ -13,7 +13,7 @@ use tendermint::types::{
 };
 use thiserror::Error;
 
-pub trait ModuleInfo {
+pub trait ModuleInfo: Clone + Sync + Send + 'static {
     const NAME: &'static str;
 }
 
