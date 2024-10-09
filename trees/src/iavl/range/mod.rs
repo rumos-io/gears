@@ -33,17 +33,16 @@ impl<'a, DB: Database> Range<'a, DB> {
         }
     }
 
-    pub fn rev(
-        Self {
+    pub fn rev_iter(self) -> RevRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)> {
+        let Self {
             range,
-            mut delayed_nodes,
+            delayed_nodes,
             node_db,
-        }: Self,
-    ) -> RevRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)> {
-        delayed_nodes.reverse();
+        } = self;
+
         RevRange {
             range: range,
-            delayed_nodes,
+            delayed_nodes: delayed_nodes.into(),
             node_db,
             _marker: PhantomData,
         }
