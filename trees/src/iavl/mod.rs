@@ -1,3 +1,4 @@
+mod range;
 mod node_db;
 mod query_tree;
 mod tree;

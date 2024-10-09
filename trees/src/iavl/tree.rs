@@ -1,9 +1,8 @@
 use std::{
     cmp::{self, Ordering},
     collections::BTreeSet,
-    marker::PhantomData,
     mem,
-    ops::{Bound, RangeBounds},
+    ops::RangeBounds,
 };
 
 use database::Database;
@@ -19,6 +18,8 @@ use crate::{
 };
 
 use super::node_db::NodeDB;
+
+pub use crate::iavl::range::*;
 
 #[derive(Debug, Clone, PartialEq, Hash, Default)]
 pub(crate) struct InnerNode {
@@ -965,201 +966,6 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct RevRange<'a, DB, RB, R> {
-    range: R,
-    delayed_nodes: Vec<Box<Node>>,
-    node_db: &'a NodeDB<DB>,
-    _marker: PhantomData<RB>,
-}
-
-impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]>> RevRange<'_, DB, RB, R> {
-    fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
-        // Instead usage of VecDeque I assume Vec already rev in `new`(or similar)
-        let node = self.delayed_nodes.pop()?;
-
-        let after_start = match self.range.start_bound() {
-            Bound::Included(l) => node.get_key() > l.as_ref(),
-            Bound::Excluded(l) => node.get_key() > l.as_ref(),
-            Bound::Unbounded => true,
-        };
-
-        let before_end = match self.range.end_bound() {
-            Bound::Included(u) => node.get_key() <= u.as_ref(),
-            Bound::Excluded(u) => node.get_key() < u.as_ref(),
-            Bound::Unbounded => true,
-        };
-
-        match *node {
-            Node::Leaf(leaf) => {
-                // TODO: Replace with (after_start && before_end) when add tests
-                let is_contains = (match self.range.start_bound() {
-                    Bound::Included(start) => start.as_ref() <= &leaf.key,
-                    Bound::Excluded(start) => start.as_ref() < &leaf.key,
-                    Bound::Unbounded => true,
-                }) && (match self.range.end_bound() {
-                    Bound::Included(end) => leaf.key.as_slice() <= end.as_ref(),
-                    Bound::Excluded(end) => leaf.key.as_slice() < end.as_ref(),
-                    Bound::Unbounded => true,
-                });
-
-                if is_contains {
-                    // we have a leaf node within the range
-                    return Some((leaf.key, leaf.value));
-                }
-            }
-            Node::Inner(inner) => {
-                // Traverse through the right subtree, then the left subtree.
-                if before_end {
-                    match inner.left_node {
-                        Some(left_node) => self.delayed_nodes.push(left_node),
-                        None => {
-                            let left_node = self
-                                .node_db
-                                .get_node(&inner.left_hash)
-                                .expect("node db should contain all nodes");
-
-                            self.delayed_nodes.push(left_node);
-                        }
-                    }
-                }
-
-                if after_start {
-                    match inner.right_node {
-                        Some(right_node) => self.delayed_nodes.push(right_node),
-                        None => {
-                            let right_node = self
-                                .node_db
-                                .get_node(&inner.right_hash)
-                                .expect("node db should contain all nodes");
-
-                            self.delayed_nodes.push(right_node);
-                        }
-                    }
-                }
-            }
-        }
-
-        self.traverse()
-    }
-}
-
-impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]>> Iterator for RevRange<'_, DB, RB, R> {
-    type Item = (Vec<u8>, Vec<u8>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.traverse()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Range<'a, DB> {
-    range: (Bound<Vec<u8>>, Bound<Vec<u8>>),
-    delayed_nodes: Vec<Box<Node>>,
-    node_db: &'a NodeDB<DB>,
-}
-
-impl<'a, DB: Database> Range<'a, DB> {
-    pub(crate) fn new<R: RangeBounds<Vec<u8>>>(
-        range: R,
-        delayed_nodes: Vec<Box<Node>>,
-        node_db: &'a NodeDB<DB>,
-    ) -> Self {
-        Self {
-            range: (
-                range.start_bound().map(|this| this.to_owned()),
-                range.end_bound().map(|this| this.to_owned()),
-            ),
-            delayed_nodes,
-            node_db,
-        }
-    }
-
-    pub fn rev(
-        Self {
-            range,
-            mut delayed_nodes,
-            node_db,
-        }: Self,
-    ) -> RevRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)> {
-        delayed_nodes.reverse();
-        RevRange {
-            range: range,
-            delayed_nodes,
-            node_db,
-            _marker: PhantomData,
-        }
-    }
-
-    fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
-        let node = self.delayed_nodes.pop()?;
-
-        let after_start = match self.range.start_bound() {
-            Bound::Included(l) => node.get_key() <= l,
-            Bound::Excluded(l) => node.get_key() < l,
-            Bound::Unbounded => true,
-        };
-
-        let before_end = match self.range.end_bound() {
-            Bound::Included(u) => node.get_key() >= u,
-            Bound::Excluded(u) => node.get_key() > u,
-            Bound::Unbounded => true,
-        };
-
-        match *node {
-            Node::Inner(inner) => {
-                // Traverse through the left subtree, then the right subtree.
-                if before_end {
-                    match inner.right_node {
-                        Some(right_node) => self.delayed_nodes.push(right_node),
-                        None => {
-                            let right_node = self
-                                .node_db
-                                .get_node(&inner.right_hash)
-                                .expect("node db should contain all nodes");
-
-                            self.delayed_nodes.push(right_node);
-                        }
-                    }
-                }
-
-                if after_start {
-                    match inner.left_node {
-                        Some(left_node) => self.delayed_nodes.push(left_node),
-                        None => {
-                            let left_node = self
-                                .node_db
-                                .get_node(&inner.left_hash)
-                                .expect("node db should contain all nodes");
-
-                            //self.cached_nodes.push(left_node);
-                            self.delayed_nodes.push(left_node);
-                        }
-                    }
-
-                    //self.delayed_nodes.push(inner.get_left_node(self.node_db));
-                }
-            }
-            Node::Leaf(leaf) => {
-                if self.range.contains(&leaf.key) {
-                    // we have a leaf node within the range
-                    return Some((leaf.key, leaf.value));
-                }
-            }
-        }
-
-        self.traverse()
-    }
-}
-
-impl<'a, DB: Database> Iterator for Range<'a, DB> {
-    type Item = (Vec<u8>, Vec<u8>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.traverse()
-    }
-}
-
 fn encode_bytes(bz: &[u8]) -> Vec<u8> {
     let mut enc_bytes = bz.len().encode_var_vec();
     enc_bytes.extend_from_slice(bz);
@@ -1178,6 +984,7 @@ fn decode_bytes(bz: &[u8]) -> Result<(Vec<u8>, usize), InternalError> {
 mod tests {
     use std::fs::File;
     use std::io::Write;
+    use std::ops::Bound;
     use std::path::Path;
     use std::vec;
 
