@@ -24,7 +24,7 @@ impl<T: Database> Database for PrefixDB<T> {
         self.db.put(key, value)
     }
 
-    fn iterator<'a>(&'a self) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
+    fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
         let prefix_length = self.prefix.len();
         Box::new(
             self.db

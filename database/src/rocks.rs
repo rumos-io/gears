@@ -42,7 +42,7 @@ impl Database for RocksDB {
             .unwrap_or_else(|e| panic!("unrecoverable database error {}", e))
     }
 
-    fn iterator<'a>(&'a self) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
+    fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
         Box::new(
             self.db
                 .iterator(rocksdb::IteratorMode::Start)

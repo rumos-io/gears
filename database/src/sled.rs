@@ -31,7 +31,7 @@ impl Database for SledDb {
         let _ = self.0.insert(key, value).unwrap_or_corrupt();
     }
 
-    fn iterator<'a>(&'a self) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
+    fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
         Box::new(
             self.0
                 .iter()
