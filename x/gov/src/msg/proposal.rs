@@ -16,7 +16,7 @@ mod inner {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MsgSubmitProposal {
-    pub content: Any,
+    pub content: Any, // TODO: Generic?
     pub initial_deposit: UnsignedCoins,
     pub proposer: AccAddress,
 }

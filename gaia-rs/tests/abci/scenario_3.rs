@@ -70,10 +70,10 @@ fn scenario_3() {
         step_res.tx_responses[0].log.contains("decode error: `error converting message type into domain type: error converting message type into domain type: decode error: `delegator address and validator address must be derived from the same public key"),
         // TODO: error messages are too verbose
     );
-    // assert_eq!(
-    //     hex::encode(step_res.app_hash),
-    //     "177683d0356ad00958fe7406f238e883850f1d0e1d815895fc56a813577167a7"
-    // );
+    assert_eq!(
+        hex::encode(step_res.app_hash),
+        "177683d0356ad00958fe7406f238e883850f1d0e1d815895fc56a813577167a7"
+    );
 
     // query the validator list
     let query = QueryValidatorsRequest {

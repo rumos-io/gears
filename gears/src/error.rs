@@ -3,10 +3,13 @@ use core_types::errors::CoreError;
 use cosmwasm_std::Decimal256RangeExceeded;
 use tendermint::{error::Error as TendermintError, types::time::timestamp::NewTimestampError};
 
-use crate::types::{
-    base::errors::{CoinError, CoinsError},
-    errors::DenomError,
-    tx::metadata::MetadataParseError,
+use crate::{
+    params::SubspaceParseError,
+    types::{
+        base::errors::{CoinError, CoinsError},
+        errors::DenomError,
+        tx::metadata::MetadataParseError,
+    },
 };
 
 pub const POISONED_LOCK: &str = "poisoned lock";
@@ -71,5 +74,17 @@ impl From<ProtobufError> for tonic::Status {
 impl From<std::convert::Infallible> for ProtobufError {
     fn from(_: std::convert::Infallible) -> Self {
         unreachable!("who would return infallible error?")
+    }
+}
+
+impl From<std::num::TryFromIntError> for ProtobufError {
+    fn from(value: std::num::TryFromIntError) -> Self {
+        Self::Custom(anyhow::anyhow!("{value}"))
+    }
+}
+
+impl From<SubspaceParseError> for ProtobufError {
+    fn from(value: SubspaceParseError) -> Self {
+        Self::Core(CoreError::DecodeGeneral(value.to_string()))
     }
 }

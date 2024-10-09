@@ -53,10 +53,10 @@ pub fn infallible_subspace_mut<
 #[error("error parsing subpsace: {0}")]
 pub struct SubspaceParseError(pub String);
 
-pub trait ParamsSubspaceKey: Hash + Eq + Clone + Send + Sync + 'static {
-    fn name(&self) -> &'static str;
+pub trait ParamsSubspaceKey: std::fmt::Debug + Hash + Eq + Clone + Send + Sync + 'static {
+    fn name(&self) -> String;
 
-    fn from_subspace_str(val: &str) -> Result<Self, SubspaceParseError>;
+    fn from_subspace_str(val: impl AsRef<str>) -> Result<Self, SubspaceParseError>;
 }
 
 // TODO:LATER For PR with xmod to change any params

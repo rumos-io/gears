@@ -3,7 +3,6 @@ use crate::{
     genesis::GenesisState,
     message::Message,
     modules::GaiaModules,
-    params::GaiaProposalHandler,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
     GaiaNodeQueryRequest, GaiaNodeQueryResponse,
 };
@@ -133,7 +132,6 @@ pub struct GaiaABCIHandler {
             >,
             GaiaModules,
         >,
-        GaiaProposalHandler,
         GovModuleInfo,
     >,
 }
@@ -186,7 +184,6 @@ impl GaiaABCIHandler {
             bank_keeper.clone(),
             auth_keeper.clone(),
             staking_keeper.clone(),
-            GaiaProposalHandler,
         );
 
         GaiaABCIHandler {

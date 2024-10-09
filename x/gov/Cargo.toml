@@ -4,21 +4,27 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gears = { path = "../../gears", features = ["cli", "xmods", "governance"] }
 
 # unsorted
 ibc-proto = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
+gears = { path = "../../gears", features = ["cli", "xmods", "governance"] }
+upgrade = { path = "../upgrade" }
+
+# unsorted
 anyhow = { workspace = true }
-thiserror = { workspace = true }
+axum = { workspace = true }
 bytes = { workspace = true }
-prost = { workspace = true }
-strum = { workspace = true }
 clap = { workspace = true }
 nz = { workspace = true }
 serde_with = { workspace = true }
+prost = { workspace = true }
+strum = { workspace = true }
+thiserror = { workspace = true }
+tonic = { workspace = true }
+tracing = { workspace = true }
 
 [lints]
 workspace = true

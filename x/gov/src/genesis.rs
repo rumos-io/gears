@@ -2,24 +2,26 @@ use gears::{
     baseapp::genesis::{Genesis, GenesisError},
     types::{address::AccAddress, base::coins::UnsignedCoins},
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     msg::{deposit::Deposit, weighted_vote::MsgVoteWeighted},
     params::GovParams,
-    types::proposal::Proposal,
+    types::proposal::ProposalModel,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct GovGenesisState {
+pub struct GovGenesisState<T> {
     pub starting_proposal_id: u64,
     pub deposits: Vec<Deposit>,
     pub votes: Vec<MsgVoteWeighted>,
-    pub proposals: Vec<Proposal>,
+    pub proposals: Vec<ProposalModel<T>>,
     pub params: GovParams,
 }
 
-impl Genesis for GovGenesisState {
+impl<P: Clone + Serialize + DeserializeOwned + std::fmt::Debug + Send + Sync + 'static> Genesis
+    for GovGenesisState<P>
+{
     fn add_genesis_account(
         &mut self,
         _address: AccAddress,
@@ -29,7 +31,7 @@ impl Genesis for GovGenesisState {
     }
 }
 
-impl Default for GovGenesisState {
+impl<T> Default for GovGenesisState<T> {
     fn default() -> Self {
         Self {
             starting_proposal_id: 1,

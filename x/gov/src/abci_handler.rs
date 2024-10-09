@@ -27,7 +27,9 @@ use gears::{
         module::Module,
     },
 };
+use serde::de::DeserializeOwned;
 
+use crate::proposal::{Proposal, ProposalHandler};
 use crate::{
     errors::GovTxError,
     genesis::GovGenesisState,
@@ -41,8 +43,7 @@ use crate::{
         },
         GovQuery, GovQueryResponse,
     },
-    types::proposal::Proposal,
-    ProposalHandler,
+    types::proposal::ProposalModel,
 };
 
 #[derive(Debug, Clone)]
@@ -53,10 +54,11 @@ pub struct GovAbciHandler<
     BK: GovernanceBankKeeper<SK, M>,
     AK: AuthKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
-    PH: ProposalHandler<PSK, Proposal>,
+    P,
+    PH: ProposalHandler<ProposalModel<P>, SK>,
     MI,
 > {
-    keeper: GovKeeper<SK, PSK, M, BK, AK, STK, PH>,
+    keeper: GovKeeper<SK, PSK, M, BK, AK, STK, P, PH>,
     _marker: PhantomData<MI>,
 }
 
@@ -67,11 +69,12 @@ impl<
         BK: GovernanceBankKeeper<SK, M>,
         AK: AuthKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
-        PH: ProposalHandler<PSK, Proposal>,
+        P,
+        PH: ProposalHandler<ProposalModel<P>, SK>,
         MI: ModuleInfo,
-    > GovAbciHandler<SK, PSK, M, BK, AK, STK, PH, MI>
+    > GovAbciHandler<SK, PSK, M, BK, AK, STK, P, PH, MI>
 {
-    pub fn new(keeper: GovKeeper<SK, PSK, M, BK, AK, STK, PH>) -> Self {
+    pub fn new(keeper: GovKeeper<SK, PSK, M, BK, AK, STK, P, PH>) -> Self {
         Self {
             keeper,
             _marker: PhantomData,
@@ -86,26 +89,27 @@ impl<
         BK: GovernanceBankKeeper<SK, M>,
         AK: AuthKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
-        PH: ProposalHandler<PSK, Proposal> + Clone + Send + Sync + 'static,
+        P: Proposal + DeserializeOwned,
+        PH: ProposalHandler<ProposalModel<P>, SK> + Clone + Send + Sync + 'static,
         MI: ModuleInfo + Clone + Send + Sync + 'static,
-    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, AK, STK, PH, MI>
+    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, AK, STK, P, PH, MI>
 {
     type Message = GovMsg;
 
-    type Genesis = GovGenesisState;
+    type Genesis = GovGenesisState<P>;
 
     type StoreKey = SK;
 
     type QReq = GovQuery;
 
-    type QRes = GovQueryResponse;
+    type QRes = GovQueryResponse<P>;
 
     fn typed_query<DB: Database>(
         &self,
-        _ctx: &QueryContext<DB, Self::StoreKey>,
-        _query: Self::QReq,
+        ctx: &QueryContext<DB, Self::StoreKey>,
+        query: Self::QReq,
     ) -> Self::QRes {
-        todo!()
+        self.keeper.query(ctx, query).unwrap_gas()
     }
 
     fn run_ante_checks<DB: Database>(

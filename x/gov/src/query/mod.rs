@@ -11,6 +11,8 @@ use response::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::proposal::Proposal;
+
 pub mod request;
 pub mod response;
 
@@ -37,13 +39,13 @@ impl QueryRequest for GovQuery {
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
 #[serde(untagged)]
-pub enum GovQueryResponse {
+pub enum GovQueryResponse<T: Proposal> {
     Deposit(QueryDepositResponse),
     Deposits(QueryDepositsResponse),
     Params(QueryParamsResponse),
     AllParams(QueryAllParamsResponse),
-    Proposal(QueryProposalResponse),
-    Proposals(QueryProposalsResponse),
+    Proposal(QueryProposalResponse<T>),
+    Proposals(QueryProposalsResponse<T>),
     Tally(QueryTallyResultResponse),
     Vote(QueryVoteResponse),
     Votes(QueryVotesResponse),

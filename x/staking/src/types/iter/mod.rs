@@ -1,2 +1,2 @@
-pub mod bounded;
+pub mod bonded;
 pub mod delegation;
