@@ -1,5 +1,5 @@
-pub mod aux;
 mod abci_handler;
+pub mod aux;
 mod client;
 pub mod errors;
 mod genesis;

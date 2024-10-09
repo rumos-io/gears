@@ -38,14 +38,12 @@ impl Database for MemDB {
     }
 
     fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
-        Box::new(
-            self.store
-                .read()
-                .expect("poisoned lock")
-                .clone()
-                .into_iter()
-                .map(|(key, value)| (key.into_boxed_slice(), value.into_boxed_slice())),
-        )
+        self.store
+            .read()
+            .expect("poisoned lock")
+            .clone()
+            .into_iter()
+            .map(|(key, value)| (key.into_boxed_slice(), value.into_boxed_slice()))
     }
 
     fn prefix_iterator<'a>(
@@ -68,7 +66,7 @@ impl Database for MemDB {
             pairs.push(pair)
         }
 
-        Box::new(pairs.into_iter())
+        pairs.into_iter()
     }
 }
 
