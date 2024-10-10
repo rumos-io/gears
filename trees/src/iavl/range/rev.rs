@@ -18,15 +18,7 @@ pub struct RevRange<'a, DB, RB, R> {
 
 impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]> + Debug> RevRange<'_, DB, RB, R> {
     fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
-        dbg!(self
-            .delayed_nodes
-            .iter()
-            .map(|this| this.get_key().to_vec())
-            .collect::<Vec<_>>());
-
         let node = self.delayed_nodes.pop()?;
-
-        dbg!(node.get_key());
 
         let after_start = match self.range.start_bound() {
             Bound::Included(l) => node.get_key() >= l.as_ref(),
@@ -43,13 +35,11 @@ impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]> + Debug> RevRange<'_, DB,
         match *node {
             Node::Leaf(leaf) => {
                 if after_start && before_end {
-                    // we have a leaf node within the range
                     return Some((leaf.key, leaf.value));
                 }
             }
             Node::Inner(inner) => {
-                // Traverse through the right subtree, then the left subtree.
-                if before_end {
+                if after_start {
                     let left_node: Box<Node> = match inner.left_node {
                         Some(left_node) => left_node,
                         None => self
@@ -61,7 +51,7 @@ impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]> + Debug> RevRange<'_, DB,
                     self.delayed_nodes.push(left_node)
                 }
 
-                if after_start {
+                if before_end {
                     let right_node = match inner.right_node {
                         Some(right_node) => right_node,
                         None => self
