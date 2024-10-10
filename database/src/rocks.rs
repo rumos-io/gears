@@ -42,24 +42,20 @@ impl Database for RocksDB {
             .unwrap_or_else(|e| panic!("unrecoverable database error {}", e))
     }
 
-    fn iterator<'a>(&'a self) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
-        Box::new(
-            self.db
-                .iterator(rocksdb::IteratorMode::Start)
-                .map(|res| res.unwrap_or_else(|e| panic!("unrecoverable database error {}", e))),
-        )
+    fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
+        self.db
+            .iterator(rocksdb::IteratorMode::Start)
+            .map(|res| res.unwrap_or_else(|e| panic!("unrecoverable database error {}", e)))
     }
 
     fn prefix_iterator<'a>(
         &'a self,
         prefix: Vec<u8>,
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
-        Box::new(
-            self.db
-                .prefix_iterator(&prefix)
-                .map(|res| res.unwrap_or_else(|e| panic!("unrecoverable database error {}", e)))
-                .take_while(move |(k, _)| k.starts_with(&prefix)), //rocks db returns keys beyond the prefix see https://github.com/rust-rocksdb/rust-rocksdb/issues/577
-        )
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
+        self.db
+            .prefix_iterator(&prefix)
+            .map(|res| res.unwrap_or_else(|e| panic!("unrecoverable database error {}", e)))
+            .take_while(move |(k, _)| k.starts_with(&prefix)) //rocks db returns keys beyond the prefix see https://github.com/rust-rocksdb/rust-rocksdb/issues/577
     }
 }
 

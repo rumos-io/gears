@@ -31,34 +31,30 @@ impl Database for SledDb {
         let _ = self.0.insert(key, value).unwrap_or_corrupt();
     }
 
-    fn iterator<'a>(&'a self) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
-        Box::new(
-            self.0
-                .iter()
-                .map(|this| this.unwrap_or_corrupt())
-                .map(|(key, value)| {
-                    (
-                        key.to_vec().into_boxed_slice(),
-                        value.to_vec().into_boxed_slice(),
-                    )
-                }),
-        )
+    fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
+        self.0
+            .iter()
+            .map(|this| this.unwrap_or_corrupt())
+            .map(|(key, value)| {
+                (
+                    key.to_vec().into_boxed_slice(),
+                    value.to_vec().into_boxed_slice(),
+                )
+            })
     }
 
     fn prefix_iterator<'a>(
         &'a self,
         prefix: Vec<u8>,
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
-        Box::new(
-            self.0
-                .scan_prefix(prefix)
-                .map(|this| this.unwrap_or_corrupt())
-                .map(|(key, value)| {
-                    (
-                        key.to_vec().into_boxed_slice(),
-                        value.to_vec().into_boxed_slice(),
-                    )
-                }),
-        )
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
+        self.0
+            .scan_prefix(prefix)
+            .map(|this| this.unwrap_or_corrupt())
+            .map(|(key, value)| {
+                (
+                    key.to_vec().into_boxed_slice(),
+                    value.to_vec().into_boxed_slice(),
+                )
+            })
     }
 }

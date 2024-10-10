@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::Bound};
 
 use gears::{
     context::QueryableContext,
@@ -18,7 +18,7 @@ use crate::{keys::validator_slash_event_key_prefix, ValidatorSlashEvent};
 
 #[derive(Debug)]
 pub struct SlashEventIterator<'a, DB> {
-    ranges: Vec<StoreRange<'a, PrefixDB<DB>>>,
+    ranges: Vec<StoreRange<'a, PrefixDB<DB>, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)>>,
     current: usize,
 }
 

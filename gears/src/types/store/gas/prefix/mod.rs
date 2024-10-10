@@ -1,4 +1,4 @@
-use std::ops::RangeBounds;
+use std::ops::{Bound, RangeBounds};
 
 use database::Database;
 use kv_store::store::prefix::immutable::ImmutablePrefixStore;
@@ -34,7 +34,10 @@ impl<DB: Database> GasPrefixStore<'_, DB> {
 }
 
 impl<'a, DB: Database> GasPrefixStore<'a, DB> {
-    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> GasRange<'a, DB> {
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(
+        self,
+        range: R,
+    ) -> GasRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)> {
         GasRange::new_prefix(self.inner.into_range(range), self.guard.clone())
     }
 }

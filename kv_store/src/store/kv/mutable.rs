@@ -29,7 +29,10 @@ impl<'a, DB: Database> KVStoreMut<'a, DB> {
         }
     }
 
-    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> Range<'a, DB> {
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(
+        self,
+        range: R,
+    ) -> Range<'a, DB, Vec<u8>, R> {
         match self.0 {
             KVStoreBackendMut::App(var) => var.range(range),
             KVStoreBackendMut::Tx(var) => var.range(range),

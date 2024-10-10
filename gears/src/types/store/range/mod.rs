@@ -1,6 +1,6 @@
 pub mod infallible;
-pub mod result;
-use std::borrow::Cow;
+
+use std::{borrow::Cow, ops::RangeBounds};
 
 use database::Database;
 use infallible::RangeIter;
@@ -9,17 +9,25 @@ use kv_store::{range::Range, store::prefix::range::PrefixRange};
 use super::gas::{errors::GasStoreErrors, range::GasRange};
 
 #[derive(Debug)]
-enum StoreRangeBackend<'a, DB> {
-    Gas(GasRange<'a, DB>),
-    Kv(Range<'a, DB>),
-    Prefix(PrefixRange<'a, DB>),
+enum StoreRangeBackend<'a, DB, RB, R> {
+    Gas(GasRange<'a, DB, RB, R>),
+    Kv(Range<'a, DB, RB, R>),
+    Prefix(PrefixRange<'a, DB, RB, R>),
 }
 
 #[derive(Debug)]
-pub struct StoreRange<'a, DB>(StoreRangeBackend<'a, DB>);
+pub struct StoreRange<'a, DB, RB, R>(StoreRangeBackend<'a, DB, RB, R>);
 
-impl<'a, DB> StoreRange<'a, DB> {
-    pub fn to_infallible_iter(self) -> RangeIter<'a, DB> {
+impl<'a, DB: Database, RB: AsRef<[u8]>, R: RangeBounds<RB>> StoreRange<'a, DB, RB, R> {
+    pub fn rev_iter(self) -> Self {
+        match self.0 {
+            StoreRangeBackend::Gas(range) => range.rev_iter().into(),
+            StoreRangeBackend::Kv(range) => range.rev_iter().into(),
+            StoreRangeBackend::Prefix(range) => range.rev_iter().into(),
+        }
+    }
+
+    pub fn to_infallible_iter(self) -> RangeIter<'a, DB, RB, R> {
         match self.0 {
             StoreRangeBackend::Gas(var) => var.to_infallible_iter().into(),
             StoreRangeBackend::Kv(var) => var.into(),
@@ -28,7 +36,7 @@ impl<'a, DB> StoreRange<'a, DB> {
     }
 }
 
-impl<'a, DB: Database> Iterator for StoreRange<'a, DB> {
+impl<'a, DB: Database, RB: AsRef<[u8]>, R: RangeBounds<RB>> Iterator for StoreRange<'a, DB, RB, R> {
     type Item = Result<(Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>), GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -40,20 +48,20 @@ impl<'a, DB: Database> Iterator for StoreRange<'a, DB> {
     }
 }
 
-impl<'a, DB> From<GasRange<'a, DB>> for StoreRange<'a, DB> {
-    fn from(value: GasRange<'a, DB>) -> Self {
+impl<'a, DB, RB, R> From<GasRange<'a, DB, RB, R>> for StoreRange<'a, DB, RB, R> {
+    fn from(value: GasRange<'a, DB, RB, R>) -> Self {
         Self(StoreRangeBackend::Gas(value))
     }
 }
 
-impl<'a, DB> From<Range<'a, DB>> for StoreRange<'a, DB> {
-    fn from(value: Range<'a, DB>) -> Self {
+impl<'a, DB, RB, R> From<Range<'a, DB, RB, R>> for StoreRange<'a, DB, RB, R> {
+    fn from(value: Range<'a, DB, RB, R>) -> Self {
         Self(StoreRangeBackend::Kv(value))
     }
 }
 
-impl<'a, DB> From<PrefixRange<'a, DB>> for StoreRange<'a, DB> {
-    fn from(value: PrefixRange<'a, DB>) -> Self {
+impl<'a, DB, RB, R> From<PrefixRange<'a, DB, RB, R>> for StoreRange<'a, DB, RB, R> {
+    fn from(value: PrefixRange<'a, DB, RB, R>) -> Self {
         Self(StoreRangeBackend::Prefix(value))
     }
 }

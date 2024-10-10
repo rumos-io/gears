@@ -21,12 +21,12 @@ pub trait Database: Clone + Send + Sync + 'static {
 
     fn put(&self, key: Vec<u8>, value: Vec<u8>);
 
-    fn iterator<'a>(&'a self) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a>;
+    fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a;
 
     fn prefix_iterator<'a>(
         &'a self,
         prefix: Vec<u8>,
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a>;
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a;
 }
 
 pub trait DatabaseBuilder<DB> {
