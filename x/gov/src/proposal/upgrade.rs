@@ -64,7 +64,7 @@ pub struct SoftwareUpgradeProposal {
     pub plan: Plan,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UpgradeProposalHandler<SK, M, UH> {
     keeper: UpgradeKeeper<SK, M, UH>,
 }

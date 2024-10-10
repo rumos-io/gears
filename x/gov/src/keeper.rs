@@ -74,7 +74,7 @@ pub struct GovKeeper<
     AK: AuthKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     P,
-    PH: ProposalHandler<ProposalModel<P>, SK>,
+    PH: ProposalHandler<P, SK>,
 > {
     store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
@@ -95,7 +95,7 @@ impl<
         AK: AuthKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         P: Proposal + DeserializeOwned,
-        PH: ProposalHandler<ProposalModel<P>, SK>,
+        PH: ProposalHandler<P, SK>,
     > GovKeeper<SK, PSK, M, BK, AK, STK, P, PH>
 {
     pub fn new(
@@ -493,7 +493,7 @@ impl<
             voting_end_time: None,
         };
 
-        if !PH::check(&proposal) {
+        if !PH::check(&proposal.content) {
             return Err(GovKeeperError::NoHandler);
         }
 
@@ -569,7 +569,7 @@ impl<
             };
 
             for proposal in active_iter {
-                let mut proposal = proposal.unwrap_gas();
+                let mut proposal: ProposalModel<P> = proposal.unwrap_gas();
 
                 let (passes, burn_deposit, tally_result) =
                     match self.tally(ctx, proposal.proposal_id) {
@@ -587,7 +587,11 @@ impl<
                 }
 
                 match passes {
-                    true if self.proposal_handler.handle(proposal.clone(), ctx).is_ok() => {
+                    true if self
+                        .proposal_handler
+                        .handle(proposal.content.clone(), ctx)
+                        .is_ok() =>
+                    {
                         proposal.status = ProposalStatus::Passed
                     }
                     true => proposal.status = ProposalStatus::Failed,
@@ -955,7 +959,7 @@ fn deposit_del<
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
     P: Proposal,
-    PH: ProposalHandler<ProposalModel<P>, SK>,
+    PH: ProposalHandler<P, SK>,
 >(
     ctx: &mut CTX,
     keeper: &GovKeeper<SK, PSK, M, BK, AK, STK, P, PH>,
@@ -990,7 +994,7 @@ fn deposit_refund<
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
     P: Proposal,
-    PH: ProposalHandler<ProposalModel<P>, SK>,
+    PH: ProposalHandler<P, SK>,
 >(
     ctx: &mut CTX,
     keeper: &GovKeeper<SK, PSK, M, BK, AK, STK, P, PH>,

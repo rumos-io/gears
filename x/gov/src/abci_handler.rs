@@ -43,7 +43,6 @@ use crate::{
         },
         GovQuery, GovQueryResponse,
     },
-    types::proposal::ProposalModel,
 };
 
 #[derive(Debug, Clone)]
@@ -55,7 +54,7 @@ pub struct GovAbciHandler<
     AK: AuthKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     P,
-    PH: ProposalHandler<ProposalModel<P>, SK>,
+    PH: ProposalHandler<P, SK>,
     MI,
 > {
     keeper: GovKeeper<SK, PSK, M, BK, AK, STK, P, PH>,
@@ -70,7 +69,7 @@ impl<
         AK: AuthKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         P,
-        PH: ProposalHandler<ProposalModel<P>, SK>,
+        PH: ProposalHandler<P, SK>,
         MI: ModuleInfo,
     > GovAbciHandler<SK, PSK, M, BK, AK, STK, P, PH, MI>
 {
@@ -90,7 +89,7 @@ impl<
         AK: AuthKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         P: Proposal + DeserializeOwned,
-        PH: ProposalHandler<ProposalModel<P>, SK> + Clone + Send + Sync + 'static,
+        PH: ProposalHandler<P, SK> + Clone + Send + Sync + 'static,
         MI: ModuleInfo + Clone + Send + Sync + 'static,
     > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, AK, STK, P, PH, MI>
 {

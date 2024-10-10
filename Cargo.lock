@@ -1885,6 +1885,7 @@ dependencies = [
  "tonic",
  "tonic-reflection",
  "tower-layer",
+ "upgrade",
  "url",
  "vec1",
 ]

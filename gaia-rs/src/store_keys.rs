@@ -1,4 +1,5 @@
 use gears::derive::{ParamsKeys, StoreKeys};
+use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, StoreKeys)]
@@ -18,9 +19,11 @@ pub enum GaiaStoreKey {
     Capability,
     #[skey(to_string = "gov")]
     Gov,
+    #[skey(to_string = "upgrade")]
+    Upgrade,
 }
 
-#[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys)]
+#[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys, Deserialize, Serialize)]
 pub enum GaiaParamsStoreKey {
     #[pkey(to_string = "bank/")]
     Bank,
