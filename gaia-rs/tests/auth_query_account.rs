@@ -39,7 +39,7 @@ fn account_query() -> anyhow::Result<()> {
                 )
                 .unwrap_test(),
             )),
-            account_number: 2,
+            account_number: 3,
             sequence: 1,
         })),
     }));
