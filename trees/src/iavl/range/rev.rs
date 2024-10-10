@@ -1,5 +1,4 @@
 use std::{
-    collections::VecDeque,
     fmt::Debug,
     marker::PhantomData,
     ops::{Bound, RangeBounds},
@@ -12,14 +11,22 @@ use crate::iavl::{node_db::NodeDB, Node};
 #[derive(Debug, Clone)]
 pub struct RevRange<'a, DB, RB, R> {
     pub(super) range: R,
-    pub(super) delayed_nodes: VecDeque<Box<Node>>,
+    pub(super) delayed_nodes: Vec<Box<Node>>,
     pub(super) node_db: &'a NodeDB<DB>,
     pub(super) _marker: PhantomData<RB>,
 }
 
 impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]> + Debug> RevRange<'_, DB, RB, R> {
     fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
-        let node = self.delayed_nodes.pop_back()?;
+        dbg!(self
+            .delayed_nodes
+            .iter()
+            .map(|this| this.get_key().to_vec())
+            .collect::<Vec<_>>());
+
+        let node = self.delayed_nodes.pop()?;
+
+        dbg!(node.get_key());
 
         let after_start = match self.range.start_bound() {
             Bound::Included(l) => node.get_key() >= l.as_ref(),
@@ -43,15 +50,15 @@ impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]> + Debug> RevRange<'_, DB,
             Node::Inner(inner) => {
                 // Traverse through the right subtree, then the left subtree.
                 if before_end {
-                    let left_node = match inner.left_node {
+                    let left_node: Box<Node> = match inner.left_node {
                         Some(left_node) => left_node,
                         None => self
                             .node_db
-                            .get_node(&inner.right_hash)
+                            .get_node(&inner.left_hash)
                             .expect("node db should contain all nodes"),
                     };
 
-                    self.delayed_nodes.push_front(left_node)
+                    self.delayed_nodes.push(left_node)
                 }
 
                 if after_start {
@@ -59,11 +66,11 @@ impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]> + Debug> RevRange<'_, DB,
                         Some(right_node) => right_node,
                         None => self
                             .node_db
-                            .get_node(&inner.left_hash)
+                            .get_node(&inner.right_hash)
                             .expect("node db should contain all nodes"),
                     };
 
-                    self.delayed_nodes.push_front(right_node)
+                    self.delayed_nodes.push(right_node)
                 }
             }
         }
