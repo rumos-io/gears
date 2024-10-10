@@ -259,6 +259,16 @@ impl From<Duration> for inner::IbcDuration {
 }
 
 pub mod serde_with {
+    pub fn serialize_duration_to_nanos_string<S>(
+        x: &super::Duration,
+        s: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        s.serialize_some(&i128::from(x.duration_nanoseconds()).to_string())
+    }
+
     pub fn serialize_duration_opt_to_nanos_string<S>(
         x: &Option<super::Duration>,
         s: S,
@@ -267,6 +277,22 @@ pub mod serde_with {
         S: serde::Serializer,
     {
         s.serialize_some(&x.map(|x| i128::from(x.duration_nanoseconds()).to_string()))
+    }
+
+    pub fn deserialize_duration_from_nanos_string<'de, D>(
+        deserializer: D,
+    ) -> Result<super::Duration, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::Deserialize;
+        super::Duration::try_new_from_nanos(
+            <String>::deserialize(deserializer)
+                .map_err(serde::de::Error::custom)?
+                .parse()
+                .map_err(serde::de::Error::custom)?,
+        )
+        .map_err(serde::de::Error::custom)
     }
 
     pub fn deserialize_duration_opt_from_nanos_string<'de, D>(

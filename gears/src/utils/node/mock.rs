@@ -88,6 +88,10 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
         }
     }
 
+    pub fn app_hash(&self) -> &Bytes {
+        &self.app_hash
+    }
+
     pub fn step(&mut self, txs: Vec<Bytes>, block_time: Timestamp) -> StepResponse {
         self.height += 1;
         self.time = block_time;

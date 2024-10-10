@@ -40,10 +40,10 @@ fn send_tx() -> anyhow::Result<()> {
         height: _,
     } = &responses[0];
 
-    let expected_hash = data_encoding::HEXUPPER
-        .decode("BC4739124707D9438CF490E6355B75E3038BD1D98BE787A950EB89B7A8A37CCA".as_bytes())?;
+    let expected_hash =
+        "0A2E6111D1B81ED9F6D40F0A27A2A36374D361BC455DB8E489E4697B37E7E1E1".to_string();
 
-    assert_eq!(&expected_hash, hash.as_bytes());
+    assert_eq!(expected_hash, hash.to_string());
     assert!(deliver_tx.code.is_ok());
 
     let expected_events = [Event {

@@ -11,7 +11,7 @@ use gears::{
 pub use handler::*;
 use ibc_proto::google::protobuf::Any;
 use param::{ParamChangeProposalHandler, ParameterChangeProposal};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use text::TextProposal;
 use upgrade::{CancelSoftwareUpgradeProposal, SoftwareUpgradeProposal, UpgradeProposalHandler};
 
@@ -27,7 +27,7 @@ pub trait Proposal:
 {
 }
 
-#[derive(Debug, Clone, AppMessage)]
+#[derive(Debug, Clone, AppMessage, Deserialize)]
 pub enum Proposals<PSK: ParamsSubspaceKey> {
     #[msg(url(path = TextProposal::TYPE_URL))]
     Text(TextProposal),
@@ -55,6 +55,7 @@ impl<PSK: ParamsSubspaceKey> Serialize for Proposals<PSK> {
 
 impl<PSK: ParamsSubspaceKey> Proposal for Proposals<PSK> {}
 
+#[derive(Debug, Clone)]
 pub struct ProposalsHandler<SK, PSK, PK, M, UH> {
     params_handler: ParamChangeProposalHandler<PK, SK, PSK>,
     upgrade_handler: UpgradeProposalHandler<SK, M, UH>,
@@ -73,11 +74,9 @@ impl<
         PSK: ParamsSubspaceKey,
         SK: StoreKey,
         PK: ParamsKeeper<PSK>,
-        M: ::upgrade::Module,
+        M: ::upgrade::Module + TryFrom<Vec<u8>, Error = anyhow::Error>,
         UH: UpgradeHandler,
     > ProposalHandler<Proposals<PSK>, SK> for ProposalsHandler<SK, PSK, PK, M, UH>
-where
-    <M as TryFrom<Vec<u8>>>::Error: std::fmt::Display + std::fmt::Debug,
 {
     fn handle<
         CTX: gears::context::InfallibleContextMut<DB, SK>,

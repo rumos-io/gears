@@ -2,19 +2,25 @@ use crate::{
     config::AppConfig,
     genesis::GenesisState,
     message::Message,
-    modules::GaiaModules,
+    modules::{GaiaModules, GaiaXmodules},
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
     GaiaNodeQueryRequest, GaiaNodeQueryResponse,
 };
-use gears::store::database::Database;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
 use gears::{application::handlers::node::ModuleInfo, context::init::InitContext};
 use gears::{application::handlers::node::TxError, config::Config};
 use gears::{baseapp::errors::QueryError, context::query::QueryContext};
+use gears::{baseapp::BaseAppParamsKeeper, store::database::Database};
 use gears::{context::tx::TxContext, x::ante::DefaultSignGasConsumer};
 use genutil::abci_handler::GenutilAbciHandler;
+use gov::{
+    abci_handler::GovAbciHandler,
+    keeper::GovKeeper,
+    proposal::{Proposals, ProposalsHandler},
+};
+use upgrade::{dummy::NullUpgradeHandler, keeper::UpgradeKeeper};
 
 #[derive(Debug, Clone)]
 struct BankModuleInfo;
@@ -35,6 +41,13 @@ struct StakingModuleInfo;
 
 impl ModuleInfo for StakingModuleInfo {
     const NAME: &'static str = "staking";
+}
+
+#[derive(Debug, Clone)]
+struct GovModuleInfo;
+
+impl ModuleInfo for GovModuleInfo {
+    const NAME: &'static str = "gov";
 }
 
 #[derive(Debug, Clone)]
@@ -96,6 +109,44 @@ pub struct GaiaABCIHandler {
         GaiaModules,
         DefaultSignGasConsumer,
     >,
+    gov_handler: GovAbciHandler<
+        GaiaStoreKey,
+        GaiaParamsStoreKey,
+        GaiaModules,
+        bank::Keeper<
+            GaiaStoreKey,
+            GaiaParamsStoreKey,
+            auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+            GaiaModules,
+        >,
+        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+        staking::Keeper<
+            GaiaStoreKey,
+            GaiaParamsStoreKey,
+            auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+            bank::Keeper<
+                GaiaStoreKey,
+                GaiaParamsStoreKey,
+                auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+                GaiaModules,
+            >,
+            staking::MockHookKeeper<
+                GaiaStoreKey,
+                auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+                GaiaModules,
+            >,
+            GaiaModules,
+        >,
+        Proposals<GaiaParamsStoreKey>,
+        ProposalsHandler<
+            GaiaStoreKey,
+            GaiaParamsStoreKey,
+            BaseAppParamsKeeper<GaiaParamsStoreKey>,
+            GaiaXmodules,
+            NullUpgradeHandler, // Note: this is actual handler for upgrade handling. Not upgrade proposal
+        >,
+        GovModuleInfo,
+    >,
 }
 
 impl GaiaABCIHandler {
@@ -139,6 +190,26 @@ impl GaiaABCIHandler {
             GaiaModules::FeeCollector,
         );
 
+        let gov_keeper = GovKeeper::new(
+            GaiaStoreKey::Gov,
+            GaiaParamsStoreKey::Gov,
+            GaiaModules::Gov,
+            bank_keeper.clone(),
+            auth_keeper.clone(),
+            staking_keeper.clone(),
+            ProposalsHandler::<
+                GaiaStoreKey,
+                GaiaParamsStoreKey,
+                BaseAppParamsKeeper<GaiaParamsStoreKey>,
+                GaiaXmodules,
+                NullUpgradeHandler,
+            >::new(UpgradeKeeper::<
+                GaiaStoreKey,
+                GaiaXmodules,
+                NullUpgradeHandler,
+            >::new(GaiaStoreKey::Upgrade, [])),
+        );
+
         GaiaABCIHandler {
             bank_abci_handler: bank::BankABCIHandler::new(bank_keeper),
             auth_abci_handler: auth::AuthABCIHandler::new(auth_keeper),
@@ -146,6 +217,7 @@ impl GaiaABCIHandler {
             staking_abci_handler: staking::StakingABCIHandler::new(staking_keeper),
             ibc_abci_handler: ibc_rs::ABCIHandler::new(ibc_keeper.clone()),
             ante_handler,
+            gov_handler: GovAbciHandler::new(gov_keeper),
         }
     }
 }
@@ -174,6 +246,7 @@ impl ABCIHandler for GaiaABCIHandler {
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         request: gears::tendermint::request::RequestBeginBlock,
     ) {
+        // TODO: need to add call to upgrade begin_block here
         self.staking_abci_handler.begin_block(ctx, request);
     }
 
@@ -182,6 +255,7 @@ impl ABCIHandler for GaiaABCIHandler {
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         request: gears::tendermint::request::RequestEndBlock,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
+        self.gov_handler.end_block(ctx, request.clone());
         self.staking_abci_handler.end_block(ctx, request)
     }
 
@@ -192,6 +266,7 @@ impl ABCIHandler for GaiaABCIHandler {
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
         self.bank_abci_handler.init_genesis(ctx, genesis.bank);
         let staking_updates = self.staking_abci_handler.genesis(ctx, genesis.staking);
+        self.gov_handler.init_genesis(ctx, genesis.gov);
         self.ibc_abci_handler.genesis(ctx, genesis.ibc);
         self.auth_abci_handler.init_genesis(ctx, genesis.auth);
         let genutil_updates = self.genutil_handler.init_genesis(ctx, genesis.genutil);

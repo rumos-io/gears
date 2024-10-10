@@ -98,7 +98,7 @@ fn setup_mock_node(
         MockNode::new(app, init_state),
         User {
             key_pair,
-            account_number: 2,
+            account_number: 3,
         },
     )
 }

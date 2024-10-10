@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use gears::baseapp::QueryResponse;
 use gears::extensions::gas::GasResultExt;
 use gears::tendermint::request::RequestEndBlock;
+use gears::x::keepers::auth::AuthKeeper;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
     baseapp::errors::QueryError,
@@ -42,7 +43,6 @@ use crate::{
         },
         GovQuery, GovQueryResponse,
     },
-    types::proposal::ProposalModel,
 };
 
 #[derive(Debug, Clone)]
@@ -51,12 +51,13 @@ pub struct GovAbciHandler<
     PSK: ParamsSubspaceKey,
     M: Module,
     BK: GovernanceBankKeeper<SK, M>,
+    AK: AuthKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     P,
-    PH: ProposalHandler<ProposalModel<P>, SK>,
+    PH: ProposalHandler<P, SK>,
     MI,
 > {
-    keeper: GovKeeper<SK, PSK, M, BK, STK, P, PH>,
+    keeper: GovKeeper<SK, PSK, M, BK, AK, STK, P, PH>,
     _marker: PhantomData<MI>,
 }
 
@@ -65,13 +66,14 @@ impl<
         PSK: ParamsSubspaceKey,
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
+        AK: AuthKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         P,
-        PH: ProposalHandler<ProposalModel<P>, SK>,
+        PH: ProposalHandler<P, SK>,
         MI: ModuleInfo,
-    > GovAbciHandler<SK, PSK, M, BK, STK, P, PH, MI>
+    > GovAbciHandler<SK, PSK, M, BK, AK, STK, P, PH, MI>
 {
-    pub fn new(keeper: GovKeeper<SK, PSK, M, BK, STK, P, PH>) -> Self {
+    pub fn new(keeper: GovKeeper<SK, PSK, M, BK, AK, STK, P, PH>) -> Self {
         Self {
             keeper,
             _marker: PhantomData,
@@ -84,11 +86,12 @@ impl<
         PSK: ParamsSubspaceKey,
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
+        AK: AuthKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         P: Proposal + DeserializeOwned,
-        PH: ProposalHandler<ProposalModel<P>, SK> + Clone + Send + Sync + 'static,
+        PH: ProposalHandler<P, SK> + Clone + Send + Sync + 'static,
         MI: ModuleInfo + Clone + Send + Sync + 'static,
-    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK, P, PH, MI>
+    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, AK, STK, P, PH, MI>
 {
     type Message = GovMsg;
 

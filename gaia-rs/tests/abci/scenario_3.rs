@@ -20,13 +20,13 @@ use crate::{setup_mock_node, USER_0, USER_1};
 fn scenario_3() {
     let genesis_path = Path::new("./tests/abci/assets/scenario_3_genesis.json");
     let (mut node, _) = setup_mock_node(Some(genesis_path));
-    let user_0 = crate::user(2, USER_0);
-    let user_1 = crate::user(3, USER_1);
+    let user_0 = crate::user(3, USER_0);
+    let user_1 = crate::user(4, USER_1);
 
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
-        "e111f4a62a52f13c7e942694aa9c6997f4f6e131b9306090aa022297ce362540"
+        "5a35ca76b00dd26100e68075cedca5d170eec03b9d46a623e3a1c4dab4be0281"
     );
 
     //----------------------------------------
@@ -70,12 +70,9 @@ fn scenario_3() {
         step_res.tx_responses[0].log.contains("decode error: `error converting message type into domain type: error converting message type into domain type: decode error: `delegator address and validator address must be derived from the same public key"),
         // TODO: error messages are too verbose
     );
-    assert!(step_res.tx_responses[0]
-        .log
-        .ends_with("flex-error-0.4.4/src/tracer_impl/eyre.rs:10:9`"),);
     assert_eq!(
         hex::encode(step_res.app_hash),
-        "6d0b1e5f3f4f3759c05be2eabed1f4586d176ab36f76df7d9b874dbe850016c8"
+        "5663e912a5f4bf5066874aaa891a016c10a942927eeb8e7bc0936e3d01348285"
     );
 
     // query the validator list
@@ -129,15 +126,13 @@ fn scenario_3() {
 
     let txs = generate_tx(vec1::vec1![msg], 0, &user_1, node.chain_id().clone());
 
-    let app_hash = node
-        .step(
-            vec![txs],
-            Timestamp::try_new(0, 0).expect("hardcoded is valid"),
-        )
-        .app_hash;
+    let step_response = node.step(
+        vec![txs],
+        Timestamp::try_new(0, 0).expect("hardcoded is valid"),
+    );
     assert_eq!(
-        hex::encode(app_hash),
-        "815b88380e50eb8a82f9df53503dddb14cba409970aaf77e7de1164ca8bc61f5"
+        hex::encode(step_response.app_hash),
+        "c92f6610dcb2f2f5b6f454c5f182f1a7ef2287a3c07516cc214aa0e0170f9d89"
     );
 
     // query the validator list
@@ -165,7 +160,7 @@ fn scenario_3() {
         .app_hash; // 30 days which is greater than the unbonding time
     assert_eq!(
         hex::encode(app_hash),
-        "07f42dc05073c352627503e52acd89538ddcf08a0bb7d385027938f32013cc1e"
+        "22dcec54c3776d5e8470ff65a2c45cf08f17d6b358d2ed5f04d84d2cfdd85371"
     );
 
     //----------------------------------------
@@ -180,12 +175,11 @@ fn scenario_3() {
         }));
 
     let txs = generate_tx(vec1::vec1![msg], 1, &user_1, node.chain_id().clone());
-
     let step_response = node.step(vec![txs], Timestamp::try_new(60 * 60 * 24 * 30, 0).unwrap());
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "9c4df3dd21c2eee54b0ac4a831615fae64417cea9d2d98301c6a2b0ce63c2963"
+        "6ac5c3c69ef12e13063032b1c7351c73fc187037a31ca5ded140283d6ce6db16"
     );
 
     //----------------------------------------
@@ -207,7 +201,7 @@ fn scenario_3() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "c60067ca69637b341607ed8bbf19048b5b04b6860dbe9f01f91b0d09d18c9e8e"
+        "5bba8d52a61305702f5f1460e4de626db3d29af5f49e5bcd6197b90ccb5cbbf2"
     );
 
     //----------------------------------------
@@ -228,7 +222,7 @@ fn scenario_3() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "10861c9ab65d0eb11443bf8b3d2954263654b9d285f00b14edc7ff64705a7ac8"
+        "435d0d7897e50fea28c43efe0d5c10ef90283c945e4d78e59e8645be88092478"
     );
 
     //----------------------------------------
@@ -263,7 +257,7 @@ fn scenario_3() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "0bea54601cf4d17baf46875b36a90620818862a7b96d76e35d6a54e67af28603"
+        "81a1853dae8dec9404a5eefa9d020f8100a16d547bc09286c704df7954dd95d7"
     );
 
     // check user_1 is bonded
@@ -302,6 +296,6 @@ fn scenario_3() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "a325bbcb004b826539708009c72531f8256c7a99d4627e18df189b0a318e484d"
+        "55ca0c776a7d051d0f9ec7a23ce0ad2a9d3adefac0f73cb227b513f6a2091582"
     );
 }

@@ -1,5 +1,7 @@
 {
-    "genutil": {"gen_txs": []},
+    "genutil": {
+        "gen_txs": []
+    },
     "bank": {
         "balances": [
             {
@@ -145,6 +147,31 @@
         ],
         "unbonding_delegations": [],
         "redelegations": []
+    },
+    "gov": {
+        "deposits": [],
+        "params": {
+            "deposit": {
+                "max_deposit_period": "172800000000000",
+                "min_deposit": [
+                    {
+                        "amount": "10000000",
+                        "denom": "uatom"
+                    }
+                ]
+            },
+            "tally": {
+                "quorum": "0.334000000000000001",
+                "threshold": "0.500000000000000001",
+                "veto_threshold": "0.334000000000000001"
+            },
+            "voting": {
+                "voting_period": "172800000000000"
+            }
+        },
+        "proposals": [],
+        "starting_proposal_id": 1,
+        "votes": []
     },
     "ibc": {
         "client_genesis": {
