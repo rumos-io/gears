@@ -15,6 +15,14 @@ enum InfallibleRangeBackend<'a, DB> {
 pub struct RangeIter<'a, DB>(InfallibleRangeBackend<'a, DB>);
 
 impl<DB> RangeIter<'_, DB> {
+    pub fn rev_iter(self) -> Self {
+        match self.0 {
+            InfallibleRangeBackend::Gas(range) => range.rev_iter().into(),
+            InfallibleRangeBackend::Kv(range) => range.rev_iter().into(),
+            InfallibleRangeBackend::Prefix(range) => range.rev_iter().into(),
+        }
+    }
+
     pub fn error(&self) -> Option<GasStoreErrors> {
         match &self.0 {
             InfallibleRangeBackend::Gas(var) => var.error().cloned(),

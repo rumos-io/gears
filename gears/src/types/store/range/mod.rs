@@ -1,5 +1,5 @@
 pub mod infallible;
-pub mod result;
+
 use std::borrow::Cow;
 
 use database::Database;
@@ -19,6 +19,14 @@ enum StoreRangeBackend<'a, DB> {
 pub struct StoreRange<'a, DB>(StoreRangeBackend<'a, DB>);
 
 impl<'a, DB> StoreRange<'a, DB> {
+    pub fn rev_iter(self) -> Self {
+        match self.0 {
+            StoreRangeBackend::Gas(range) => range.rev_iter().into(),
+            StoreRangeBackend::Kv(range) => range.rev_iter().into(),
+            StoreRangeBackend::Prefix(range) => range.rev_iter().into(),
+        }
+    }
+
     pub fn to_infallible_iter(self) -> RangeIter<'a, DB> {
         match self.0 {
             StoreRangeBackend::Gas(var) => var.to_infallible_iter().into(),

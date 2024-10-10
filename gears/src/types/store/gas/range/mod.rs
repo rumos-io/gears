@@ -21,6 +21,18 @@ pub struct GasRange<'a, DB> {
 }
 
 impl<'a, DB> GasRange<'a, DB> {
+    pub fn rev_iter(self) -> Self {
+        let Self { inner, guard } = self;
+        let inner = match inner {
+            RangeBackend::Kv(range) => RangeBackend::Kv(range.rev_iter()),
+            RangeBackend::Prefix(range) => RangeBackend::Prefix(range.rev_iter()),
+        };
+
+        Self { inner, guard }
+    }
+}
+
+impl<'a, DB> GasRange<'a, DB> {
     pub(super) fn new_kv(inner: Range<'a, DB>, guard: GasGuard) -> Self {
         Self {
             inner: RangeBackend::Kv(inner),

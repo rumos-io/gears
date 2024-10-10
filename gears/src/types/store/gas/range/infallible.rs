@@ -13,6 +13,11 @@ pub struct RangeIter<'a, DB> {
 }
 
 impl<DB> RangeIter<'_, DB> {
+    pub fn rev_iter(mut self) -> Self {
+        self.range = self.range.rev_iter();
+        self
+    }
+
     pub fn error(&self) -> Option<&GasStoreErrors> {
         self.err.as_ref()
     }
