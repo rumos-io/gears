@@ -2,7 +2,6 @@ use std::{
     cmp::{self, Ordering},
     collections::BTreeSet,
     mem,
-    ops::{Bound, RangeBounds},
 };
 
 use database::Database;
@@ -18,6 +17,8 @@ use crate::{
 };
 
 use super::node_db::NodeDB;
+
+pub use crate::iavl::range::*;
 
 #[derive(Debug, Clone, PartialEq, Hash, Default)]
 pub(crate) struct InnerNode {
@@ -509,7 +510,7 @@ impl Node {
 // TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?). this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug)]
 pub struct Tree<T> {
-    root: Option<Box<Node>>,
+    pub(crate) root: Option<Box<Node>>,
     pub(crate) node_db: NodeDB<T>,
     pub(crate) loaded_version: u32,
     pub(crate) versions: BTreeSet<u32>,
@@ -949,110 +950,15 @@ where
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, T>
-    where
-        R: RangeBounds<Vec<u8>>,
-    {
+    pub fn range<R, RB>(&self, range: R) -> Range<'_, T, RB, R> {
         match &self.root {
             Some(root) => Range::new(
                 range,
-                vec![root.clone()], //TODO: remove clone
+                Some(root.clone()), //TODO: remove clone
                 &self.node_db,
             ),
-            None => Range::new(range, vec![], &self.node_db),
+            None => Range::new(range, None, &self.node_db),
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Range<'a, DB> {
-    range: (Bound<Vec<u8>>, Bound<Vec<u8>>),
-    delayed_nodes: Vec<Box<Node>>,
-    node_db: &'a NodeDB<DB>,
-}
-
-impl<'a, DB: Database> Range<'a, DB> {
-    pub(crate) fn new<R: RangeBounds<Vec<u8>>>(
-        range: R,
-        delayed_nodes: Vec<Box<Node>>,
-        node_db: &'a NodeDB<DB>,
-    ) -> Self {
-        Self {
-            range: (
-                range.start_bound().map(|this| this.to_owned()),
-                range.end_bound().map(|this| this.to_owned()),
-            ),
-            delayed_nodes,
-            node_db,
-        }
-    }
-
-    fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
-        let node = self.delayed_nodes.pop()?;
-
-        let after_start = match self.range.start_bound() {
-            Bound::Included(l) => node.get_key() > l,
-            Bound::Excluded(l) => node.get_key() > l,
-            Bound::Unbounded => true,
-        };
-
-        let before_end = match self.range.end_bound() {
-            Bound::Included(u) => node.get_key() <= u,
-            Bound::Excluded(u) => node.get_key() < u,
-            Bound::Unbounded => true,
-        };
-
-        match *node {
-            Node::Inner(inner) => {
-                // Traverse through the left subtree, then the right subtree.
-                if before_end {
-                    match inner.right_node {
-                        Some(right_node) => self.delayed_nodes.push(right_node),
-                        None => {
-                            let right_node = self
-                                .node_db
-                                .get_node(&inner.right_hash)
-                                .expect("node db should contain all nodes");
-
-                            self.delayed_nodes.push(right_node);
-                        }
-                    }
-                }
-
-                if after_start {
-                    match inner.left_node {
-                        Some(left_node) => self.delayed_nodes.push(left_node),
-                        None => {
-                            let left_node = self
-                                .node_db
-                                .get_node(&inner.left_hash)
-                                .expect("node db should contain all nodes");
-
-                            //self.cached_nodes.push(left_node);
-                            self.delayed_nodes.push(left_node);
-                        }
-                    }
-
-                    //self.delayed_nodes.push(inner.get_left_node(self.node_db));
-                }
-            }
-            Node::Leaf(leaf) => {
-                if self.range.contains(&leaf.key) {
-                    // we have a leaf node within the range
-                    return Some((leaf.key, leaf.value));
-                }
-            }
-        }
-
-        self.traverse()
-    }
-}
-
-impl<'a, DB: Database> Iterator for Range<'a, DB> {
-    type Item = (Vec<u8>, Vec<u8>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.traverse()
     }
 }
 
@@ -1070,11 +976,134 @@ fn decode_bytes(bz: &[u8]) -> Result<(Vec<u8>, usize), InternalError> {
     Ok((bytes, n_consumed + bz_length))
 }
 
-#[cfg(test)]
-mod tests {
+pub(crate) mod draw {
     use std::fs::File;
     use std::io::Write;
     use std::path::Path;
+
+    use extensions::testing::UnwrapTesting;
+
+    use super::*;
+
+    /// Draws a mermaid graph of the tree to a markdown file
+    /// Arguments:
+    /// - filename: the path to the file to write the graph to
+    /// - root: the root node of the tree
+    /// - node_db: the node database
+    /// - highlight: highlights a node with the given key
+    #[allow(dead_code)]
+    pub fn draw<T: Database, N>(
+        filename: impl AsRef<Path>,
+        root: N,
+        node_db: &NodeDB<T>,
+        highlight: Option<&[u8]>,
+    ) where
+        N: AsRef<Node>,
+    {
+        let mut f = File::create(filename.as_ref()).unwrap_test();
+
+        fn recursive_draw<T: Database, N>(
+            root: Option<N>,
+            node_db: &NodeDB<T>,
+            parent: Option<&str>,
+            f: &mut File,
+            highlight: Option<&[u8]>,
+        ) where
+            N: AsRef<Node>,
+        {
+            match root {
+                Some(root) => {
+                    let self_hash = hex::encode(root.as_ref().hash());
+                    let self_height = root.as_ref().get_height();
+                    let self_size = root.as_ref().get_size();
+                    let self_key = format!("{:?}", root.as_ref().get_key())
+                        .replace("[", "")
+                        .replace("]", "");
+
+                    let prefix = match parent {
+                        Some(parent) => {
+                            format!("{} --> ", parent)
+                        }
+                        None => "".to_string(),
+                    };
+                    let buf = format!(
+                        "{}{}[Hash: {}<br/>Height: {}<br/>Size: {}<br/>Key: {}];\n",
+                        prefix,
+                        self_hash,
+                        &self_hash[0..8],
+                        self_height,
+                        self_size,
+                        self_key,
+                    );
+                    f.write_all(buf.as_bytes()).unwrap_test();
+
+                    match root.as_ref() {
+                        Node::Inner(node) => {
+                            let left_node = match &node.left_node {
+                                Some(left_node) => Some(left_node.clone()),
+                                None => node_db.get_node(&node.left_hash),
+                            };
+
+                            let right_node = match &node.right_node {
+                                Some(right_node) => Some(right_node.clone()),
+                                None => node_db.get_node(&node.right_hash),
+                            };
+
+                            recursive_draw(
+                                left_node,
+                                node_db,
+                                Some(self_hash.as_str()),
+                                f,
+                                highlight,
+                            );
+                            recursive_draw(
+                                right_node,
+                                node_db,
+                                Some(self_hash.as_str()),
+                                f,
+                                highlight,
+                            );
+                        }
+                        Node::Leaf(node) => {
+                            let highlight = highlight.map(|h| h == node.key).unwrap_or(false);
+
+                            let buf = if highlight {
+                                format!(
+                            "style {} fill:#bbf,stroke:#f66,stroke-width:10px,color:#fff \n",
+                            self_hash,
+                        )
+                            } else {
+                                format!(
+                            "style {} fill:#bbf,stroke:#fff,stroke-width:2px,color:#fff,stroke-dasharray: 5 5 \n",
+                            self_hash,
+                        )
+                            };
+
+                            f.write_all(buf.as_bytes()).unwrap_test();
+                        }
+                    }
+                }
+                None => {
+                    let buf = format!("{} --> none[NONE];\n", parent.expect("for this to not have a parent it must be the root, but then it wouldn't be `None`"));
+                    f.write_all(buf.as_bytes()).unwrap_test();
+                }
+            }
+        }
+
+        f.write_all("```mermaid\n  graph TD;".as_bytes())
+            .unwrap_test();
+
+        recursive_draw(Some(root), node_db, None, &mut f, highlight);
+
+        f.write_all("```".as_bytes()).unwrap_test();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use std::ops::Bound;
+
     use std::vec;
 
     use super::*;
@@ -1582,7 +1611,7 @@ mod tests {
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
         tree.set(b"q".to_vec(), b"1".to_vec());
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range::<_, Vec<u8>>(..).collect();
 
         let expected_pairs = vec![
             (b"alice".to_vec(), b"abc".to_vec()),
@@ -1604,7 +1633,7 @@ mod tests {
         let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"alice".to_vec(), b"abc".to_vec());
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range::<_, Vec<u8>>(..).collect();
 
         let expected_pairs = vec![(b"alice".to_vec(), b"abc".to_vec())];
 
@@ -1619,7 +1648,7 @@ mod tests {
     fn empty_tree_range_works() {
         let db = MemDB::new();
         let tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range::<_, Vec<u8>>(..).collect();
 
         let expected_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
 
@@ -3012,118 +3041,5 @@ mod tests {
             }
             Node::Leaf(_) => (true, 0, 1),
         }
-    }
-
-    /// Draws a mermaid graph of the tree to a markdown file
-    /// Arguments:
-    /// - filename: the path to the file to write the graph to
-    /// - root: the root node of the tree
-    /// - node_db: the node database
-    /// - highlight: highlights a node with the given key
-    #[allow(dead_code)]
-    fn draw<T: Database, N>(
-        filename: impl AsRef<Path>,
-        root: N,
-        node_db: &NodeDB<T>,
-        highlight: Option<&[u8]>,
-    ) where
-        N: AsRef<Node>,
-    {
-        let mut f = File::create(filename.as_ref()).unwrap_test();
-
-        fn recursive_draw<T: Database, N>(
-            root: Option<N>,
-            node_db: &NodeDB<T>,
-            parent: Option<&str>,
-            f: &mut File,
-            highlight: Option<&[u8]>,
-        ) where
-            N: AsRef<Node>,
-        {
-            match root {
-                Some(root) => {
-                    let self_hash = hex::encode(root.as_ref().hash());
-                    let self_height = root.as_ref().get_height();
-                    let self_size = root.as_ref().get_size();
-                    let self_key = format!("{:?}", root.as_ref().get_key())
-                        .replace("[", "")
-                        .replace("]", "");
-
-                    let prefix = match parent {
-                        Some(parent) => {
-                            format!("{} --> ", parent)
-                        }
-                        None => "".to_string(),
-                    };
-                    let buf = format!(
-                        "{}{}[Hash: {}<br/>Height: {}<br/>Size: {}<br/>Key: {}];\n",
-                        prefix,
-                        self_hash,
-                        &self_hash[0..8],
-                        self_height,
-                        self_size,
-                        self_key,
-                    );
-                    f.write_all(buf.as_bytes()).unwrap_test();
-
-                    match root.as_ref() {
-                        Node::Inner(node) => {
-                            let left_node = match &node.left_node {
-                                Some(left_node) => Some(left_node.clone()),
-                                None => node_db.get_node(&node.left_hash),
-                            };
-
-                            let right_node = match &node.right_node {
-                                Some(right_node) => Some(right_node.clone()),
-                                None => node_db.get_node(&node.right_hash),
-                            };
-
-                            recursive_draw(
-                                left_node,
-                                node_db,
-                                Some(self_hash.as_str()),
-                                f,
-                                highlight,
-                            );
-                            recursive_draw(
-                                right_node,
-                                node_db,
-                                Some(self_hash.as_str()),
-                                f,
-                                highlight,
-                            );
-                        }
-                        Node::Leaf(node) => {
-                            let highlight = highlight.map(|h| h == node.key).unwrap_or(false);
-
-                            let buf = if highlight {
-                                format!(
-                            "style {} fill:#bbf,stroke:#f66,stroke-width:10px,color:#fff \n",
-                            self_hash,
-                        )
-                            } else {
-                                format!(
-                            "style {} fill:#bbf,stroke:#fff,stroke-width:2px,color:#fff,stroke-dasharray: 5 5 \n",
-                            self_hash,
-                        )
-                            };
-
-                            f.write_all(buf.as_bytes()).unwrap_test();
-                        }
-                    }
-                }
-                None => {
-                    let buf = format!("{} --> none[NONE];\n", parent.expect("for this to not have a parent it must be the root, but then it wouldn't be `None`"));
-                    f.write_all(buf.as_bytes()).unwrap_test();
-                }
-            }
-        }
-
-        f.write_all("```mermaid\n  graph TD;".as_bytes())
-            .unwrap_test();
-
-        recursive_draw(Some(root), node_db, None, &mut f, highlight);
-
-        f.write_all("```".as_bytes()).unwrap_test();
     }
 }

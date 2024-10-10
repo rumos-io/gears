@@ -90,17 +90,14 @@ impl<DB: Database> QueryTree<DB> {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, DB>
-    where
-        R: RangeBounds<Vec<u8>>,
-    {
+    pub fn range<R: RangeBounds<RB>, RB: AsRef<[u8]>>(&self, range: R) -> Range<'_, DB, RB, R> {
         match &self.root {
             Some(root) => Range::new(
                 range,
-                vec![root.clone()], //TODO: remove clone
+                Some(root.clone()), //TODO: remove clone
                 &self.node_db,
             ),
-            None => Range::new(range, vec![], &self.node_db),
+            None => Range::new(range, None, &self.node_db),
         }
     }
 }

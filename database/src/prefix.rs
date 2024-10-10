@@ -24,29 +24,28 @@ impl<T: Database> Database for PrefixDB<T> {
         self.db.put(key, value)
     }
 
-    fn iterator<'a>(&'a self) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
+    fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
         let prefix_length = self.prefix.len();
-        Box::new(
-            self.db
-                .prefix_iterator(self.prefix.clone())
-                .map(move |(k, v)| {
-                    let key = k[prefix_length..].to_vec();
-                    (key.into_boxed_slice(), v)
-                }),
-        )
+
+        self.db
+            .prefix_iterator(self.prefix.clone())
+            .map(move |(k, v)| {
+                let key = k[prefix_length..].to_vec();
+                (key.into_boxed_slice(), v)
+            })
     }
 
     fn prefix_iterator<'a>(
         &'a self,
         prefix: Vec<u8>,
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
         let prefix = [self.prefix.clone(), prefix].concat();
         let prefix_length = prefix.len();
 
-        Box::new(self.db.prefix_iterator(prefix).map(move |(k, v)| {
+        self.db.prefix_iterator(prefix).map(move |(k, v)| {
             let key = k[prefix_length..].to_vec();
             (key.into_boxed_slice(), v)
-        }))
+        })
     }
 }
 

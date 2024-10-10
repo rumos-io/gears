@@ -37,21 +37,19 @@ impl Database for MemDB {
             .insert(key, value);
     }
 
-    fn iterator<'a>(&'a self) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
-        Box::new(
-            self.store
-                .read()
-                .expect("poisoned lock")
-                .clone()
-                .into_iter()
-                .map(|(key, value)| (key.into_boxed_slice(), value.into_boxed_slice())),
-        )
+    fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
+        self.store
+            .read()
+            .expect("poisoned lock")
+            .clone()
+            .into_iter()
+            .map(|(key, value)| (key.into_boxed_slice(), value.into_boxed_slice()))
     }
 
     fn prefix_iterator<'a>(
         &'a self,
         prefix: Vec<u8>,
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
         let start = Bound::Included(prefix.clone());
         let end = prefix_end_bound(prefix);
 
@@ -68,7 +66,7 @@ impl Database for MemDB {
             pairs.push(pair)
         }
 
-        Box::new(pairs.into_iter())
+        pairs.into_iter()
     }
 }
 

@@ -22,7 +22,10 @@ pub(crate) enum KVStoreBackend<'a, DB> {
 pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 
 impl<'a, DB: Database> KVStore<'a, DB> {
-    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> Range<'a, DB> {
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(
+        self,
+        range: R,
+    ) -> Range<'a, DB, Vec<u8>, R> {
         match self.0 {
             KVStoreBackend::App(var) => var.range(range),
             KVStoreBackend::Tx(var) => var.range(range),
