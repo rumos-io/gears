@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::RangeBounds};
 
 use database::Database;
 use infallible::RangeIter;
@@ -9,18 +9,18 @@ use super::{errors::GasStoreErrors, guard::GasGuard};
 pub mod infallible;
 
 #[derive(Debug)]
-enum RangeBackend<'a, DB> {
-    Kv(Range<'a, DB>),
-    Prefix(PrefixRange<'a, DB>),
+enum RangeBackend<'a, DB, RB, R> {
+    Kv(Range<'a, DB, RB, R>),
+    Prefix(PrefixRange<'a, DB, RB, R>),
 }
 
 #[derive(Debug)]
-pub struct GasRange<'a, DB> {
-    inner: RangeBackend<'a, DB>,
+pub struct GasRange<'a, DB, RB, R> {
+    inner: RangeBackend<'a, DB, RB, R>,
     guard: GasGuard,
 }
 
-impl<'a, DB> GasRange<'a, DB> {
+impl<'a, DB: Database, RB: AsRef<[u8]>, R: RangeBounds<RB>> GasRange<'a, DB, RB, R> {
     pub fn rev_iter(self) -> Self {
         let Self { inner, guard } = self;
         let inner = match inner {
@@ -32,27 +32,27 @@ impl<'a, DB> GasRange<'a, DB> {
     }
 }
 
-impl<'a, DB> GasRange<'a, DB> {
-    pub(super) fn new_kv(inner: Range<'a, DB>, guard: GasGuard) -> Self {
+impl<'a, DB, RB, R> GasRange<'a, DB, RB, R> {
+    pub(super) fn new_kv(inner: Range<'a, DB, RB, R>, guard: GasGuard) -> Self {
         Self {
             inner: RangeBackend::Kv(inner),
             guard,
         }
     }
 
-    pub(super) fn new_prefix(inner: PrefixRange<'a, DB>, guard: GasGuard) -> Self {
+    pub(super) fn new_prefix(inner: PrefixRange<'a, DB, RB, R>, guard: GasGuard) -> Self {
         Self {
             inner: RangeBackend::Prefix(inner),
             guard,
         }
     }
 
-    pub fn to_infallible_iter(self) -> RangeIter<'a, DB> {
+    pub fn to_infallible_iter(self) -> RangeIter<'a, DB, RB, R> {
         RangeIter::from(self)
     }
 }
 
-impl<'a, DB: Database> Iterator for GasRange<'a, DB> {
+impl<'a, DB: Database, RB: AsRef<[u8]>, R: RangeBounds<RB>> Iterator for GasRange<'a, DB, RB, R> {
     type Item = Result<(Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>), GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {

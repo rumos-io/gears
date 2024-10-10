@@ -6,62 +6,43 @@ use std::{
 };
 
 use database::Database;
-pub use rev::*;
 
 use super::{node_db::NodeDB, Node};
 
 #[derive(Debug, Clone)]
-pub struct Range<'a, DB> {
-    range: (Bound<Vec<u8>>, Bound<Vec<u8>>),
+pub struct Range<'a, DB, RB, R> {
+    range: R,
     delayed_nodes: Vec<Box<Node>>,
+    delayed_nodes_rev: Vec<Box<Node>>,
     node_db: &'a NodeDB<DB>,
+    _marker: PhantomData<RB>,
 }
 
-impl<'a, DB> Range<'a, DB> {
-    pub fn rev_iter(self) -> RevRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)> {
-        let Self {
+impl<'a, DB, RB, R> Range<'a, DB, RB, R> {
+    pub(crate) fn new(range: R, root: Option<Box<Node>>, node_db: &'a NodeDB<DB>) -> Self {
+        Self {
             range,
-            delayed_nodes,
-            node_db,
-        } = self;
-
-        RevRange {
-            range: range,
-            delayed_nodes: delayed_nodes.into(),
+            delayed_nodes: root.clone().map(|this| vec![this]).unwrap_or_default(),
+            delayed_nodes_rev: root.map(|this| vec![this]).unwrap_or_default(),
             node_db,
             _marker: PhantomData,
         }
     }
 }
 
-impl<'a, DB: Database> Range<'a, DB> {
-    pub(crate) fn new<R: RangeBounds<Vec<u8>>>(
-        range: R,
-        delayed_nodes: Vec<Box<Node>>,
-        node_db: &'a NodeDB<DB>,
-    ) -> Self {
-        Self {
-            range: (
-                range.start_bound().map(|this| this.to_owned()),
-                range.end_bound().map(|this| this.to_owned()),
-            ),
-            delayed_nodes,
-            node_db,
-        }
-    }
-
+impl<'a, DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]>> Range<'a, DB, RB, R> {
     fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         let node = self.delayed_nodes.pop()?;
 
         let after_start = match self.range.start_bound() {
-            Bound::Included(l) => node.get_key() > l,
-            Bound::Excluded(l) => node.get_key() > l,
+            Bound::Included(l) => node.get_key() >= l.as_ref(),
+            Bound::Excluded(l) => node.get_key() > l.as_ref(),
             Bound::Unbounded => true,
         };
 
         let before_end = match self.range.end_bound() {
-            Bound::Included(u) => node.get_key() <= u,
-            Bound::Excluded(u) => node.get_key() < u,
+            Bound::Included(u) => node.get_key() <= u.as_ref(),
+            Bound::Excluded(u) => node.get_key() < u.as_ref(),
             Bound::Unbounded => true,
         };
 
@@ -100,7 +81,7 @@ impl<'a, DB: Database> Range<'a, DB> {
                 }
             }
             Node::Leaf(leaf) => {
-                if self.range.contains(&leaf.key) {
+                if after_start && before_end {
                     // we have a leaf node within the range
                     return Some((leaf.key, leaf.value));
                 }
@@ -111,7 +92,7 @@ impl<'a, DB: Database> Range<'a, DB> {
     }
 }
 
-impl<'a, DB: Database> Iterator for Range<'a, DB> {
+impl<'a, DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]>> Iterator for Range<'a, DB, RB, R> {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -134,7 +115,7 @@ mod tests {
         let db = MemDB::new();
         let tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
 
-        let empty_range = tree.range(..).into_iter().collect::<Vec<_>>();
+        let empty_range = tree.range::<_, Vec<u8>>(..).into_iter().collect::<Vec<_>>();
 
         assert_eq!(Vec::<(Vec<u8>, Vec<u8>)>::new(), empty_range)
     }
@@ -165,7 +146,7 @@ mod tests {
 
         tree.save_version().unwrap_test();
 
-        let full_range = tree.range(..).into_iter().collect::<Vec<_>>();
+        let full_range = tree.range::<_, Vec<u8>>(..).into_iter().collect::<Vec<_>>();
 
         assert_eq!(expected_array, full_range)
     }

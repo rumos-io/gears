@@ -31,7 +31,10 @@ impl<'a, DB> From<KVStoreMut<'a, DB>> for StoreMut<'a, DB> {
 }
 
 impl<'a, DB: Database> StoreMut<'a, DB> {
-    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> StoreRange<'a, DB> {
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(
+        self,
+        range: R,
+    ) -> StoreRange<'a, DB, Vec<u8>, R> {
         match self.0 {
             StoreMutBackend::Gas(var) => StoreRange::from(var.into_range(range)),
             StoreMutBackend::Kv(var) => StoreRange::from(var.into_range(range)),

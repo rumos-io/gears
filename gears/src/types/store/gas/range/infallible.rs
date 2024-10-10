@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::RangeBounds};
 
 use database::Database;
 
@@ -7,12 +7,12 @@ use crate::types::store::gas::errors::GasStoreErrors;
 use super::{GasRange, RangeBackend};
 
 #[derive(Debug)]
-pub struct RangeIter<'a, DB> {
-    range: GasRange<'a, DB>,
+pub struct RangeIter<'a, DB, RB, R> {
+    range: GasRange<'a, DB, RB, R>,
     err: Option<GasStoreErrors>,
 }
 
-impl<DB> RangeIter<'_, DB> {
+impl<DB: Database, RB: AsRef<[u8]>, R: RangeBounds<RB>> RangeIter<'_, DB, RB, R> {
     pub fn rev_iter(mut self) -> Self {
         self.range = self.range.rev_iter();
         self
@@ -23,8 +23,8 @@ impl<DB> RangeIter<'_, DB> {
     }
 }
 
-impl<'a, DB> From<GasRange<'a, DB>> for RangeIter<'a, DB> {
-    fn from(value: GasRange<'a, DB>) -> Self {
+impl<'a, DB, RB, R> From<GasRange<'a, DB, RB, R>> for RangeIter<'a, DB, RB, R> {
+    fn from(value: GasRange<'a, DB, RB, R>) -> Self {
         Self {
             range: value,
             err: None,
@@ -32,7 +32,7 @@ impl<'a, DB> From<GasRange<'a, DB>> for RangeIter<'a, DB> {
     }
 }
 
-impl<'a, DB: Database> Iterator for RangeIter<'a, DB> {
+impl<'a, DB: Database, RB: AsRef<[u8]>, R: RangeBounds<RB>> Iterator for RangeIter<'a, DB, RB, R> {
     type Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>);
 
     fn next(&mut self) -> Option<Self::Item> {

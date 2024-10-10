@@ -1,24 +1,14 @@
-use std::{
-    fmt::Debug,
-    marker::PhantomData,
-    ops::{Bound, RangeBounds},
-};
+use std::ops::{Bound, RangeBounds};
 
 use database::Database;
 
-use crate::iavl::{node_db::NodeDB, Node};
+use crate::iavl::Node;
 
-#[derive(Debug, Clone)]
-pub struct RevRange<'a, DB, RB, R> {
-    pub(super) range: R,
-    pub(super) delayed_nodes: Vec<Box<Node>>,
-    pub(super) node_db: &'a NodeDB<DB>,
-    pub(super) _marker: PhantomData<RB>,
-}
+use super::*;
 
-impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]>> RevRange<'_, DB, RB, R> {
-    fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
-        let node = self.delayed_nodes.pop()?;
+impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]>> Range<'_, DB, RB, R> {
+    fn traverse_rev(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
+        let node = self.delayed_nodes_rev.pop()?;
 
         let after_start = match self.range.start_bound() {
             Bound::Included(l) => node.get_key() >= l.as_ref(),
@@ -48,7 +38,7 @@ impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]>> RevRange<'_, DB, RB, R> 
                             .expect("node db should contain all nodes"),
                     };
 
-                    self.delayed_nodes.push(left_node)
+                    self.delayed_nodes_rev.push(left_node)
                 }
 
                 if before_end {
@@ -60,22 +50,20 @@ impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]>> RevRange<'_, DB, RB, R> 
                             .expect("node db should contain all nodes"),
                     };
 
-                    self.delayed_nodes.push(right_node)
+                    self.delayed_nodes_rev.push(right_node)
                 }
             }
         }
 
-        self.traverse()
+        self.traverse_rev()
     }
 }
 
-impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]> + Debug> Iterator
-    for RevRange<'_, DB, RB, R>
+impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]>> DoubleEndedIterator
+    for Range<'_, DB, RB, R>
 {
-    type Item = (Vec<u8>, Vec<u8>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.traverse()
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.traverse_rev()
     }
 }
 
@@ -94,7 +82,7 @@ mod tests {
         let db = MemDB::new();
         let tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
 
-        let empty_range = tree.range(..).into_iter().collect::<Vec<_>>();
+        let empty_range = tree.range::<_, Vec<u8>>(..).into_iter().collect::<Vec<_>>();
 
         assert_eq!(Vec::<(Vec<u8>, Vec<u8>)>::new(), empty_range)
     }
@@ -125,7 +113,11 @@ mod tests {
 
         tree.save_version().unwrap_test();
 
-        let full_range = tree.range(..).rev_iter().into_iter().collect::<Vec<_>>();
+        let full_range = tree
+            .range::<_, Vec<u8>>(..)
+            .rev()
+            .into_iter()
+            .collect::<Vec<_>>();
 
         // Revert expected, but not for insert order
         let expected_array = expected_array.into_iter().rev().collect::<Vec<_>>();
@@ -161,7 +153,7 @@ mod tests {
 
         let full_range = tree
             .range((Bound::Included(vec![1_u8]), Bound::Excluded(vec![10])))
-            .rev_iter();
+            .rev();
 
         let full_range = full_range.into_iter().collect::<Vec<_>>();
 
@@ -199,7 +191,7 @@ mod tests {
 
         let result_range = tree
             .range((Bound::Included(vec![1_u8]), Bound::Excluded(vec![5])))
-            .rev_iter()
+            .rev()
             .into_iter()
             .collect::<Vec<_>>();
 
@@ -241,7 +233,7 @@ mod tests {
 
         let result_range = tree
             .range((Bound::Included(vec![1_u8]), Bound::Included(vec![5])))
-            .rev_iter()
+            .rev()
             .into_iter()
             .collect::<Vec<_>>();
 
@@ -278,7 +270,7 @@ mod tests {
 
         let result_range = tree
             .range((Bound::Excluded(vec![0_u8]), Bound::Excluded(vec![10])))
-            .rev_iter()
+            .rev()
             .into_iter()
             .collect::<Vec<_>>();
 
@@ -315,7 +307,7 @@ mod tests {
 
         let result_range = tree
             .range((Bound::Included(vec![5_u8]), Bound::Excluded(vec![9])))
-            .rev_iter()
+            .rev()
             .into_iter()
             .collect::<Vec<_>>();
 
@@ -357,7 +349,7 @@ mod tests {
 
         let result_range = tree
             .range((Bound::Excluded(vec![5_u8]), Bound::Included(vec![9])))
-            .rev_iter()
+            .rev()
             .into_iter()
             .collect::<Vec<_>>();
 
@@ -399,7 +391,7 @@ mod tests {
 
         let result_range = tree
             .range((Bound::Excluded(vec![3_u8]), Bound::Included(vec![7])))
-            .rev_iter()
+            .rev()
             .into_iter()
             .collect::<Vec<_>>();
 

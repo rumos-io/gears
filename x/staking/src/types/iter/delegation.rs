@@ -8,10 +8,12 @@ use gears::{
         store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
     },
 };
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::Bound};
 
 #[derive(Debug)]
-pub struct DelegationIterator<'a, DB>(StoreRange<'a, DB>);
+pub struct DelegationIterator<'a, DB>(
+    StoreRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)>,
+);
 
 impl<'a, DB: Database> DelegationIterator<'a, DB> {
     pub fn new(store: Store<'a, DB>, address: &AccAddress) -> DelegationIterator<'a, DB> {

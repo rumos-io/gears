@@ -13,7 +13,10 @@ pub struct ImmutablePrefixStore<'a, DB> {
 }
 
 impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
-    pub fn into_range<R: RangeBounds<Vec<u8>>>(self, range: R) -> PrefixRange<'a, DB> {
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(
+        self,
+        range: R,
+    ) -> PrefixRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)> {
         let new_start = match range.start_bound() {
             Bound::Included(b) => Bound::Included([self.prefix.clone(), b.clone()].concat()),
             Bound::Excluded(b) => Bound::Excluded([self.prefix.clone(), b.clone()].concat()),
@@ -27,7 +30,7 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
         };
 
         PrefixRange {
-            parent_range: self.store.into_range((new_start, new_end)),
+            parent_range: self.store.into_range((new_start, new_end).into()),
             prefix_length: self.prefix.len(),
         }
     }

@@ -2,7 +2,6 @@ use std::{
     cmp::{self, Ordering},
     collections::BTreeSet,
     mem,
-    ops::RangeBounds,
 };
 
 use database::Database;
@@ -951,17 +950,14 @@ where
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, T>
-    where
-        R: RangeBounds<Vec<u8>>,
-    {
+    pub fn range<R, RB>(&self, range: R) -> Range<'_, T, RB, R> {
         match &self.root {
             Some(root) => Range::new(
                 range,
-                vec![root.clone()], //TODO: remove clone
+                Some(root.clone()), //TODO: remove clone
                 &self.node_db,
             ),
-            None => Range::new(range, vec![], &self.node_db),
+            None => Range::new(range, None, &self.node_db),
         }
     }
 }
@@ -1615,7 +1611,7 @@ mod tests {
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
         tree.set(b"q".to_vec(), b"1".to_vec());
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range::<_, Vec<u8>>(..).collect();
 
         let expected_pairs = vec![
             (b"alice".to_vec(), b"abc".to_vec()),
@@ -1637,7 +1633,7 @@ mod tests {
         let mut tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"alice".to_vec(), b"abc".to_vec());
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range::<_, Vec<u8>>(..).collect();
 
         let expected_pairs = vec![(b"alice".to_vec(), b"abc".to_vec())];
 
@@ -1652,7 +1648,7 @@ mod tests {
     fn empty_tree_range_works() {
         let db = MemDB::new();
         let tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range::<_, Vec<u8>>(..).collect();
 
         let expected_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
 

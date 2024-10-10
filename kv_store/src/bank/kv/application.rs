@@ -117,7 +117,7 @@ impl<DB: Database> ApplicationKVBank<DB> {
         }
     }
 
-    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, DB> {
+    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, DB, Vec<u8>, R> {
         let cached_values = self
             .cache
             .storage

@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::RangeBounds};
 
 use database::Database;
 use kv_store::{range::Range, store::prefix::range::PrefixRange};
@@ -6,15 +6,15 @@ use kv_store::{range::Range, store::prefix::range::PrefixRange};
 use crate::types::store::gas::errors::GasStoreErrors;
 
 #[derive(Debug)]
-enum InfallibleRangeBackend<'a, DB> {
-    Gas(crate::types::store::gas::range::infallible::RangeIter<'a, DB>),
-    Kv(Range<'a, DB>),
-    Prefix(PrefixRange<'a, DB>),
+enum InfallibleRangeBackend<'a, DB, RB, R> {
+    Gas(crate::types::store::gas::range::infallible::RangeIter<'a, DB, RB, R>),
+    Kv(Range<'a, DB, RB, R>),
+    Prefix(PrefixRange<'a, DB, RB, R>),
 }
 
-pub struct RangeIter<'a, DB>(InfallibleRangeBackend<'a, DB>);
+pub struct RangeIter<'a, DB, RB, R>(InfallibleRangeBackend<'a, DB, RB, R>);
 
-impl<DB> RangeIter<'_, DB> {
+impl<DB: Database, RB: AsRef<[u8]>, R: RangeBounds<RB>> RangeIter<'_, DB, RB, R> {
     pub fn rev_iter(self) -> Self {
         match self.0 {
             InfallibleRangeBackend::Gas(range) => range.rev_iter().into(),
@@ -32,7 +32,7 @@ impl<DB> RangeIter<'_, DB> {
     }
 }
 
-impl<'a, DB: Database> Iterator for RangeIter<'a, DB> {
+impl<'a, DB: Database, RB: AsRef<[u8]>, R: RangeBounds<RB>> Iterator for RangeIter<'a, DB, RB, R> {
     type Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -44,22 +44,22 @@ impl<'a, DB: Database> Iterator for RangeIter<'a, DB> {
     }
 }
 
-impl<'a, DB> From<crate::types::store::gas::range::infallible::RangeIter<'a, DB>>
-    for RangeIter<'a, DB>
+impl<'a, DB, RB, R> From<crate::types::store::gas::range::infallible::RangeIter<'a, DB, RB, R>>
+    for RangeIter<'a, DB, RB, R>
 {
-    fn from(value: crate::types::store::gas::range::infallible::RangeIter<'a, DB>) -> Self {
+    fn from(value: crate::types::store::gas::range::infallible::RangeIter<'a, DB, RB, R>) -> Self {
         Self(InfallibleRangeBackend::Gas(value))
     }
 }
 
-impl<'a, DB> From<Range<'a, DB>> for RangeIter<'a, DB> {
-    fn from(value: Range<'a, DB>) -> Self {
+impl<'a, DB, RB, R> From<Range<'a, DB, RB, R>> for RangeIter<'a, DB, RB, R> {
+    fn from(value: Range<'a, DB, RB, R>) -> Self {
         Self(InfallibleRangeBackend::Kv(value))
     }
 }
 
-impl<'a, DB> From<PrefixRange<'a, DB>> for RangeIter<'a, DB> {
-    fn from(value: PrefixRange<'a, DB>) -> Self {
+impl<'a, DB, RB, R> From<PrefixRange<'a, DB, RB, R>> for RangeIter<'a, DB, RB, R> {
+    fn from(value: PrefixRange<'a, DB, RB, R>) -> Self {
         Self(InfallibleRangeBackend::Prefix(value))
     }
 }
