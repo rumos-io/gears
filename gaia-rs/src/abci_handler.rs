@@ -246,6 +246,7 @@ impl ABCIHandler for GaiaABCIHandler {
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         request: gears::tendermint::request::RequestBeginBlock,
     ) {
+        // TODO: need to add call to upgrade begin_block here
         self.staking_abci_handler.begin_block(ctx, request);
     }
 

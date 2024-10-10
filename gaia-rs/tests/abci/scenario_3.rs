@@ -26,7 +26,7 @@ fn scenario_3() {
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
-        "5f3f9b2a7b0a9d2d645da95bc8eed1c6a0105b52c36200ff68155cacfc4e5e08"
+        "5a35ca76b00dd26100e68075cedca5d170eec03b9d46a623e3a1c4dab4be0281"
     );
 
     //----------------------------------------
@@ -72,7 +72,7 @@ fn scenario_3() {
     );
     assert_eq!(
         hex::encode(step_res.app_hash),
-        "177683d0356ad00958fe7406f238e883850f1d0e1d815895fc56a813577167a7"
+        "5663e912a5f4bf5066874aaa891a016c10a942927eeb8e7bc0936e3d01348285"
     );
 
     // query the validator list
@@ -132,7 +132,7 @@ fn scenario_3() {
     );
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "d8e98a3173e681a3cb84f199c119080c5de2d33b6e837cffb27d779227c0e5b0"
+        "c92f6610dcb2f2f5b6f454c5f182f1a7ef2287a3c07516cc214aa0e0170f9d89"
     );
 
     // query the validator list
@@ -160,7 +160,7 @@ fn scenario_3() {
         .app_hash; // 30 days which is greater than the unbonding time
     assert_eq!(
         hex::encode(app_hash),
-        "885e9d12107d1c1bd3f6dc07d240a7cec4a2bfc5621d983d6d4070dbdfbc0152"
+        "22dcec54c3776d5e8470ff65a2c45cf08f17d6b358d2ed5f04d84d2cfdd85371"
     );
 
     //----------------------------------------
@@ -179,7 +179,7 @@ fn scenario_3() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "214d04fd965515cd12a2a1e97be0eeaff658f4e79cc6e65c47e9bdd78fc8650c"
+        "6ac5c3c69ef12e13063032b1c7351c73fc187037a31ca5ded140283d6ce6db16"
     );
 
     //----------------------------------------
@@ -201,7 +201,7 @@ fn scenario_3() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "736ae35880680f418baa96627bde4daced7da324e12467ffa6617f593d9e756c"
+        "5bba8d52a61305702f5f1460e4de626db3d29af5f49e5bcd6197b90ccb5cbbf2"
     );
 
     //----------------------------------------
@@ -222,7 +222,7 @@ fn scenario_3() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "716c45a401203214af73502289602ab08783b36fff26f0e3ea7ccc63d3bf3ed6"
+        "435d0d7897e50fea28c43efe0d5c10ef90283c945e4d78e59e8645be88092478"
     );
 
     //----------------------------------------
@@ -257,7 +257,7 @@ fn scenario_3() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "859f3457061b5e65492b20842f690abc00285554dc49bcd4c4fd37aab426ed19"
+        "81a1853dae8dec9404a5eefa9d020f8100a16d547bc09286c704df7954dd95d7"
     );
 
     // check user_1 is bonded
@@ -296,6 +296,6 @@ fn scenario_3() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "7f0646e9c8b2a12235088c6cdfaedcd0ea67fb4957112e51a85b8d2f07915933"
+        "55ca0c776a7d051d0f9ec7a23ce0ad2a9d3adefac0f73cb227b513f6a2091582"
     );
 }

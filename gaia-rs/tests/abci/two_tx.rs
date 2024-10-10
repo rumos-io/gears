@@ -13,7 +13,7 @@ fn two_tx_in_different_block() {
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
-        "76db0b7e8c2bbe8340719649cd7ceb18490a2789908634da1433f22493dcec5d"
+        "fadd423b82c26b2a22effdd4b99e8c685dd9c7281eab3d1911b303599a98dd75"
     );
 
     node.step(vec![], Timestamp::UNIX_EPOCH);
@@ -36,7 +36,7 @@ fn two_tx_in_different_block() {
     let app_hash = node.step(vec![txs], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
-        "12c23374b049220003f26ede3dea6ca134a15072f895038cefe8c4a33108f4ae"
+        "c87125d99593ca696ce60c2195ef67125fb434714c36c4b4d1fe1d1eb4f1580e"
     );
 
     let msg = gaia_rs::message::Message::Bank(bank::Message::Send(MsgSend {
@@ -50,7 +50,7 @@ fn two_tx_in_different_block() {
     let app_hash = node.step(vec![txs], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
-        "fa38b70ea1cb45473a13bccf40d1cd836faa416f10ba5ce5f66b4db7e3224297"
+        "799fe6e722efd5582207c548be705472983b10ab19d48db98512569931a85eaa"
     );
 }
 
@@ -63,7 +63,7 @@ fn two_tx_in_single_block() {
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
-        "76db0b7e8c2bbe8340719649cd7ceb18490a2789908634da1433f22493dcec5d"
+        "fadd423b82c26b2a22effdd4b99e8c685dd9c7281eab3d1911b303599a98dd75"
     );
 
     node.step(vec![], Timestamp::UNIX_EPOCH);
@@ -93,6 +93,6 @@ fn two_tx_in_single_block() {
     let app_hash = node.step(vec![tx1, tx2], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
-        "12c23374b049220003f26ede3dea6ca134a15072f895038cefe8c4a33108f4ae"
+        "b0de8e449befc5ad60b10cabcbd4dd184c025b4697922329d26b87facd92b8e2"
     );
 }

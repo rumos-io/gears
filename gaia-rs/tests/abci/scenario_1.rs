@@ -17,7 +17,7 @@ fn scenario_1() {
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
-        "76db0b7e8c2bbe8340719649cd7ceb18490a2789908634da1433f22493dcec5d"
+        "fadd423b82c26b2a22effdd4b99e8c685dd9c7281eab3d1911b303599a98dd75"
     );
 
     node.step(vec![], Timestamp::UNIX_EPOCH);
@@ -41,7 +41,7 @@ fn scenario_1() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "6276d7ba6271d98a204f58873797954a267bba87e3e9749fab630009a7df1c8d"
+        "c87125d99593ca696ce60c2195ef67125fb434714c36c4b4d1fe1d1eb4f1580e"
     );
 
     // check user balance

@@ -20,7 +20,7 @@ fn scenario_2() {
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
         hex::encode(app_hash),
-        "87308fa82b6de74ed14ac1e701aeb66e7844494ba1713c37328cca3ce7884bf0"
+        "84fe8533042f839ac30c47c06b2488561c8fd06baea2e6a3e3ed89548d575ebb"
     );
 
     //----------------------------------------
@@ -65,7 +65,7 @@ fn scenario_2() {
     assert_eq!(step_response.tx_responses[0].code, 0);
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "7134aa05a768927784a369aecdc42bd1c77c01c41e6bbf861cb52edefd2f6ff5"
+        "ca9fb5ffb66dec17738673048038e73e24168e61c3167b62c54ab90cd677cb32"
     );
 
     //----------------------------------------
@@ -95,7 +95,7 @@ fn scenario_2() {
     assert_eq!(step_response.tx_responses[0].code, 0);
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "661cf36acf893031c237cb8381845211fa8ee59160e4e0bd0c86f56e17d8f0d5"
+        "b67270d64726252330733d3f6955d7cd89230e342044798829c41a36af40e03a"
     );
 
     //----------------------------------------
@@ -118,7 +118,7 @@ fn scenario_2() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "86995fd7296fa474c6b2fcead1ac40b36b5b69e03e97bd47e0549157719535f0"
+        "335a2ee38efbe2d58b0ddc18aab28bfdc25277aab44aeabbe7968a9d20afd39e"
     );
 
     //----------------------------------------
@@ -142,7 +142,7 @@ fn scenario_2() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "02347e5bb6d59518bed1c73cbbbf22025c242f01332d5101aa1310080dfe243a"
+        "d2366f8070103134bd095fe4578441c64f065d6b5b62db5f5c05e774593c9dcb"
     );
 
     //----------------------------------------
@@ -165,7 +165,7 @@ fn scenario_2() {
 
     assert_eq!(
         hex::encode(step_response.app_hash),
-        "9ebdae93785523a55178ede198f70adfbc86126b7fffda4f95c784a2f8cd2960"
+        "cd20c5db4bc2e575d82590df22770964128ae88a249ce176015268799cb9bd80"
     );
 
     //----------------------------------------
@@ -176,6 +176,6 @@ fn scenario_2() {
         .app_hash; // 30 days which is greater than the unbonding time
     assert_eq!(
         hex::encode(app_hash),
-        "ef1d229776930752d005278738ea2ceab02dc184e4a0795e4f8dd503bc2a87d6"
+        "275fed647b2e14398e3f59abbae8b414c8c4783c08959246fda417b7d9f35ba9"
     );
 }
