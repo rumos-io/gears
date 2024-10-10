@@ -17,6 +17,23 @@ pub struct Range<'a, DB> {
     node_db: &'a NodeDB<DB>,
 }
 
+impl<'a, DB> Range<'a, DB> {
+    pub fn rev_iter(self) -> RevRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)> {
+        let Self {
+            range,
+            delayed_nodes,
+            node_db,
+        } = self;
+
+        RevRange {
+            range: range,
+            delayed_nodes: delayed_nodes.into(),
+            node_db,
+            _marker: PhantomData,
+        }
+    }
+}
+
 impl<'a, DB: Database> Range<'a, DB> {
     pub(crate) fn new<R: RangeBounds<Vec<u8>>>(
         range: R,
@@ -30,21 +47,6 @@ impl<'a, DB: Database> Range<'a, DB> {
             ),
             delayed_nodes,
             node_db,
-        }
-    }
-
-    pub fn rev_iter(self) -> RevRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)> {
-        let Self {
-            range,
-            delayed_nodes,
-            node_db,
-        } = self;
-
-        RevRange {
-            range: range,
-            delayed_nodes: delayed_nodes.into(),
-            node_db,
-            _marker: PhantomData,
         }
     }
 
