@@ -16,7 +16,7 @@ pub struct RevRange<'a, DB, RB, R> {
     pub(super) _marker: PhantomData<RB>,
 }
 
-impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]> + Debug> RevRange<'_, DB, RB, R> {
+impl<DB: Database, R: RangeBounds<RB>, RB: AsRef<[u8]>> RevRange<'_, DB, RB, R> {
     fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         let node = self.delayed_nodes.pop()?;
 
