@@ -269,6 +269,10 @@ impl<
             amount,
         }: MsgSend,
     ) -> Result<(), BankKeeperError> {
+        if let Some(denom) = self.is_send_enabled_for(ctx, amount.inner())? {
+            Err(BankKeeperError::SendDisabled(denom.clone()))?
+        }
+
         let mut events = vec![];
 
         for send_coin in amount.inner() {
@@ -668,6 +672,34 @@ impl<
             Ok(spendable) => Ok((Some(spendable), total, pagination)),
             Err(_) => Ok((None, total, pagination)),
         }
+    }
+
+    fn is_send_enabled_for<'a, DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        coins: impl IntoIterator<Item = &'a UnsignedCoin>,
+    ) -> Result<Option<&'a Denom>, GasStoreErrors> {
+        let BankParams {
+            send_enabled,
+            default_send_enabled,
+        } = self.bank_params_keeper.try_get(ctx)?;
+
+        let send_enabled = send_enabled
+            .into_iter()
+            .map(|this| (this.denom, this.enabled))
+            .collect::<HashMap<_, _>>();
+        for UnsignedCoin { denom, amount: _ } in coins {
+            let enabled = send_enabled
+                .get(denom)
+                .map(bool::clone)
+                .unwrap_or(default_send_enabled);
+
+            if !enabled {
+                return Ok(Some(denom));
+            }
+        }
+
+        Ok(None)
     }
 }
 

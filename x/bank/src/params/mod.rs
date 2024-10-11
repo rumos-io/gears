@@ -1,12 +1,8 @@
 use gears::application::keepers::params::ParamsKeeper;
-use gears::context::{InfallibleContext, QueryableContext};
 use gears::derive::Protobuf;
 use gears::extensions::corruption::UnwrapCorrupt;
 use gears::params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey};
-use gears::store::database::Database;
-use gears::store::StoreKey;
 use gears::types::denom::Denom;
-use gears::types::store::gas::errors::GasStoreErrors;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -92,37 +88,6 @@ impl ParamsDeserialize for BankParams {
 #[derive(Debug, Clone)]
 pub struct BankParamsKeeper<PSK: ParamsSubspaceKey> {
     pub params_subspace_key: PSK,
-}
-
-impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
-    pub fn send_enabled<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        denom: &Denom,
-    ) -> Option<bool> {
-        self.get(ctx)
-            .send_enabled
-            .into_iter()
-            .find_map(|this| match denom == &this.denom {
-                true => Some(this.enabled),
-                false => None,
-            })
-    }
-
-    pub fn try_send_enabled<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        denom: &Denom,
-    ) -> Result<Option<bool>, GasStoreErrors> {
-        Ok(self
-            .try_get(ctx)?
-            .send_enabled
-            .into_iter()
-            .find_map(|this| match denom == &this.denom {
-                true => Some(this.enabled),
-                false => None,
-            }))
-    }
 }
 
 impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for BankParamsKeeper<PSK> {
