@@ -178,6 +178,8 @@ pub enum BankKeeperError {
     AccountPermission,
     #[error("{0} is not allowed to receive funds. Probably tried send to module as account")]
     Blocked(AccAddress),
+    #[error("Send disabled for denom: {0}")]
+    SendDisabled(Denom),
     #[error("{0}")]
     GasError(#[from] GasStoreErrors),
 }
