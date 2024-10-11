@@ -6,6 +6,7 @@ use std::{
 };
 
 use database::Database;
+use extensions::corruption::UnwrapCorrupt;
 use trees::iavl::Tree;
 
 use crate::{
@@ -167,7 +168,7 @@ impl<DB: Database> ApplicationKVBank<DB> {
         }
 
         //TODO: is it safe to assume this won't ever error?
-        persistent.save_version().ok().unwrap_or_default().0
+        persistent.save_version().unwrap_or_corrupt().0
     }
 }
 

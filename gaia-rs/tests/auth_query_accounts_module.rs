@@ -21,47 +21,61 @@ fn module_accounts_query() -> anyhow::Result<()> {
     println!("{}", serde_json::to_string_pretty(&result).unwrap_test());
 
     let expected = r#"
-[
+    [
     {
-    "@type": "/cosmos.auth.v1beta1.ModuleAccount",
-    "base_account": {
+      "@type": "/cosmos.auth.v1beta1.ModuleAccount",
+      "base_account": {
         "address": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh",
         "pub_key": null,
         "account_number": "0",
         "sequence": "0"
-    },
-    "name": "bonded_tokens_pool",
-    "permissions": [
+      },
+      "name": "bonded_tokens_pool",
+      "permissions": [
         "burner",
         "staking"
-    ]
+      ]
     },
     {
-    "@type": "/cosmos.auth.v1beta1.ModuleAccount",
-    "base_account": {
+      "@type": "/cosmos.auth.v1beta1.ModuleAccount",
+      "base_account": {
         "address": "cosmos1tygms3xhhs3yv487phx3dw4a95jn7t7lpm470r",
         "pub_key": null,
         "account_number": "1",
         "sequence": "0"
-    },
-    "name": "not_bonded_tokens_pool",
-    "permissions": [
+      },
+      "name": "not_bonded_tokens_pool",
+      "permissions": [
         "burner",
         "staking"
-    ]
+      ]
     },
     {
-    "@type": "/cosmos.auth.v1beta1.ModuleAccount",
-    "base_account": {
+      "@type": "/cosmos.auth.v1beta1.ModuleAccount",
+      "base_account": {
+        "address": "cosmos10d07y265gmmuvt4z0w9aw880jnsr700j6zn9kn",
+        "pub_key": null,
+        "account_number": "2",
+        "sequence": "0"
+      },
+      "name": "gov",
+      "permissions": [
+        "burner"
+      ]
+    },
+    {
+      "@type": "/cosmos.auth.v1beta1.ModuleAccount",
+      "base_account": {
         "address": "cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta",
         "pub_key": null,
-        "account_number": "13",
+        "account_number": "14",
         "sequence": "0"
-    },
-    "name": "fee_collector",
-    "permissions": []
+      },
+      "name": "fee_collector",
+      "permissions": []
     }
-]"#;
+  ]
+"#;
 
     let expected: Vec<Account> = serde_json::from_str(expected).unwrap_test();
 

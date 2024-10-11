@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use super::handler::{ProposalHandler, ProposalHandlingError};
 
-#[derive(Debug, Clone, PartialEq, Raw, Protobuf, AppMessage)]
+#[derive(Debug, Clone, PartialEq, Raw, Protobuf, AppMessage, Deserialize)]
 #[raw(derive(Serialize, Deserialize, Clone, PartialEq))]
 #[msg(url = "/cosmos.params.v1beta1/ParamChange")]
 pub struct ParamChange<PSK: ParamsSubspaceKey> {
@@ -42,7 +42,7 @@ impl<PSK: ParamsSubspaceKey> serde::Serialize for ParamChange<PSK> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Raw, Protobuf, AppMessage)]
+#[derive(Debug, Clone, PartialEq, Raw, Protobuf, AppMessage, Deserialize)]
 #[raw(derive(Serialize, Deserialize, Clone, PartialEq))]
 #[msg(url = "/cosmos.params.v1beta1/ParameterChangeProposal")]
 pub struct ParameterChangeProposal<PSK: ParamsSubspaceKey> {
@@ -73,7 +73,7 @@ impl From<RawParameterChangeProposal> for Any {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ParamChangeProposalHandler<PK, SK, PSK>(PhantomData<(PK, SK, PSK)>);
 
 impl<PK, SK, PSK> Default for ParamChangeProposalHandler<PK, SK, PSK> {

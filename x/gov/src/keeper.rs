@@ -2,6 +2,7 @@ use std::{collections::HashMap, marker::PhantomData, ops::Mul};
 
 use gears::core::errors::CoreError;
 use gears::extensions::gas::GasResultExt;
+use gears::x::keepers::auth::AuthKeeper;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
@@ -70,14 +71,16 @@ pub struct GovKeeper<
     PSK: ParamsSubspaceKey,
     M: Module,
     BK: GovernanceBankKeeper<SK, M>,
+    AK: AuthKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     P,
-    PH: ProposalHandler<ProposalModel<P>, SK>,
+    PH: ProposalHandler<P, SK>,
 > {
     store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
     gov_mod: M,
     bank_keeper: BK,
+    auth_keeper: AK,
     staking_keeper: STK,
     proposal_handler: PH,
 
@@ -89,16 +92,18 @@ impl<
         PSK: ParamsSubspaceKey,
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
+        AK: AuthKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         P: Proposal + DeserializeOwned,
-        PH: ProposalHandler<ProposalModel<P>, SK>,
-    > GovKeeper<SK, PSK, M, BK, STK, P, PH>
+        PH: ProposalHandler<P, SK>,
+    > GovKeeper<SK, PSK, M, BK, AK, STK, P, PH>
 {
     pub fn new(
         store_key: SK,
         params_subspace_key: PSK,
         gov_mod: M,
         bank_keeper: BK,
+        auth_keeper: AK,
         staking_keeper: STK,
         proposal_handler: PH,
     ) -> Self {
@@ -109,6 +114,7 @@ impl<
             },
             gov_mod,
             bank_keeper,
+            auth_keeper,
             staking_keeper,
             proposal_handler,
             _marker: PhantomData,
@@ -131,6 +137,10 @@ impl<
             store.set(PROPOSAL_ID_KEY, starting_proposal_id.to_be_bytes())
         }
         self.gov_params_keeper.set(ctx, params);
+
+        self.auth_keeper
+            .check_create_new_module_account(ctx, &self.gov_mod)
+            .unwrap_gas();
 
         let total_deposits = {
             let mut store_mut = ctx.kv_store_mut(&self.store_key);
@@ -483,7 +493,7 @@ impl<
             voting_end_time: None,
         };
 
-        if !PH::check(&proposal) {
+        if !PH::check(&proposal.content) {
             return Err(GovKeeperError::NoHandler);
         }
 
@@ -559,7 +569,7 @@ impl<
             };
 
             for proposal in active_iter {
-                let mut proposal = proposal.unwrap_gas();
+                let mut proposal: ProposalModel<P> = proposal.unwrap_gas();
 
                 let (passes, burn_deposit, tally_result) =
                     match self.tally(ctx, proposal.proposal_id) {
@@ -577,7 +587,11 @@ impl<
                 }
 
                 match passes {
-                    true if self.proposal_handler.handle(proposal.clone(), ctx).is_ok() => {
+                    true if self
+                        .proposal_handler
+                        .handle(proposal.content.clone(), ctx)
+                        .is_ok() =>
+                    {
                         proposal.status = ProposalStatus::Passed
                     }
                     true => proposal.status = ProposalStatus::Failed,
@@ -941,13 +955,14 @@ fn deposit_del<
     PSK: ParamsSubspaceKey,
     M: Module,
     BK: GovernanceBankKeeper<SK, M>,
+    AK: AuthKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
     P: Proposal,
-    PH: ProposalHandler<ProposalModel<P>, SK>,
+    PH: ProposalHandler<P, SK>,
 >(
     ctx: &mut CTX,
-    keeper: &GovKeeper<SK, PSK, M, BK, STK, P, PH>,
+    keeper: &GovKeeper<SK, PSK, M, BK, AK, STK, P, PH>,
     proposal_id: u64,
 ) -> Result<(), GasStoreErrors> {
     let deposits = DepositIterator::new(ctx.kv_store(&keeper.store_key))
@@ -975,13 +990,14 @@ fn deposit_refund<
     PSK: ParamsSubspaceKey,
     M: Module,
     BK: GovernanceBankKeeper<SK, M>,
+    AK: AuthKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
     P: Proposal,
-    PH: ProposalHandler<ProposalModel<P>, SK>,
+    PH: ProposalHandler<P, SK>,
 >(
     ctx: &mut CTX,
-    keeper: &GovKeeper<SK, PSK, M, BK, STK, P, PH>,
+    keeper: &GovKeeper<SK, PSK, M, BK, AK, STK, P, PH>,
 ) -> Result<(), GasStoreErrors> {
     for deposit in DepositIterator::new(ctx.kv_store(&keeper.store_key))
         .map(|this| this.map(|(_, val)| val))

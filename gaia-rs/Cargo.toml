@@ -14,6 +14,7 @@ bank = { path = "../x/bank" }
 distribution = { path = "../x/distribution" }
 ibc-rs = { path = "../x/ibc-rs" }
 gov = { path = "../x/gov" }
+upgrade = { path = "../x/upgrade" }
 gears = { path = "../gears", features = [
     "cli",
     "xmods",

@@ -7,7 +7,7 @@ edition = "2021"
 #local
 trees = { path = "../trees" }
 database = { path = "../database" }
-
+extensions = { path = "../extensions" }
 #newtypes
 
 #utils

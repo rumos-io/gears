@@ -1885,6 +1885,7 @@ dependencies = [
  "tonic",
  "tonic-reflection",
  "tower-layer",
+ "upgrade",
  "url",
  "vec1",
 ]
@@ -2050,6 +2051,7 @@ dependencies = [
  "prost",
  "serde",
  "serde_json",
+ "serde_with",
  "strum",
  "thiserror",
  "tonic",

@@ -3,6 +3,9 @@ use std::{
     str::FromStr,
 };
 
+use gears::tendermint::types::time::duration::serde_with::{
+    deserialize_duration_from_nanos_string, serialize_duration_to_nanos_string,
+};
 use gears::{
     application::keepers::params::ParamsKeeper,
     core::{errors::CoreError, Protobuf},
@@ -18,6 +21,7 @@ use gears::{
     },
 };
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 
 use crate::errors::{EXISTS, SERDE_JSON_CONVERSION};
 
@@ -29,9 +33,12 @@ const DEFAULT_PERIOD: Duration = Duration::new_from_secs(172800); // 2 days
 
 mod environment;
 
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DepositParams {
     pub min_deposit: UnsignedCoins,
+    #[serde(serialize_with = "serialize_duration_to_nanos_string")]
+    #[serde(deserialize_with = "deserialize_duration_from_nanos_string")]
     pub max_deposit_period: Duration, // ?
 }
 
@@ -48,8 +55,11 @@ impl Default for DepositParams {
     }
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VotingParams {
+    #[serde(serialize_with = "serialize_duration_to_nanos_string")]
+    #[serde(deserialize_with = "deserialize_duration_from_nanos_string")]
     pub voting_period: Duration,
 }
 
@@ -71,9 +81,17 @@ pub struct TallyParams {
 impl Default for TallyParams {
     fn default() -> Self {
         Self {
-            quorum: Decimal256::from_atomics(334_u16, 3).expect("Default should be valid"),
-            threshold: Decimal256::from_atomics(5_u8, 1).expect("Default should be valid"),
-            veto_threshold: Decimal256::from_atomics(334_u16, 3).expect("Default should be valid"),
+            // TODO: change back to original defaults once Decimal256 formatting is fixed (currently
+            // 0.334000000000000000 is being formatted as 0.334)
+            //quorum: Decimal256::from_atomics(334_u16, 3).expect("Default should be valid"),
+            quorum: Decimal256::from_atomics(334000000000000001_u64, 18)
+                .expect("Default should be valid"),
+            //threshold: Decimal256::from_atomics(5_u8, 1).expect("Default should be valid"),
+            threshold: Decimal256::from_atomics(500000000000000001_u64, 18)
+                .expect("Default should be valid"),
+            //veto_threshold: Decimal256::from_atomics(334_u16, 3).expect("Default should be valid"),
+            veto_threshold: Decimal256::from_atomics(334000000000000001_u64, 18)
+                .expect("Default should be valid"),
         }
     }
 }
