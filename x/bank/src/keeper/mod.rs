@@ -269,7 +269,7 @@ impl<
             amount,
         }: MsgSend,
     ) -> Result<(), BankKeeperError> {
-        if let Some(denom) = self.is_send_enabled_for(ctx, amount.inner())? {
+        if let Some(denom) = self.find_first_blocked_denom_if_any(ctx, amount.inner())? {
             Err(BankKeeperError::SendDisabled(denom.clone()))?
         }
 
@@ -674,7 +674,7 @@ impl<
         }
     }
 
-    fn is_send_enabled_for<'a, DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn find_first_blocked_denom_if_any<'a, DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         coins: impl IntoIterator<Item = &'a UnsignedCoin>,
