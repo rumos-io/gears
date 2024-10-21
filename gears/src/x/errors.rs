@@ -160,6 +160,8 @@ pub enum BankCoinsError {
     Parse(#[from] CoinsError),
     #[error("{smaller} is smaller than {bigger}")]
     Amount { smaller: Uint256, bigger: Uint256 },
+    #[error("{0}")]
+    Math(String),
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -174,8 +176,10 @@ pub enum BankKeeperError {
     InsufficientFunds(#[from] InsufficientFundsError),
     #[error("{0}")]
     AccountNotFound(#[from] AccountNotFound),
-    #[error("account doesnt have enought permission")]
+    #[error("account doesn't have enough permission")]
     AccountPermission,
+    #[error("module doesn't have enough permission")]
+    ModulePermission,
     #[error("{0} is not allowed to receive funds. Probably tried send to module as account")]
     Blocked(AccAddress),
     #[error("Send disabled for denom: {0}")]

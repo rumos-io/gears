@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use gears::x::module::Module;
 
 #[derive(Debug, Clone, PartialEq, Eq, strum::EnumIter)]
@@ -18,12 +20,12 @@ impl Module for GaiaModules {
         }
     }
 
-    fn permissions(&self) -> Vec<String> {
+    fn permissions(&self) -> HashSet<String> {
         match self {
-            GaiaModules::FeeCollector => vec![],
-            GaiaModules::BondedPool => vec!["burner".into(), "staking".into()],
-            GaiaModules::NotBondedPool => vec!["burner".into(), "staking".into()],
-            GaiaModules::Gov => vec!["burner".into()],
+            GaiaModules::FeeCollector => HashSet::new(),
+            GaiaModules::BondedPool => HashSet::from_iter(["burner".into(), "staking".into()]),
+            GaiaModules::NotBondedPool => HashSet::from_iter(["burner".into(), "staking".into()]),
+            GaiaModules::Gov => HashSet::from_iter(["burner".into()]),
         }
     }
 }

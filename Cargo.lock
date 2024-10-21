@@ -3531,6 +3531,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "mint"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "gears",
+ "ibc-proto 0.33.0",
+ "prost",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "mio"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

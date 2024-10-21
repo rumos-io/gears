@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::types::address::AccAddress;
 
 /// For declaring modules on app level.
@@ -15,7 +17,7 @@ pub trait Module: std::fmt::Debug + Clone + Send + Sync + 'static {
             .expect("vector of 20 bytes can't produce error because 0 < 20 < MAX_ADDR_LEN")
     }
     /// Module permissions. Default value is empty list.
-    fn permissions(&self) -> Vec<String> {
-        vec![]
+    fn permissions(&self) -> HashSet<String> {
+        HashSet::new()
     }
 }

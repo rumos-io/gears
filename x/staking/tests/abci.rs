@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::HashSet, str::FromStr};
 
 use gears::{
     application::handlers::node::ModuleInfo,
@@ -100,11 +100,13 @@ impl Module for StakingModules {
         }
     }
 
-    fn permissions(&self) -> Vec<String> {
+    fn permissions(&self) -> HashSet<String> {
         match self {
-            StakingModules::FeeCollector => vec![],
-            StakingModules::BondedPool => vec!["burner".into(), "staking".into()],
-            StakingModules::NotBondedPool => vec!["burner".into(), "staking".into()],
+            StakingModules::FeeCollector => HashSet::new(),
+            StakingModules::BondedPool => HashSet::from_iter(["burner".into(), "staking".into()]),
+            StakingModules::NotBondedPool => {
+                HashSet::from_iter(["burner".into(), "staking".into()])
+            }
         }
     }
 }
