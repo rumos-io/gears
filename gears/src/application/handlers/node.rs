@@ -49,12 +49,15 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         query: Self::QReq,
     ) -> Self::QRes;
 
+    #[allow(unused_variables)]
     fn run_ante_checks<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         tx: &TxWithRaw<Self::Message>,
         is_check: bool,
-    ) -> Result<(), TxError>;
+    ) -> Result<(), TxError> {
+        Ok(())
+    }
 
     // TODO: this should return a Result similar to the SDK. See:
     // 1. https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/baseapp/baseapp.go#L717

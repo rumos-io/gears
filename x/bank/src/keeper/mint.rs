@@ -5,15 +5,19 @@ use gears::{
     types::{base::coin::UnsignedCoin, uint::Uint256},
     x::{
         errors::{BankCoinsError, BankKeeperError},
-        keepers::{auth::AuthKeeper, mint::MintingBankKeeper},
+        keepers::{auth::AuthKeeper, bank::BalancesKeeper, mint::MintingBankKeeper},
         module::Module,
     },
 };
 
 use super::Keeper;
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
-    MintingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M>,
+        M: Module + strum::IntoEnumIterator,
+    > MintingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
     fn mint_coins<
         DB: gears::store::database::Database,
