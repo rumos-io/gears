@@ -13,7 +13,7 @@ use crate::{
 pub struct MockBankKeeper {
     pub get_denom_metadata: Option<Metadata>,
     pub balance_all: Vec<UnsignedCoin>,
-    pub balance: UnsignedCoin,
+    pub balance: Option<UnsignedCoin>,
 }
 
 impl<SK: StoreKey, M: Module> BalancesKeeper<SK, M> for MockBankKeeper {
