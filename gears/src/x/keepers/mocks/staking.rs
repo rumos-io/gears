@@ -9,8 +9,6 @@ use crate::{
 use super::bank::MockBankKeeper;
 
 impl<SK: StoreKey, M: Module> StakingBankKeeper<SK, M> for MockBankKeeper {
-    
-
     fn undelegate_coins_from_module_to_account<
         DB: database::Database,
         CTX: crate::context::TransactionalContext<DB, SK>,

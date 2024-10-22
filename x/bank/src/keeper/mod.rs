@@ -375,8 +375,6 @@ impl<
         }
     }
 
-   
-
     fn address_balances_store<'a, DB: Database>(
         &'a self,
         ctx: &'a mut impl TransactionalContext<DB, SK>,

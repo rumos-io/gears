@@ -7,8 +7,6 @@ impl<
         M: Module + strum::IntoEnumIterator,
     > StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
-    
-
     fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
