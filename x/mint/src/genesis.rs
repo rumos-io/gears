@@ -3,19 +3,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{params::MintingParams, types::minter::Minter};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MintGenesis {
     pub minter: Minter,
     pub params: MintingParams,
-}
-
-impl Default for MintGenesis {
-    fn default() -> Self {
-        Self {
-            minter: Default::default(),
-            params: Default::default(),
-        }
-    }
 }
 
 impl Genesis for MintGenesis {

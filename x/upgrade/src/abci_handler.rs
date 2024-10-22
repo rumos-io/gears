@@ -13,7 +13,6 @@ use gears::{
     tendermint::types::request::query::RequestQuery,
     types::tx::NullTxMsg,
 };
-use prost::bytes::Bytes;
 use tracing::info;
 
 use crate::{
@@ -102,17 +101,15 @@ where
             prove: _,
         }: RequestQuery,
     ) -> Result<Vec<u8>, gears::baseapp::errors::QueryError> {
-        let bytes = Bytes::from(data);
-
         let query = match path.as_str() {
             QueryCurrentPlanRequest::QUERY_URL => {
-                Self::QReq::Plan(QueryCurrentPlanRequest::decode(bytes)?)
+                Self::QReq::Plan(QueryCurrentPlanRequest::decode(data)?)
             }
             QueryAppliedPlanRequest::QUERY_URL => {
-                Self::QReq::Applied(QueryAppliedPlanRequest::decode(bytes)?)
+                Self::QReq::Applied(QueryAppliedPlanRequest::decode(data)?)
             }
             QueryModuleVersionsRequest::QUERY_URL => {
-                Self::QReq::ModuleVersions(QueryModuleVersionsRequest::decode(bytes)?)
+                Self::QReq::ModuleVersions(QueryModuleVersionsRequest::decode(data)?)
             }
             _ => Err(QueryError::PathNotFound)?,
         };

@@ -21,14 +21,8 @@ pub trait Genesis:
 mod null_genesis {
     use super::*;
 
-    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
     pub struct NullGenesis();
-
-    impl Default for NullGenesis {
-        fn default() -> Self {
-            Self()
-        }
-    }
 
     impl Genesis for NullGenesis {
         fn add_genesis_account(

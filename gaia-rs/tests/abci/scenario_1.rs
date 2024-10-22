@@ -46,7 +46,7 @@ fn scenario_1() {
 
     // check user balance
     let query = QueryBalanceRequest {
-        address: user.address().into(),
+        address: user.address(),
         denom: "uatom".try_into().unwrap_test(),
     };
     let res = node.query(RequestQuery {

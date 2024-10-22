@@ -674,7 +674,7 @@ impl<
         for UnsignedCoin { denom, amount: _ } in coins {
             let enabled = send_enabled
                 .get(denom)
-                .map(bool::clone)
+                .copied()
                 .unwrap_or(default_send_enabled);
 
             if !enabled {

@@ -28,11 +28,10 @@ impl<
         module: &M,
         amount: gears::types::base::coins::UnsignedCoins,
     ) -> Result<(), gears::x::errors::BankKeeperError> {
-        if module
+        if !module
             .permissions()
             .iter()
-            .find(|this| this.as_str() == "minter")
-            .is_none()
+            .any(|this| this.as_str() == "minter")
         {
             Err(BankKeeperError::ModulePermission)?
         }
@@ -57,7 +56,7 @@ impl<
             let mut supply = match self.supply(ctx, &denom)? {
                 Some(supply) => supply,
                 None => UnsignedCoin {
-                    denom: denom,
+                    denom,
                     amount: Uint256::zero(),
                 },
             };
