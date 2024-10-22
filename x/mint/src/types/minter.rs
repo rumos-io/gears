@@ -8,7 +8,7 @@ use gears::{
 
 use crate::params::MintingParams;
 
-#[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize, Raw, Protobuf)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, Raw, Protobuf)]
 pub struct Minter {
     #[raw(kind(string), raw = String)]
     #[proto(
@@ -26,6 +26,15 @@ pub struct Minter {
         into_ref
     )]
     pub annual_provisions: Decimal256,
+}
+
+impl Default for Minter {
+    fn default() -> Self {
+        Self {
+            inflation: Decimal256::from_atomics(13_u8, 2).expect("default is valid"),
+            annual_provisions: Decimal256::zero(),
+        }
+    }
 }
 
 impl Minter {
