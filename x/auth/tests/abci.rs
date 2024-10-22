@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use auth::{AuthABCIHandler, GenesisState, Keeper};
 use gears::{
     derive::{ParamsKeys, StoreKeys},
@@ -63,9 +61,9 @@ impl Module for AuthModules {
         }
     }
 
-    fn permissions(&self) -> HashSet<String> {
+    fn permissions(&self) -> Vec<String> {
         match self {
-            AuthModules::FeeCollector => HashSet::new(),
+            AuthModules::FeeCollector => Vec::new(),
         }
     }
 }

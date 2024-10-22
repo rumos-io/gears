@@ -1,4 +1,4 @@
-use std::{collections::HashSet, str::FromStr};
+use std::str::FromStr;
 
 use bank::{BankABCIHandler, GenesisState, Keeper, Message};
 use gears::{
@@ -134,9 +134,9 @@ impl Module for BankModules {
         }
     }
 
-    fn permissions(&self) -> HashSet<String> {
+    fn permissions(&self) -> Vec<String> {
         match self {
-            BankModules::FeeCollector => HashSet::new(),
+            BankModules::FeeCollector => Vec::new(),
         }
     }
 }

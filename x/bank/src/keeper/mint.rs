@@ -28,7 +28,12 @@ impl<
         module: &M,
         amount: gears::types::base::coins::UnsignedCoins,
     ) -> Result<(), gears::x::errors::BankKeeperError> {
-        if !module.permissions().contains("minter") {
+        if module
+            .permissions()
+            .iter()
+            .find(|this| this.as_str() == "minter")
+            .is_none()
+        {
             Err(BankKeeperError::ModulePermission)?
         }
 
