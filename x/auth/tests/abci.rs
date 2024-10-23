@@ -23,7 +23,7 @@ fn test_init_and_few_blocks() {
         .baseapp_sbs_key(SubspaceKey::BaseApp)
         .genesis(GenesisSource::Genesis(GenesisState::default()));
 
-    let (mut node, _) = init_node(opt);
+    let mut node = init_node(opt);
 
     let app_hash = &node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(

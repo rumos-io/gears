@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use database::MemDB;
-use keyring::key::pair::KeyPair;
 use tendermint::types::{
     chain_id::ChainId,
     proto::{
@@ -14,11 +13,10 @@ use tendermint::types::{
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::{genesis::Genesis, options::NodeOptions, BaseApp},
-    crypto::keys::ReadAccAddress,
     params::ParamsSubspaceKey,
 };
 
-use super::{InitState, MockApplication, MockNode, User};
+use super::{InitState, MockApplication, MockNode};
 
 #[derive(Debug, Clone, Default)]
 pub enum GenesisSource<GS> {
@@ -46,7 +44,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, GS: Genesis> From<MockOptionsFormer
 
 pub fn init_node<PSK: ParamsSubspaceKey, H: ABCIHandler<Genesis = GS>, GS: Genesis>(
     opt: impl Into<MockOptions<PSK, H, GS>>,
-) -> (MockNode<BaseApp<MemDB, PSK, H, MockApplication>, GS>, User) {
+) -> MockNode<BaseApp<MemDB, PSK, H, MockApplication>, GS> {
     let MockOptions {
         baseapp_sbs_key,
         node_opt,
@@ -61,11 +59,6 @@ pub fn init_node<PSK: ParamsSubspaceKey, H: ABCIHandler<Genesis = GS>, GS: Genes
         BaseApp::new(db, baseapp_sbs_key, abci_handler, node_options);
     let chain_id = ChainId::default();
 
-    let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-    let mnemonic =
-        bip32::Mnemonic::new(mnemonic, bip32::Language::English).expect("Invalid mnemonic");
-    let key_pair = KeyPair::from_mnemonic(&mnemonic);
-    let address = key_pair.get_address();
     let consensus_key = tendermint::crypto::new_private_key();
 
     let app_genesis = match genesis {
@@ -79,16 +72,7 @@ pub fn init_node<PSK: ParamsSubspaceKey, H: ABCIHandler<Genesis = GS>, GS: Genes
             serde_json::from_str(&genesis_state).expect("failed to deserialize genesis state")
         }
         GenesisSource::Genesis(genesis) => genesis,
-        GenesisSource::Default => {
-            let mut genesis = GS::default();
-            genesis
-                .add_genesis_account(
-                    address.clone(),
-                    "34uatom".parse().expect("hard coded coin is valid"),
-                )
-                .expect("won't fail since there's no existing account");
-            genesis
-        }
+        GenesisSource::Default => GS::default(),
     };
 
     let init_state = InitState {
@@ -105,11 +89,5 @@ pub fn init_node<PSK: ParamsSubspaceKey, H: ABCIHandler<Genesis = GS>, GS: Genes
         initial_height: 1,
     };
 
-    (
-        MockNode::new(app, init_state),
-        User {
-            key_pair,
-            account_number: 2,
-        },
-    )
+    MockNode::new(app, init_state)
 }

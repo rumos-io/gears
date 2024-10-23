@@ -88,3 +88,11 @@ impl From<SubspaceParseError> for ProtobufError {
         Self::Core(CoreError::DecodeGeneral(value.to_string()))
     }
 }
+
+
+impl From<tendermint::types::time::duration::DurationError> for ProtobufError
+{
+    fn from(value: tendermint::types::time::duration::DurationError) -> Self {
+        Self::Core(CoreError::DecodeGeneral(value.to_string()))
+    }
+}
