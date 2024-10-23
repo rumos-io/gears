@@ -63,7 +63,7 @@ impl Module for AuthModules {
 
     fn permissions(&self) -> Vec<String> {
         match self {
-            AuthModules::FeeCollector => vec![],
+            AuthModules::FeeCollector => Vec::new(),
         }
     }
 }

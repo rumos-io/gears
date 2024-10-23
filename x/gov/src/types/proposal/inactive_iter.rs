@@ -12,7 +12,10 @@ use crate::proposal::Proposal;
 use super::{parse_proposal_key_bytes, ProposalModel};
 
 #[derive(Debug)]
-pub struct InactiveProposalIterator<'a, DB, P>(StoreRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)>, PhantomData<P>);
+pub struct InactiveProposalIterator<'a, DB, P>(
+    StoreRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)>,
+    PhantomData<P>,
+);
 
 impl<'a, DB: Database, P: Proposal> InactiveProposalIterator<'a, DB, P> {
     pub fn new(store: Store<'a, DB>, end_time: &Timestamp) -> InactiveProposalIterator<'a, DB, P> {

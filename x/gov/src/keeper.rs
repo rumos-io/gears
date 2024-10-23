@@ -711,16 +711,13 @@ impl<
             }
         }
 
-        for (
-            _,
-            ValidatorGovInfo {
-                address: _,
-                bounded_tokens,
-                delegator_shares,
-                delegator_deduction,
-                vote,
-            },
-        ) in &curr_validators
+        for ValidatorGovInfo {
+            address: _,
+            bounded_tokens,
+            delegator_shares,
+            delegator_deduction,
+            vote,
+        } in curr_validators.values()
         {
             if vote.is_empty() {
                 continue;

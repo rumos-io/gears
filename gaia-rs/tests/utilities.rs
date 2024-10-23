@@ -154,7 +154,7 @@ impl GaiaNode {
             TxCommand {
                 ctx: ClientTxContext::new_online(
                     self.tendermint.home(),
-                    200_000_u32.try_into().expect("default gas is valid"),
+                    200_000_u32.into(),
                     self.rpc_addr.clone().try_into().expect("invalid addr"),
                     self.tendermint.chain_id.clone(),
                     key,

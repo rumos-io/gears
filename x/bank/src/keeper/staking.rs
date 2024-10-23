@@ -7,25 +7,6 @@ impl<
         M: Module + strum::IntoEnumIterator,
     > StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
-    fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_pool: &M,
-        recepient_pool: &M,
-        amount: UnsignedCoins,
-    ) -> Result<(), BankKeeperError> {
-        self.auth_keeper
-            .check_create_new_module_account(ctx, recepient_pool)?;
-
-        let msg = MsgSend {
-            from_address: sender_pool.address(),
-            to_address: recepient_pool.address(),
-            amount,
-        };
-
-        self.send_coins(ctx, msg)
-    }
-
     fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,

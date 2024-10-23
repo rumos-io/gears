@@ -136,7 +136,7 @@ impl Module for BankModules {
 
     fn permissions(&self) -> Vec<String> {
         match self {
-            BankModules::FeeCollector => vec![],
+            BankModules::FeeCollector => Vec::new(),
         }
     }
 }

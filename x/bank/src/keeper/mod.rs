@@ -1,3 +1,4 @@
+mod mint;
 use crate::{Balance, BankParams, BankParamsKeeper};
 use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
@@ -178,18 +179,20 @@ impl<
 
     /// add_coins increase the addr balance by the given amt. Fails if the provided amt is invalid.
     /// It emits a coin received event.
-    pub fn add_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn add_coins<'a, DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         address: &AccAddress,
-        amount: Vec<UnsignedCoin>,
+        amount: impl IntoIterator<Item = &'a UnsignedCoin>,
     ) -> Result<(), GasStoreErrors> {
+        let amount = amount.into_iter().collect::<Vec<_>>();
+
         for coin in &amount {
             if let Some(mut balance) = self.balance(ctx, address, &coin.denom)? {
                 balance.amount += coin.amount;
                 self.set_balance(ctx, address, balance)?;
             } else {
-                self.set_balance(ctx, address, coin.clone())?;
+                self.set_balance(ctx, address, (**coin).clone())?;
             }
         }
 
@@ -204,7 +207,7 @@ impl<
                 ),
                 EventAttribute::new(
                     "amount".into(),
-                    SimpleCoins::new(amount).to_string_bytes(),
+                    gears::types::base::coins::format_coins(amount),
                     true,
                 ),
             ],
@@ -372,26 +375,6 @@ impl<
         }
     }
 
-    pub fn supply<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        denom: &Denom,
-    ) -> Result<Option<UnsignedCoin>, GasStoreErrors> {
-        let supply_store = ctx.kv_store(&self.store_key).prefix_store(SUPPLY_KEY);
-
-        let amount_bytes = supply_store.get(denom)?;
-
-        match amount_bytes {
-            Some(bytes) => Ok(Some(UnsignedCoin {
-                denom: denom.clone(),
-                amount: Uint256::from_str(&String::from_utf8_lossy(&bytes))
-                    .ok()
-                    .unwrap_or_corrupt(),
-            })),
-            None => Ok(None),
-        }
-    }
-
     fn address_balances_store<'a, DB: Database>(
         &'a self,
         ctx: &'a mut impl TransactionalContext<DB, SK>,
@@ -499,13 +482,13 @@ impl<
                 EventAttribute::new("spender".into(), String::from(delegator_addr).into(), true),
                 EventAttribute::new(
                     "amount".into(),
-                    SimpleCoins::new(amount.clone()).to_string_bytes(),
+                    gears::types::base::coins::format_coins(amount.inner()),
                     true,
                 ),
             ],
         ));
 
-        Ok(self.add_coins(ctx, &module_acc_addr, amount.into())?)
+        Ok(self.add_coins(ctx, &module_acc_addr, amount.inner())?)
     }
 
     /// undelegate_coins performs undelegation by crediting amt coins to an account with
@@ -530,7 +513,7 @@ impl<
 
         self.sub_unlocked_coins(ctx, &module_acc_addr, &amount)?;
         self.track_undelegation(ctx, &delegator_addr, &amount)?;
-        Ok(self.add_coins(ctx, &delegator_addr, amount.into_inner())?)
+        Ok(self.add_coins(ctx, &delegator_addr, amount.inner())?)
     }
 
     /// sub_unlocked_coins removes the unlocked amt coins of the given account. An error is
@@ -691,7 +674,7 @@ impl<
         for UnsignedCoin { denom, amount: _ } in coins {
             let enabled = send_enabled
                 .get(denom)
-                .map(bool::clone)
+                .copied()
                 .unwrap_or(default_send_enabled);
 
             if !enabled {

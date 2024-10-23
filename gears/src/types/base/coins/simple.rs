@@ -7,6 +7,16 @@ use super::*;
 pub type SimpleDecimalCoins = SimpleCoins<DecimalCoin>;
 pub type SimpleUnsignedCoins = SimpleCoins<UnsignedCoin>;
 
+pub fn format_coins<'a, U: ToString + 'a>(coins: impl IntoIterator<Item = &'a U>) -> Bytes {
+    coins
+        .into_iter()
+        .map(|this| this.to_string())
+        .collect::<Vec<_>>()
+        .join(",")
+        .into_bytes()
+        .into()
+}
+
 // TODO: Allow borrowed data
 #[derive(Debug, Clone)]
 pub struct SimpleCoins<U>(Vec<U>);
