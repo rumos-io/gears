@@ -3,12 +3,12 @@ use gears::{
     types::decimal256::{CosmosDecimalProtoString, Decimal256},
 };
 
-use crate::params::{MintingParams, RawMintingParams};
+use crate::params::{MintParams, RawMintParams};
 
 #[derive(Debug, Clone, Raw, Query, Protobuf, serde::Serialize, serde::Deserialize)]
 pub struct QueryParamsResponse {
-    #[raw(kind(message), raw = RawMintingParams)]
-    pub params: MintingParams,
+    #[raw(kind(message), raw = RawMintParams)]
+    pub params: MintParams,
 }
 
 #[derive(Debug, Clone, Raw, Query, Protobuf, serde::Serialize, serde::Deserialize)]

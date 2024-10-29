@@ -23,7 +23,7 @@ const GOAL_BONDED_KEY: &str = "GoalBonded";
 const BLOCKS_PER_YEAR_KEY: &str = "BlocksPerYear";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Raw, Protobuf)]
-pub struct MintingParams {
+pub struct MintParams {
     /// denom of coin to mint
     #[raw(kind(string), raw = String)]
     pub mint_denom: Denom,
@@ -68,7 +68,7 @@ pub struct MintingParams {
     pub blocks_per_year: u32,
 }
 
-impl Default for MintingParams {
+impl Default for MintParams {
     fn default() -> Self {
         Self {
             mint_denom: Denom::from_str(env!("XMOD_STAKING_PARAMS_BOND_DENOM"))
@@ -82,7 +82,7 @@ impl Default for MintingParams {
     }
 }
 
-impl ParamsSerialize for MintingParams {
+impl ParamsSerialize for MintParams {
     fn keys() -> HashSet<&'static str> {
         HashSet::from_iter([
             MINT_DENOM_KEY,
@@ -123,7 +123,7 @@ impl ParamsSerialize for MintingParams {
     }
 }
 
-impl ParamsDeserialize for MintingParams {
+impl ParamsDeserialize for MintParams {
     fn from_raw(fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
             mint_denom: Denom::from_str(&String::from_utf8_lossy(
@@ -160,7 +160,7 @@ pub struct MintParamsKeeper<PSK> {
 }
 
 impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for MintParamsKeeper<PSK> {
-    type Param = MintingParams;
+    type Param = MintParams;
 
     fn psk(&self) -> &PSK {
         &self.params_subspace_key

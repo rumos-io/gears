@@ -6,7 +6,7 @@ use gears::{
     types::decimal256::Decimal256,
 };
 
-use crate::params::MintingParams;
+use crate::params::MintParams;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, Raw, Protobuf)]
 pub struct Minter {
@@ -40,7 +40,7 @@ impl Default for Minter {
 impl Minter {
     pub fn next_inflation_rate(
         &self,
-        params: &MintingParams,
+        params: &MintParams,
         bonded_ratio: Decimal256,
     ) -> Option<Decimal256> {
         let inflation_change_per_year = Decimal256::one()
@@ -68,7 +68,7 @@ impl Minter {
         self.inflation.checked_mul(total_supply).ok()
     }
 
-    pub fn block_provision(&self, params: &MintingParams) -> Option<UnsignedCoin> {
+    pub fn block_provision(&self, params: &MintParams) -> Option<UnsignedCoin> {
         let provision_amount = self
             .annual_provisions
             .checked_div(Decimal256::new(Uint256::from(params.blocks_per_year)))

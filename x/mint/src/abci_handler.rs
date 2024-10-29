@@ -48,7 +48,7 @@ const MISSING_MINTER_ERR_MSG: &str =
 pub struct MintAbciHandler<SK, PSK, BK, STK, M, MI> {
     keeper: MintKeeper<SK, BK, STK, M>,
     params_keeper: MintParamsKeeper<PSK>,
-    _marker: PhantomData<(MI, SK, PSK, M)>,
+    _marker: PhantomData<MI>,
 }
 
 impl<SK, PSK, BK, STK, M, MI> MintAbciHandler<SK, PSK, BK, STK, M, MI> {
