@@ -1,9 +1,13 @@
+use std::str::FromStr;
+
 use gears::{
     application::handlers::node::ModuleInfo,
     baseapp::BaseApp,
     derive::{ParamsKeys, StoreKeys},
+    extensions::testing::UnwrapTesting,
     store::database::MemDB,
-    utils::node::{GenesisSource, MockApplication, MockNode, MockOptions},
+    types::denom::Denom,
+    utils::node::{init_node, GenesisSource, MockApplication, MockNode, MockOptions},
     x::{
         keepers::{
             bank::{BalancesKeeper, BankKeeper},
@@ -88,7 +92,7 @@ pub fn set_node() -> MockNode<
         SubspaceKey::Mint,
     );
 
-    let _opt = MockOptions::<
+    let opt = MockOptions::<
         SubspaceKey,
         MintAbciHandler<_, _, _, _, _, MintModuleInfo>,
         MintGenesis,
@@ -97,9 +101,10 @@ pub fn set_node() -> MockNode<
     .baseapp_sbs_key(SubspaceKey::BaseApp)
     .genesis(GenesisSource::Default);
 
-    // init_node(opt)
-    todo!()
+    init_node(opt).0
 }
+
+
 
 #[derive(Debug, Clone)]
 pub struct MockStakingKeeper;
@@ -112,7 +117,7 @@ impl MintingStakingKeeper<SpaceKey, Modules> for MockStakingKeeper {
         &self,
         _ctx: &CTX,
     ) -> Result<gears::types::denom::Denom, gears::types::store::gas::errors::GasStoreErrors> {
-        todo!()
+        Ok(Denom::from_str("uatom").unwrap_test())
     }
 
     fn total_bonded_tokens<
@@ -243,6 +248,6 @@ impl BalancesKeeper<SpaceKey, Modules> for MockBankKeeper {
         Option<gears::types::base::coin::UnsignedCoin>,
         gears::types::store::gas::errors::GasStoreErrors,
     > {
-        todo!()
+        Ok(None)
     }
 }

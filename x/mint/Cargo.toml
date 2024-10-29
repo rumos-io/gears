@@ -27,5 +27,6 @@ ibc-proto = { workspace = true }
 clap = { workspace = true }
 
 [dev-dependencies]
+gears = { path = "../../gears", features = ["cli", "xmods", "governance", "utils" ] }
 data-encoding = { workspace = true }
 strum = { workspace = true }

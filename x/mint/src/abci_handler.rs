@@ -192,8 +192,8 @@ impl<
         let total_staking_supply = self
             .keeper
             .staking_token_supply(ctx)
-            .expect("overflow")
-            .amount;
+            .map(|this| this.amount)
+            .unwrap_or_default();
         let bonded_ration = self.keeper.bonded_ratio(ctx);
 
         //
@@ -210,7 +210,15 @@ impl<
         let minted_coin = minter.block_provision(&params).expect("overflow");
         let minted_attribute =
             EventAttribute::new("amount".into(), minted_coin.amount.to_string().into(), true);
-        let minted_coins = UnsignedCoins::new(vec![minted_coin]).expect("invalid coin for minting");
+
+        let minted_coins = match UnsignedCoins::new([minted_coin]) {
+            Ok(minted_coins) => minted_coins,
+            Err(_) => {
+                tracing::info!("No suitable coin for minting found");
+
+                return;
+            }
+        };
 
         if let Err(err) = self.keeper.mint_coins(ctx, minted_coins.clone()) {
             panic!(
