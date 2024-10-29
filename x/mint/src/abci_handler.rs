@@ -144,7 +144,7 @@ impl<
         _ctx: &mut gears::context::tx::TxContext<'_, DB, Self::StoreKey>,
         _msg: &Self::Message,
     ) -> Result<(), gears::application::handlers::node::TxError> {
-        unreachable!("Mint doesn't have any tx")
+        unreachable!("Module {} doesn't have any tx", MI::NAME)
     }
 
     fn init_genesis<DB: Database>(
@@ -186,7 +186,10 @@ impl<
     ) {
         let mut minter = match self.keeper.minter(ctx) {
             Some(minter) => minter,
-            None => panic!("{MISSING_MINTER_ERR_MSG}"), // This shouldn't happen
+            None => panic!(
+                "Failed to `begin_block` in {} Reason: {MISSING_MINTER_ERR_MSG}",
+                MI::NAME
+            ), // This should never happen
         };
         let params = self.params_keeper.get(ctx);
         let total_staking_supply = self
@@ -194,15 +197,26 @@ impl<
             .staking_token_supply(ctx)
             .map(|this| this.amount)
             .unwrap_or_default();
+
         let bonded_ration = self.keeper.bonded_ratio(ctx);
 
         //
-        minter.inflation = minter
-            .next_inflation_rate(&params, bonded_ration)
-            .expect("overflow");
-        minter.annual_provisions = minter
-            .next_annual_provision(Decimal256::new(total_staking_supply))
-            .expect("overflow");
+        minter.inflation = match minter.next_inflation_rate(&params, bonded_ration) {
+            Some(inflation) => inflation,
+            None => panic!(
+                "Failed to `begin_block` in {} Reason: overflow while calculate inflation",
+                MI::NAME
+            ),
+        };
+
+        minter.annual_provisions =
+            match minter.next_annual_provision(Decimal256::new(total_staking_supply)) {
+                Some(provisions) => provisions,
+                None => panic!(
+                    "Failed to `begin_block` in {} Reason: overflow while calculate next annual provision",
+                    MI::NAME
+                ),
+            };
 
         self.keeper.minter_set(ctx, &minter);
 
