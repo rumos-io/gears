@@ -1,5 +1,5 @@
-pub mod client;
 pub mod abci_handler;
+pub mod client;
 mod handler;
 pub mod keeper;
 pub mod types;

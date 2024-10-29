@@ -22,6 +22,12 @@ pub trait BalancesKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static
         address: AccAddress,
         pagination: Option<Pagination>,
     ) -> Result<(Option<PaginationResult>, Vec<UnsignedCoin>), GasStoreErrors>;
+
+    fn supply<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        denom: &Denom,
+    ) -> Result<Option<UnsignedCoin>, GasStoreErrors>;
 }
 
 pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
@@ -45,6 +51,14 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         &self,
         ctx: &mut CTX,
         msg: &MsgSend,
+    ) -> Result<(), BankKeeperError>;
+
+    fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        sender_pool: &M,
+        recepient_pool: &M,
+        amount: UnsignedCoins,
     ) -> Result<(), BankKeeperError>;
 
     fn denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(

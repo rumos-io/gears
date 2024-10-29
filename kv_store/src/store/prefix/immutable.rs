@@ -30,7 +30,7 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
         };
 
         PrefixRange {
-            parent_range: self.store.into_range((new_start, new_end).into()),
+            parent_range: self.store.into_range((new_start, new_end)),
             prefix_length: self.prefix.len(),
         }
     }

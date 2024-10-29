@@ -16,6 +16,6 @@ pub trait Module: std::fmt::Debug + Clone + Send + Sync + 'static {
     }
     /// Module permissions. Default value is empty list.
     fn permissions(&self) -> Vec<String> {
-        vec![]
+        Vec::new()
     }
 }

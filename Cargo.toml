@@ -31,7 +31,7 @@ members = [
   "x/ibc-rs",
   "x/slashing",
   "x/staking",
-  "x/genutil", "x/upgrade",
+  "x/genutil", "x/upgrade", "x/mint",
 
   # new unsorted
 ]

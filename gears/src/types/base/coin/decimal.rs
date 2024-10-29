@@ -124,6 +124,6 @@ impl FromStr for DecimalCoin {
 
 impl std::fmt::Display for DecimalCoin {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.amount.to_string(), self.denom.to_string())
+        write!(f, "{}{}", self.amount, self.denom)
     }
 }

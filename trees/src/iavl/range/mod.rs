@@ -115,7 +115,7 @@ mod tests {
         let db = MemDB::new();
         let tree = Tree::new(db, None, 100.try_into().unwrap_test(), None).unwrap_test();
 
-        let empty_range = tree.range::<_, Vec<u8>>(..).into_iter().collect::<Vec<_>>();
+        let empty_range = tree.range::<_, Vec<u8>>(..).collect::<Vec<_>>();
 
         assert_eq!(Vec::<(Vec<u8>, Vec<u8>)>::new(), empty_range)
     }
@@ -146,7 +146,7 @@ mod tests {
 
         tree.save_version().unwrap_test();
 
-        let full_range = tree.range::<_, Vec<u8>>(..).into_iter().collect::<Vec<_>>();
+        let full_range = tree.range::<_, Vec<u8>>(..).collect::<Vec<_>>();
 
         assert_eq!(expected_array, full_range)
     }
@@ -179,7 +179,6 @@ mod tests {
 
         let full_range = tree
             .range((Bound::Included(vec![1_u8]), Bound::Excluded(vec![10])))
-            .into_iter()
             .collect::<Vec<_>>();
 
         assert_eq!(expected_array, full_range)
@@ -213,7 +212,6 @@ mod tests {
 
         let result_range = tree
             .range((Bound::Included(vec![1_u8]), Bound::Excluded(vec![5])))
-            .into_iter()
             .collect::<Vec<_>>();
 
         let expected_range = expected_array.into_iter().take(4).collect::<Vec<_>>();
@@ -249,7 +247,6 @@ mod tests {
 
         let result_range = tree
             .range((Bound::Included(vec![1_u8]), Bound::Included(vec![5])))
-            .into_iter()
             .collect::<Vec<_>>();
 
         let expected_range = expected_array.into_iter().take(5).collect::<Vec<_>>();
@@ -285,7 +282,6 @@ mod tests {
 
         let result_range = tree
             .range((Bound::Excluded(vec![0_u8]), Bound::Excluded(vec![10])))
-            .into_iter()
             .collect::<Vec<_>>();
 
         assert_eq!(expected_array, result_range)
@@ -319,7 +315,6 @@ mod tests {
 
         let result_range = tree
             .range((Bound::Included(vec![5_u8]), Bound::Excluded(vec![9])))
-            .into_iter()
             .collect::<Vec<_>>();
 
         let expected_range = expected_array
@@ -359,7 +354,6 @@ mod tests {
 
         let result_range = tree
             .range((Bound::Excluded(vec![5_u8]), Bound::Included(vec![9])))
-            .into_iter()
             .collect::<Vec<_>>();
 
         let expected_range = expected_array

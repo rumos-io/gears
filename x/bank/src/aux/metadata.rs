@@ -76,13 +76,9 @@ pub fn add_coins_meta_to_genesis(
     if !dry {
         *genesis
             .pointer_mut(in_genesis_path)
-            .expect("we checked that this exists") = serde_json::to_value(
-            original_meta
-                .into_iter()
-                .map(|(_, this)| this)
-                .collect::<Vec<_>>(),
-        )
-        .expect("serde encoding");
+            .expect("we checked that this exists") =
+            serde_json::to_value(original_meta.into_values().collect::<Vec<_>>())
+                .expect("serde encoding");
 
         std::fs::write(
             genesis_path,

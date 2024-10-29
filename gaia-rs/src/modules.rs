@@ -20,7 +20,7 @@ impl Module for GaiaModules {
 
     fn permissions(&self) -> Vec<String> {
         match self {
-            GaiaModules::FeeCollector => vec![],
+            GaiaModules::FeeCollector => Vec::new(),
             GaiaModules::BondedPool => vec!["burner".into(), "staking".into()],
             GaiaModules::NotBondedPool => vec!["burner".into(), "staking".into()],
             GaiaModules::Gov => vec!["burner".into()],

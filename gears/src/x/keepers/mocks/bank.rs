@@ -1,7 +1,15 @@
+use std::collections::HashMap;
+
 use kv_store::StoreKey;
 
 use crate::{
-    types::{base::coin::UnsignedCoin, store::gas::errors::GasStoreErrors, tx::metadata::Metadata},
+    context::TransactionalContext,
+    types::{
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
+        denom::Denom,
+        store::gas::errors::GasStoreErrors,
+        tx::metadata::Metadata,
+    },
     x::{
         errors::BankKeeperError,
         keepers::bank::{BalancesKeeper, BankKeeper},
@@ -14,6 +22,7 @@ pub struct MockBankKeeper {
     pub get_denom_metadata: Option<Metadata>,
     pub balance_all: Vec<UnsignedCoin>,
     pub balance: Option<UnsignedCoin>,
+    pub supply: HashMap<Denom, UnsignedCoin>,
 }
 
 impl<SK: StoreKey, M: Module> BalancesKeeper<SK, M> for MockBankKeeper {
@@ -30,6 +39,14 @@ impl<SK: StoreKey, M: Module> BalancesKeeper<SK, M> for MockBankKeeper {
         GasStoreErrors,
     > {
         Ok((None, self.balance_all.clone()))
+    }
+
+    fn supply<DB: database::Database, CTX: crate::context::QueryableContext<DB, SK>>(
+        &self,
+        _ctx: &CTX,
+        denom: &crate::types::denom::Denom,
+    ) -> Result<Option<UnsignedCoin>, GasStoreErrors> {
+        Ok(self.supply.get(denom).cloned())
     }
 }
 
@@ -56,6 +73,19 @@ impl<SK: StoreKey, M: Module> BankKeeper<SK, M> for MockBankKeeper {
         _: &address::AccAddress,
         _: &M,
         _: crate::types::base::coins::UnsignedCoins,
+    ) -> Result<(), BankKeeperError> {
+        Ok(())
+    }
+
+    fn send_coins_from_module_to_module<
+        DB: database::Database,
+        CTX: TransactionalContext<DB, SK>,
+    >(
+        &self,
+        _: &mut CTX,
+        _: &M,
+        _: &M,
+        _: UnsignedCoins,
     ) -> Result<(), BankKeeperError> {
         Ok(())
     }

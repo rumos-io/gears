@@ -102,9 +102,11 @@ impl Module for StakingModules {
 
     fn permissions(&self) -> Vec<String> {
         match self {
-            StakingModules::FeeCollector => vec![],
+            StakingModules::FeeCollector => Vec::new(),
             StakingModules::BondedPool => vec!["burner".into(), "staking".into()],
-            StakingModules::NotBondedPool => vec!["burner".into(), "staking".into()],
+            StakingModules::NotBondedPool => {
+                vec!["burner".into(), "staking".into()]
+            }
         }
     }
 }

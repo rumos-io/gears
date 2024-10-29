@@ -15,7 +15,10 @@ impl<DB: Database> QueryKVStore<DB> {
 }
 
 impl<DB: Database> QueryKVStore<DB> {
-    pub fn range<R: RangeBounds<Vec<u8>>>(&self, range: R) -> crate::range::Range<'_, DB, Vec<u8>, R> {
+    pub fn range<R: RangeBounds<Vec<u8>>>(
+        &self,
+        range: R,
+    ) -> crate::range::Range<'_, DB, Vec<u8>, R> {
         self.0.range(range).into()
     }
 

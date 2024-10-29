@@ -30,7 +30,10 @@ impl<'a, DB: Database> GasKVStoreMut<'a, DB> {
         }
     }
 
-    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> GasRange<'a, DB, Vec<u8>, R> {
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(
+        self,
+        range: R,
+    ) -> GasRange<'a, DB, Vec<u8>, R> {
         GasRange::new_kv(self.inner.into_range(range), self.guard.clone())
     }
 

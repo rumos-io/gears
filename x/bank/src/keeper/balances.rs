@@ -29,4 +29,24 @@ impl<
         }
         Ok((p_result, balances))
     }
+
+    fn supply<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        denom: &Denom,
+    ) -> Result<Option<UnsignedCoin>, GasStoreErrors> {
+        let supply_store = ctx.kv_store(&self.store_key).prefix_store(SUPPLY_KEY);
+
+        let amount_bytes = supply_store.get(denom)?;
+
+        match amount_bytes {
+            Some(bytes) => Ok(Some(UnsignedCoin {
+                denom: denom.clone(),
+                amount: Uint256::from_str(&String::from_utf8_lossy(&bytes))
+                    .ok()
+                    .unwrap_or_corrupt(),
+            })),
+            None => Ok(None),
+        }
+    }
 }

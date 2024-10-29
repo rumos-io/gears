@@ -119,7 +119,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
                     sequence: 0,
                 },
                 name: module.name(),
-                permissions: module.permissions(),
+                permissions: module.permissions().into_iter().collect(),
             };
 
             self.set_account(ctx, Account::Module(account))?
