@@ -5,11 +5,15 @@ use gears::{
         handlers::node::{ABCIHandler, ModuleInfo},
         keepers::params::ParamsKeeper,
     },
-    baseapp::{NullQueryRequest, NullQueryResponse},
-    context::TransactionalContext,
+    baseapp::{errors::QueryError, QueryResponse},
+    context::{query::QueryContext, InfallibleContext, TransactionalContext},
+    core::Protobuf,
     params::ParamsSubspaceKey,
-    store::StoreKey,
-    tendermint::types::proto::event::{Event, EventAttribute},
+    store::{database::Database, StoreKey},
+    tendermint::types::{
+        proto::event::{Event, EventAttribute},
+        request::query::RequestQuery,
+    },
     types::{
         base::coins::UnsignedCoins,
         decimal256::{CosmosDecimalProtoString, Decimal256},
@@ -21,13 +25,85 @@ use gears::{
     },
 };
 
-use crate::{genesis::MintGenesis, keeper::MintKeeper, params::MintParamsKeeper};
+use crate::{
+    genesis::MintGenesis,
+    keeper::MintKeeper,
+    params::MintParamsKeeper,
+    types::query::{
+        request::{
+            MintQueryRequest, QueryAnnualProvisionsRequest, QueryInflationRequest,
+            QueryParamsRequest,
+        },
+        response::{
+            MintQueryResponse, QueryAnnualProvisionsResponse, QueryInflationResponse,
+            QueryParamsResponse,
+        },
+    },
+};
+
+const MISSING_MINTER_ERR_MSG: &str =
+    "Failed to get minter. Minter should be set during init genesis";
 
 #[derive(Debug, Clone)]
 pub struct MintAbciHandler<SK, PSK, BK, STK, M, MI> {
     keeper: MintKeeper<SK, BK, STK, M>,
     params_keeper: MintParamsKeeper<PSK>,
     _marker: PhantomData<(MI, SK, PSK, M)>,
+}
+
+impl<SK, PSK, BK, STK, M, MI> MintAbciHandler<SK, PSK, BK, STK, M, MI> {
+    pub fn new(keeper: MintKeeper<SK, BK, STK, M>, params_subspace_key: PSK) -> Self {
+        Self {
+            keeper,
+            params_keeper: MintParamsKeeper {
+                params_subspace_key,
+            },
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        BK: MintingBankKeeper<SK, M>,
+        STK: MintingStakingKeeper<SK, M>,
+        M: Module,
+        MI: ModuleInfo,
+    > MintAbciHandler<SK, PSK, BK, STK, M, MI>
+{
+    pub fn query_params<CTX: InfallibleContext<DB, SK>, DB: Database>(
+        &self,
+        ctx: &CTX,
+    ) -> QueryParamsResponse {
+        QueryParamsResponse {
+            params: self.params_keeper.get(ctx),
+        }
+    }
+
+    pub fn query_inflation<CTX: InfallibleContext<DB, SK>, DB: Database>(
+        &self,
+        ctx: &CTX,
+    ) -> QueryInflationResponse {
+        let inflation = match self.keeper.minter(ctx) {
+            Some(minter) => minter.inflation,
+            None => panic!("{MISSING_MINTER_ERR_MSG}"),
+        };
+
+        QueryInflationResponse { inflation }
+    }
+
+    pub fn query_annual_provisions<CTX: InfallibleContext<DB, SK>, DB: Database>(
+        &self,
+        ctx: &CTX,
+    ) -> QueryAnnualProvisionsResponse {
+        let annual_provisions = match self.keeper.minter(ctx) {
+            Some(minter) => minter.annual_provisions,
+            None => panic!("{MISSING_MINTER_ERR_MSG}"),
+        };
+
+        QueryAnnualProvisionsResponse { annual_provisions }
+    }
 }
 
 impl<
@@ -45,27 +121,33 @@ impl<
 
     type StoreKey = SK;
 
-    type QReq = NullQueryRequest;
+    type QReq = MintQueryRequest;
 
-    type QRes = NullQueryResponse;
+    type QRes = MintQueryResponse;
 
-    fn typed_query<DB: gears::store::database::Database>(
+    fn typed_query<DB: Database>(
         &self,
-        _ctx: &gears::context::query::QueryContext<DB, Self::StoreKey>,
-        _query: Self::QReq,
+        ctx: &QueryContext<DB, Self::StoreKey>,
+        query: Self::QReq,
     ) -> Self::QRes {
-        todo!()
+        match query {
+            MintQueryRequest::Params(_) => Self::QRes::Params(self.query_params(ctx)),
+            MintQueryRequest::Inflation(_) => Self::QRes::Inflation(self.query_inflation(ctx)),
+            MintQueryRequest::AnnualProvisions(_) => {
+                Self::QRes::AnnualProvisions(self.query_annual_provisions(ctx))
+            }
+        }
     }
 
-    fn msg<DB: gears::store::database::Database>(
+    fn msg<DB: Database>(
         &self,
         _ctx: &mut gears::context::tx::TxContext<'_, DB, Self::StoreKey>,
         _msg: &Self::Message,
     ) -> Result<(), gears::application::handlers::node::TxError> {
-        todo!()
+        unreachable!("Mint doesn't have any tx")
     }
 
-    fn init_genesis<DB: gears::store::database::Database>(
+    fn init_genesis<DB: Database>(
         &self,
         ctx: &mut gears::context::init::InitContext<'_, DB, Self::StoreKey>,
         Self::Genesis { minter, params }: Self::Genesis,
@@ -78,10 +160,23 @@ impl<
 
     fn query<DB: gears::store::database::Database + Send + Sync>(
         &self,
-        _ctx: &gears::context::query::QueryContext<DB, Self::StoreKey>,
-        _query: gears::tendermint::types::request::query::RequestQuery,
+        ctx: &QueryContext<DB, Self::StoreKey>,
+        RequestQuery { data, path, .. }: RequestQuery,
     ) -> Result<Vec<u8>, gears::baseapp::errors::QueryError> {
-        todo!()
+        let query = match path.as_str() {
+            QueryParamsRequest::QUERY_URL => {
+                Self::QReq::Params(QueryParamsRequest::decode_vec(&data)?)
+            }
+            QueryInflationRequest::QUERY_URL => {
+                Self::QReq::Inflation(QueryInflationRequest::decode_vec(&data)?)
+            }
+            QueryAnnualProvisionsRequest::QUERY_URL => {
+                Self::QReq::AnnualProvisions(QueryAnnualProvisionsRequest::decode_vec(&data)?)
+            }
+            _ => Err(QueryError::PathNotFound)?,
+        };
+
+        Ok(self.typed_query(ctx, query).into_bytes())
     }
 
     fn begin_block<'a, DB: gears::store::database::Database>(
@@ -91,7 +186,7 @@ impl<
     ) {
         let mut minter = match self.keeper.minter(ctx) {
             Some(minter) => minter,
-            None => panic!("failed to get minter"), // TODO: should this be unreachable! ?
+            None => panic!("{MISSING_MINTER_ERR_MSG}"), // This shouldn't happen
         };
         let params = self.params_keeper.get(ctx);
         let total_staking_supply = self
@@ -118,11 +213,17 @@ impl<
         let minted_coins = UnsignedCoins::new(vec![minted_coin]).expect("invalid coin for minting");
 
         if let Err(err) = self.keeper.mint_coins(ctx, minted_coins.clone()) {
-            panic!("error minting coins {err}")
+            panic!(
+                "Failed to `begin_block` in {} Reason: error minting coins {err}",
+                MI::NAME
+            )
         }
 
         if let Err(err) = self.keeper.collect_fees(ctx, minted_coins) {
-            panic!("error collecting fees: {err}")
+            panic!(
+                "Failed to `begin_block` in {} Reason: error collecting fees: {err}",
+                MI::NAME
+            )
         }
 
         ctx.push_event(Event::new(

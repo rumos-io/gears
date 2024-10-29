@@ -5,6 +5,7 @@ use std::{
 
 use gears::{
     application::keepers::params::ParamsKeeper,
+    derive::{Protobuf, Raw},
     extensions::corruption::UnwrapCorrupt,
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     types::{
@@ -21,19 +22,49 @@ const INFLATION_MIN_KEY: &str = "InflationMin";
 const GOAL_BONDED_KEY: &str = "GoalBonded";
 const BLOCKS_PER_YEAR_KEY: &str = "BlocksPerYear";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Raw, Protobuf)]
 pub struct MintingParams {
     /// denom of coin to mint
+    #[raw(kind(string), raw = String)]
     pub mint_denom: Denom,
     /// maximum annual change in inflation rate
+    #[raw(kind(string), raw = String)]
+    #[proto(
+        from = "CosmosDecimalProtoString::from_cosmos_proto_string",
+        from_ref,
+        into = "CosmosDecimalProtoString::to_cosmos_proto_string",
+        into_ref
+    )]
     pub inflation_rate_change: Decimal256,
     /// maximum inflation rate
+    #[raw(kind(string), raw = String)]
+    #[proto(
+        from = "CosmosDecimalProtoString::from_cosmos_proto_string",
+        from_ref,
+        into = "CosmosDecimalProtoString::to_cosmos_proto_string",
+        into_ref
+    )]
     pub inflation_max: Decimal256,
     /// minimum inflation rate
+    #[raw(kind(string), raw = String)]
+    #[proto(
+        from = "CosmosDecimalProtoString::from_cosmos_proto_string",
+        from_ref,
+        into = "CosmosDecimalProtoString::to_cosmos_proto_string",
+        into_ref
+    )]
     pub inflation_min: Decimal256,
     /// goal of percent bonded atoms
+    #[raw(kind(string), raw = String)]
+    #[proto(
+        from = "CosmosDecimalProtoString::from_cosmos_proto_string",
+        from_ref,
+        into = "CosmosDecimalProtoString::to_cosmos_proto_string",
+        into_ref
+    )]
     pub goal_bonded: Decimal256,
     /// expected blocks per year
+    #[raw(kind(uint32))]
     pub blocks_per_year: u32,
 }
 
