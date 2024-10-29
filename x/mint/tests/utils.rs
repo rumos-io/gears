@@ -1,12 +1,19 @@
-use std::str::FromStr;
+use std::{
+    str::FromStr,
+    sync::{Arc, RwLock},
+};
 
 use gears::{
     application::handlers::node::ModuleInfo,
     baseapp::BaseApp,
     derive::{ParamsKeys, StoreKeys},
-    extensions::testing::UnwrapTesting,
+    extensions::{lock::AcquireRwLock, testing::UnwrapTesting},
     store::database::MemDB,
-    types::denom::Denom,
+    types::{
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
+        decimal256::Decimal256,
+        denom::Denom,
+    },
     utils::node::{init_node, GenesisSource, MockApplication, MockNode, MockOptions},
     x::{
         keepers::{
@@ -65,7 +72,10 @@ impl ModuleInfo for MintModuleInfo {
     const NAME: &'static str = "mint";
 }
 
-pub fn set_node() -> MockNode<
+pub fn set_node(
+    bank_mock: Option<MockBankKeeper>,
+    staking_mock: Option<MockStakingKeeper>,
+) -> MockNode<
     BaseApp<
         MemDB,
         SubspaceKey,
@@ -84,8 +94,8 @@ pub fn set_node() -> MockNode<
     let handler = MintAbciHandler::new(
         MintKeeper::new(
             SpaceKey::Mint,
-            MockStakingKeeper,
-            MockBankKeeper,
+            staking_mock.unwrap_or_default(),
+            bank_mock.unwrap_or_default(),
             Modules::Mint,
             Modules::FeeCollector,
         ),
@@ -104,10 +114,18 @@ pub fn set_node() -> MockNode<
     init_node(opt).0
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct MockStakingKeeper {
+    pub total_bonded_tokens: Arc<RwLock<Decimal256>>,
+}
 
-
-#[derive(Debug, Clone)]
-pub struct MockStakingKeeper;
+impl MockStakingKeeper {
+    pub fn new(total_bonded_tokens: Decimal256) -> Self {
+        Self {
+            total_bonded_tokens: Arc::new(RwLock::new(total_bonded_tokens)),
+        }
+    }
+}
 
 impl MintingStakingKeeper<SpaceKey, Modules> for MockStakingKeeper {
     fn staking_denom<
@@ -130,12 +148,24 @@ impl MintingStakingKeeper<SpaceKey, Modules> for MockStakingKeeper {
         gears::types::decimal256::Decimal256,
         gears::types::store::gas::errors::GasStoreErrors,
     > {
-        todo!()
+        Ok(self.total_bonded_tokens.acquire_read().clone())
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct MockBankKeeper;
+#[derive(Debug, Clone, Default)]
+pub struct MockBankKeeper {
+    pub expected_mint_amount: Option<Arc<RwLock<UnsignedCoins>>>,
+    pub supply: Arc<RwLock<Option<UnsignedCoin>>>,
+}
+
+impl MockBankKeeper {
+    pub fn new(supply: UnsignedCoin, expected_mint: Option<UnsignedCoins>) -> Self {
+        Self {
+            supply: Arc::new(RwLock::new(Some(supply))),
+            expected_mint_amount: expected_mint.map(|this| Arc::new(RwLock::new(this))),
+        }
+    }
+}
 
 impl MintingBankKeeper<SpaceKey, Modules> for MockBankKeeper {
     fn mint_coins<
@@ -145,9 +175,14 @@ impl MintingBankKeeper<SpaceKey, Modules> for MockBankKeeper {
         &self,
         _ctx: &mut CTX,
         _module: &Modules,
-        _amount: gears::types::base::coins::UnsignedCoins,
+        amount: gears::types::base::coins::UnsignedCoins,
     ) -> Result<(), gears::x::errors::BankKeeperError> {
-        todo!()
+        match &self.expected_mint_amount {
+            Some(exp_amount) => assert_eq!(exp_amount.acquire_read().clone(), amount),
+            None => (),
+        }
+
+        Ok(())
     }
 }
 
@@ -188,7 +223,7 @@ impl BankKeeper<SpaceKey, Modules> for MockBankKeeper {
         _recepient_pool: &Modules,
         _amount: gears::types::base::coins::UnsignedCoins,
     ) -> Result<(), gears::x::errors::BankKeeperError> {
-        todo!()
+        Ok(())
     }
 
     fn denom_metadata<
@@ -248,6 +283,6 @@ impl BalancesKeeper<SpaceKey, Modules> for MockBankKeeper {
         Option<gears::types::base::coin::UnsignedCoin>,
         gears::types::store::gas::errors::GasStoreErrors,
     > {
-        Ok(None)
+        Ok(self.supply.acquire_read().clone())
     }
 }

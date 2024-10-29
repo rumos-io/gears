@@ -21,7 +21,7 @@ mod utils;
 
 #[test]
 fn query_provision_after_init() {
-    let mut node = set_node();
+    let mut node = set_node(None, None);
 
     let _ = node.step(vec![], Timestamp::UNIX_EPOCH);
 
@@ -43,7 +43,7 @@ fn query_provision_after_init() {
 
 #[test]
 fn query_provision_after_month_without_staking() {
-    let mut node = set_node();
+    let mut node = set_node(None, None);
 
     let mut timestamp = Timestamp::UNIX_EPOCH;
     while timestamp.timestamp_seconds() <= TimestampSeconds::try_from(2_628_000).unwrap_test() {
