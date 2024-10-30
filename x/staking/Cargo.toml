@@ -22,3 +22,5 @@ tonic = { workspace = true }
 data-encoding = { workspace = true }
 strum = { workspace = true }
 gears = { path = "../../gears", features = ["cli", "xmods", "governance", "utils", "mocks"] }
+vec1 = { workspace = true }
+pretty_assertions = "1.4.1"

@@ -6,6 +6,7 @@ pub mod types {
     }
 
     pub mod response {
+        pub use crate::types::response::deliver_tx::ResponseDeliverTx;
         pub use crate::types::response::query::ResponseQuery;
     }
 

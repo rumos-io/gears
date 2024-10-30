@@ -2,7 +2,7 @@ use bytes::Bytes;
 
 use crate::types::proto::crypto::ProofOps;
 
-#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ResponseQuery {
     pub code: u32,
     /// bytes data = 2; // use "value" instead.
