@@ -15,13 +15,10 @@ use staking::{
     Commission, CommissionRates, CreateValidator, Description, IbcV046Validator, Message,
     QueryValidatorRequest, QueryValidatorResponse,
 };
-use utils::set_node;
+use utils::{set_node, CONSENSUS_KEY, CONSENSUS_PUBLIC_KEY};
 
 #[path = "./utils.rs"]
 mod utils;
-
-const CONSENSUS_KEY: &str = r#"{ "type": "tendermint/PubKeyEd25519", "value": "JVWozgDG2S0TOEE0oFWz/EnSxA0EtYhXQANVIZpePFs="} "#;
-const CONSENSUS_PUBLIC_KEY : &str = "{\"@type\":\"/cosmos.crypto.ed25519.PubKey\",\"key\":\"JVWozgDG2S0TOEE0oFWz/EnSxA0EtYhXQANVIZpePFs=\"}";
 
 const GENESIS_FILE_PATH: &str = "./tests/assets/tx_create_validator.json";
 

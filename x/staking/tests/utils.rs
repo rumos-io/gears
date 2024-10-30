@@ -9,6 +9,11 @@ use gears::{
 };
 use staking::{Keeper, MockHookKeeper, StakingABCIHandler};
 
+#[allow(dead_code)]
+pub const CONSENSUS_KEY: &str = r#"{ "type": "tendermint/PubKeyEd25519", "value": "JVWozgDG2S0TOEE0oFWz/EnSxA0EtYhXQANVIZpePFs="} "#;
+#[allow(dead_code)]
+pub const CONSENSUS_PUBLIC_KEY : &str = "{\"@type\":\"/cosmos.crypto.ed25519.PubKey\",\"key\":\"JVWozgDG2S0TOEE0oFWz/EnSxA0EtYhXQANVIZpePFs=\"}";
+
 #[derive(Debug, Clone)]
 pub struct StakingModuleInfo;
 

@@ -1,0 +1,148 @@
+{
+    "bank": {
+        "balances": [
+            {
+                "address": "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
+                "coins": [
+                    {
+                        "denom": "uatom",
+                        "amount": "34"
+                    }
+                ]
+            },
+            {
+                "address": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh",
+                "coins": [
+                    {
+                        "amount": "5",
+                        "denom": "uatom"
+                    }
+                ]
+            },
+            {
+                "address": "cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q",
+                "coins": [
+                    {
+                        "amount": "500000",
+                        "denom": "uatom"
+                    }
+                ]
+            }
+        ],
+        "params": {
+            "send_enabled": [],
+            "default_send_enabled": true
+        },
+        "denom_metadata": []
+    },
+    "auth": {
+        "accounts": [
+            {
+                "@type": "/cosmos.auth.v1beta1.ModuleAccount",
+                "base_account": {
+                    "account_number": "0",
+                    "address": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh",
+                    "pub_key": null,
+                    "sequence": "0"
+                },
+                "name": "bonded_tokens_pool",
+                "permissions": [
+                    "burner",
+                    "staking"
+                ]
+            },
+            {
+                "@type": "/cosmos.auth.v1beta1.ModuleAccount",
+                "base_account": {
+                    "account_number": "1",
+                    "address": "cosmos1tygms3xhhs3yv487phx3dw4a95jn7t7lpm470r",
+                    "pub_key": null,
+                    "sequence": "0"
+                },
+                "name": "not_bonded_tokens_pool",
+                "permissions": [
+                    "burner",
+                    "staking"
+                ]
+            },
+            {
+                "@type": "/cosmos.auth.v1beta1.BaseAccount",
+                "address": "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
+                "pub_key": null,
+                "account_number": "2",
+                "sequence": "0"
+            },
+            {
+                "@type": "/cosmos.auth.v1beta1.BaseAccount",
+                "address": "cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q",
+                "pub_key": null,
+                "account_number": "2",
+                "sequence": "0"
+            }
+        ],
+        "params": {
+            "max_memo_characters": "256",
+            "tx_sig_limit": "7",
+            "tx_size_cost_per_byte": "10",
+            "sig_verify_cost_ed25519": "590",
+            "sig_verify_cost_secp256k1": "1000"
+        }
+    },
+    "staking": {
+        "params": {
+            "unbonding_time": "1814400s",
+            "max_validators": 100,
+            "max_entries": 7,
+            "historical_entries": 2,
+            "bond_denom": "uatom"
+        },
+        "validators": [
+            {
+                "commission": {
+                    "commission_rates": {
+                        "max_change_rate": "0.100000000000000000",
+                        "max_rate": "0.200000000000000000",
+                        "rate": "0.100000000000000000"
+                    },
+                    "update_time": "2024-07-30T17:10:11.032635319Z"
+                },
+                "consensus_pubkey": {
+                    "type": "tendermint/PubKeyEd25519",
+                    "value": "6Ob7SEB++IzwqXQQ/pgsD/bkxXNl+LDBhJZwpKuvnMo="
+                },
+                "delegator_shares": "5.000000000000000000",
+                "description": {
+                    "details": "",
+                    "identity": "",
+                    "moniker": "my_val",
+                    "security_contact": "",
+                    "website": ""
+                },
+                "jailed": false,
+                "min_self_delegation": "1",
+                "operator_address": "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
+                "status": "BOND_STATUS_BONDED",
+                "tokens": "5",
+                "unbonding_height": "0",
+                "unbonding_time": "1970-01-01T00:00:00Z"
+            }
+        ],
+        "last_total_power": "24238",
+        "exported": true,
+        "last_validator_powers": [
+            {
+                "address": "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
+                "power": "24238"
+            }
+        ],
+        "delegations": [
+            {
+                "delegator_address": "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
+                "shares": "1000000000000000000.000000000000000000",
+                "validator_address": "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4"
+            }
+        ],
+        "unbonding_delegations": [],
+        "redelegations": []
+    }
+}
