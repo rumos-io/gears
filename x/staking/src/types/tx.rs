@@ -169,7 +169,7 @@ impl Commission {
 }
 
 /// Description defines a validator description.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct EditDescription {
     /// moniker defines a human-readable name for the validator.
     pub moniker: Option<String>,
