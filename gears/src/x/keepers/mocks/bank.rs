@@ -21,7 +21,7 @@ use crate::{
 pub struct MockBankKeeper {
     pub get_denom_metadata: Option<Metadata>,
     pub balance_all: Vec<UnsignedCoin>,
-    pub balance: UnsignedCoin,
+    pub balance: Option<UnsignedCoin>,
     pub supply: HashMap<Denom, UnsignedCoin>,
 }
 

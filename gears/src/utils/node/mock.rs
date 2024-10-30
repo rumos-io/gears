@@ -193,4 +193,8 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
             let _ = self.step(vec![], Timestamp::UNIX_EPOCH);
         }
     }
+
+    pub fn height(&self) -> u32 {
+        self.height
+    }
 }
