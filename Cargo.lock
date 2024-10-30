@@ -5016,7 +5016,9 @@ name = "staking"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "auth",
  "axum",
+ "bank",
  "clap",
  "data-encoding",
  "gears",

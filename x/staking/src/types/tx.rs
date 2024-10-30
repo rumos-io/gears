@@ -478,7 +478,6 @@ impl ValueRenderer for CreateValidator {
     }
 }
 
-/// CreateValidator defines a SDK message for creating a new validator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, AppMessage)]
 #[msg(url = "/cosmos.staking.v1beta1.MsgEditValidator")]
 pub struct EditValidator {

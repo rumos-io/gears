@@ -46,7 +46,7 @@ impl AuthParams for MockAuthParams {
 pub struct MockAuthKeeper {
     pub get_auth_params: MockAuthParams,
     pub has_account: bool,
-    pub get_account: Option<Account>,
+    pub get_account: Vec<Account>,
 }
 
 impl<SK: StoreKey, M: Module> AuthKeeper<SK, M> for MockAuthKeeper {
@@ -70,9 +70,15 @@ impl<SK: StoreKey, M: Module> AuthKeeper<SK, M> for MockAuthKeeper {
     fn get_account<DB: database::Database, CTX: QueryableContext<DB, SK>>(
         &self,
         _: &CTX,
-        _: &address::AccAddress,
+        addr: &address::AccAddress,
     ) -> Result<Option<Account>, GasStoreErrors> {
-        Ok(self.get_account.clone())
+        let account = self
+            .get_account
+            .iter()
+            .find(|this| this.get_address() == addr)
+            .cloned();
+
+        Ok(account)
     }
 
     fn set_account<DB: database::Database, CTX: TransactionalContext<DB, SK>>(

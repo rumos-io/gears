@@ -7,7 +7,7 @@ use gears::{
         request::query::RequestQuery, response::ResponseDeliverTx, time::timestamp::Timestamp,
     },
     types::{base::coin::UnsignedCoin, decimal256::Decimal256, uint::Uint256},
-    utils::node::{generate_tx, StepResponse, User},
+    utils::node::{generate_tx, GenesisSource, StepResponse, User},
     x::types::validator::BondStatus,
 };
 
@@ -23,13 +23,15 @@ mod utils;
 const CONSENSUS_KEY: &str = r#"{ "type": "tendermint/PubKeyEd25519", "value": "JVWozgDG2S0TOEE0oFWz/EnSxA0EtYhXQANVIZpePFs="} "#;
 const CONSENSUS_PUBLIC_KEY : &str = "{\"@type\":\"/cosmos.crypto.ed25519.PubKey\",\"key\":\"JVWozgDG2S0TOEE0oFWz/EnSxA0EtYhXQANVIZpePFs=\"}";
 
+const GENESIS_FILE_PATH: &str = "./tests/assets/tx_create_validator.json";
+
 #[test]
 fn create_validator_unbounded() {
-    let mut node = set_node();
+    let mut node = set_node(GenesisSource::File(GENESIS_FILE_PATH.into()));
 
     let _ = node.step(vec![], Timestamp::UNIX_EPOCH);
 
-    let user = User::from_bech32("embrace dash dirt awake weird beauty nest fee slice reopen hundred width bright glass kick also forget forum guess guard unusual poet grass very", 1).unwrap_test();
+    let user = User::from_bech32("unfair live spike near cushion blanket club salad poet cigar venue above north speak harbor salute curve tail appear obvious month end boss priority", 1).unwrap_test();
 
     let commission = CommissionRates::new(
         Decimal256::from_atomics(1u64, 1).unwrap_test(),
@@ -60,13 +62,13 @@ fn create_validator_unbounded() {
         mut tx_responses,
     } = node.step(vec![txs], Timestamp::UNIX_EPOCH);
 
-    let ResponseDeliverTx { code, .. } = tx_responses.pop().unwrap_test();
+    let ResponseDeliverTx { code, log, .. } = tx_responses.pop().unwrap_test();
 
-    assert!(code == 0);
+    assert!(code == 0, "{log}");
 
     assert_eq!(
         data_encoding::HEXLOWER.encode(&app_hash),
-        "83f9c3a55de321b0d7970ccdaa7719c95af28fa0f6de8d6928e649c128749914"
+        "615fc7b99bc5375281010fcb424e0dbc4b9145b2e386396f5fc9c414b5d734b3"
     );
 
     let StepResponse {
@@ -76,7 +78,7 @@ fn create_validator_unbounded() {
 
     assert_eq!(
         data_encoding::HEXLOWER.encode(&app_hash),
-        "00327c5505998e3ce4640656a09bfce8f099947a9717b91ae53c9d91da60c0cc"
+        "22b2a66570e221f9c79209432c46d8a14c730c8ff4d5a5e20b67e73e50e504fe"
     );
 
     let q = QueryValidatorRequest {
