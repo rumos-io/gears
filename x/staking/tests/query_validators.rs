@@ -13,7 +13,7 @@ use staking::{
     Commission, CommissionRates, Description, IbcV046Validator, QueryValidatorsRequest,
     QueryValidatorsResponse,
 };
-use utils::set_node;
+use utils::{set_node, USER_0};
 
 #[path = "./utils.rs"]
 mod utils;
@@ -77,7 +77,7 @@ fn query_validators_from_file() {
         pagination: _,
     } = QueryValidatorsResponse::decode_vec(&value).unwrap_test();
 
-    let user = User::from_bech32("race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow", 1).unwrap_test();
+    let user = User::from_bech32(USER_0, 1).unwrap_test();
 
     let expected_validators: Vec<IbcV046Validator> = vec![IbcV046Validator {
         operator_address: user.address().into(),

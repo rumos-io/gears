@@ -13,7 +13,7 @@ use staking::{
     Commission, CommissionRates, Description, IbcV046Validator, QueryValidatorRequest,
     QueryValidatorResponse,
 };
-use utils::set_node;
+use utils::{set_node, USER_0};
 
 #[path = "./utils.rs"]
 mod utils;
@@ -24,7 +24,7 @@ fn query_validator_empty() {
 
     let _ = node.step(vec![], Timestamp::UNIX_EPOCH);
 
-    let user = User::from_bech32("race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow", 1).unwrap_test();
+    let user = User::from_bech32(USER_0, 1).unwrap_test();
 
     let q = QueryValidatorRequest {
         validator_addr: user.address().into(),
@@ -54,7 +54,7 @@ fn query_validator_from_file() {
 
     let _ = node.step(vec![], Timestamp::UNIX_EPOCH);
 
-    let user = User::from_bech32("race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow", 1).unwrap_test();
+    let user = User::from_bech32(USER_0, 1).unwrap_test();
 
     let q = QueryValidatorRequest {
         validator_addr: user.address().into(),
@@ -72,8 +72,6 @@ fn query_validator_from_file() {
 
     let QueryValidatorResponse { validator } =
         QueryValidatorResponse::decode_vec(&value).unwrap_test();
-
-    let user = User::from_bech32("race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow", 1).unwrap_test();
 
     let expected_validator= IbcV046Validator {
         operator_address: user.address().into(),

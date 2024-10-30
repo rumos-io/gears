@@ -13,7 +13,7 @@ use staking::{
     Delegation, DelegationResponse, QueryValidatorDelegationsRequest,
     QueryValidatorDelegationsResponse,
 };
-use utils::set_node;
+use utils::{set_node, USER_0};
 
 #[path = "./utils.rs"]
 mod utils;
@@ -24,7 +24,7 @@ fn query_delegations_empty() {
 
     let _ = node.step(vec![], Timestamp::UNIX_EPOCH);
 
-    let user = User::from_bech32("race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow", 1).unwrap_test();
+    let user = User::from_bech32(USER_0, 1).unwrap_test();
 
     let q = QueryValidatorDelegationsRequest {
         validator_addr: user.address().into(),
@@ -59,7 +59,7 @@ fn query_delegations() {
 
     let _ = node.step(vec![], Timestamp::UNIX_EPOCH);
 
-    let user = User::from_bech32("race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow", 1).unwrap_test();
+    let user = User::from_bech32(USER_0, 1).unwrap_test();
 
     let q = QueryValidatorDelegationsRequest {
         validator_addr: user.address().into(),
