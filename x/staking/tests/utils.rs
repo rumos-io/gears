@@ -147,6 +147,12 @@ pub struct MockStakingAbciHandler {
     pub auth: auth::AuthABCIHandler<SpaceKey, SubspaceKey, StakingModules>,
 }
 
+impl Default for MockStakingAbciHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MockStakingAbciHandler {
     pub fn new() -> Self {
         let auth_keeper = auth::Keeper::new(
