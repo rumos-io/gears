@@ -29,14 +29,16 @@ fn query_validator_empty() {
     let q = QueryValidatorRequest {
         validator_addr: user.address().into(),
     };
-    let ResponseQuery { code, value, .. } = node.query(RequestQuery {
+    let ResponseQuery {
+        code, value, log, ..
+    } = node.query(RequestQuery {
         data: q.encode_vec().into(),
         path: QueryValidatorRequest::QUERY_URL.to_owned(),
         height: node.height() as i64,
         prove: false,
     });
 
-    assert!(code == 0);
+    assert!(code == 0, "{log}");
 
     let QueryValidatorResponse { validator } =
         QueryValidatorResponse::decode_vec(&value).unwrap_test();
@@ -57,14 +59,16 @@ fn query_validator_from_file() {
     let q = QueryValidatorRequest {
         validator_addr: user.address().into(),
     };
-    let ResponseQuery { code, value, .. } = node.query(RequestQuery {
+    let ResponseQuery {
+        code, value, log, ..
+    } = node.query(RequestQuery {
         data: q.encode_vec().into(),
         path: QueryValidatorRequest::QUERY_URL.to_owned(),
         height: node.height() as i64,
         prove: false,
     });
 
-    assert!(code == 0);
+    assert!(code == 0, "{log}");
 
     let QueryValidatorResponse { validator } =
         QueryValidatorResponse::decode_vec(&value).unwrap_test();

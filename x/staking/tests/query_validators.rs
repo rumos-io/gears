@@ -28,14 +28,16 @@ fn query_validators_empty() {
         status: BondStatus::Unspecified, // Query all validators
         pagination: None,
     };
-    let ResponseQuery { code, value, .. } = node.query(RequestQuery {
+    let ResponseQuery {
+        code, value, log, ..
+    } = node.query(RequestQuery {
         data: q.encode_vec().into(),
         path: QueryValidatorsRequest::QUERY_URL.to_owned(),
         height: node.height() as i64,
         prove: false,
     });
 
-    assert!(code == 0);
+    assert!(code == 0, "{log}");
 
     let QueryValidatorsResponse {
         validators,
@@ -59,14 +61,16 @@ fn query_validators_from_file() {
         status: BondStatus::Unspecified, // Query all validators
         pagination: None,
     };
-    let ResponseQuery { code, value, .. } = node.query(RequestQuery {
+    let ResponseQuery {
+        code, value, log, ..
+    } = node.query(RequestQuery {
         data: q.encode_vec().into(),
         path: QueryValidatorsRequest::QUERY_URL.to_owned(),
         height: node.height() as i64,
         prove: false,
     });
 
-    assert!(code == 0);
+    assert!(code == 0, "{log}");
 
     let QueryValidatorsResponse {
         validators,
