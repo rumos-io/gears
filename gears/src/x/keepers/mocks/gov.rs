@@ -14,6 +14,6 @@ impl<SK: StoreKey, M: Module> GovernanceBankKeeper<SK, M> for MockBankKeeper {
         _: &address::AccAddress,
         _: &crate::types::denom::Denom,
     ) -> Result<UnsignedCoin, GasStoreErrors> {
-        Ok(self.balance.clone())
+        Ok(self.balance.clone().expect("balances field in mock is not set"))
     }
 }

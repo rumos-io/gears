@@ -22,6 +22,16 @@ impl User {
     pub fn address(&self) -> AccAddress {
         self.key_pair.get_address()
     }
+
+    pub fn from_bech32(mnemonic: impl AsRef<str>, account_number: u64) -> Option<Self> {
+        let mnemonic = bip32::Mnemonic::new(mnemonic, bip32::Language::English).ok()?;
+        let key_pair = KeyPair::from_mnemonic(&mnemonic);
+
+        Some(Self {
+            key_pair,
+            account_number,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]

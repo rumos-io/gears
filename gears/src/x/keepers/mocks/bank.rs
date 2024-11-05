@@ -21,7 +21,7 @@ use crate::{
 pub struct MockBankKeeper {
     pub get_denom_metadata: Option<Metadata>,
     pub balance_all: Vec<UnsignedCoin>,
-    pub balance: UnsignedCoin,
+    pub balance: Option<UnsignedCoin>,
     pub supply: HashMap<Denom, UnsignedCoin>,
 }
 
@@ -104,6 +104,17 @@ impl<SK: StoreKey, M: Module> BankKeeper<SK, M> for MockBankKeeper {
         _: &M,
         _: &crate::types::base::coins::UnsignedCoins,
     ) -> Result<(), crate::x::errors::BankKeeperError> {
+        Ok(())
+    }
+
+    fn send_coins_from_account_to_account<
+        DB: database::Database,
+        CTX: crate::context::TransactionalContext<DB, SK>,
+    >(
+        &self,
+        _ctx: &mut CTX,
+        _msg: &crate::types::msg::send::MsgSend,
+    ) -> Result<(), BankKeeperError> {
         Ok(())
     }
 }

@@ -14,7 +14,7 @@ use gears::{
         },
         msg::send::MsgSend,
     },
-    utils::node::{acc_address, generate_tx, init_node, GenesisSource, MockOptionsFormer},
+    utils::node::{acc_address, generate_tx, init_node, GenesisSource, MockOptionsFormer, User},
     x::{keepers::mocks::auth::MockAuthKeeper, module::Module},
 };
 
@@ -34,7 +34,7 @@ fn test_init_and_few_blocks() {
         .baseapp_sbs_key(SubspaceKey::BaseApp)
         .genesis(GenesisSource::Genesis(GenesisState::default()));
 
-    let (mut node, _) = init_node(opt);
+    let mut node = init_node(opt);
 
     let app_hash = &node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
@@ -74,7 +74,9 @@ fn test_init_and_sending_tx() {
         .baseapp_sbs_key(SubspaceKey::BaseApp)
         .genesis(GenesisSource::Genesis(genesis));
 
-    let (mut node, user) = init_node(opt);
+    let mut node = init_node(opt);
+
+    let user = User::from_bech32("race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow", 1).unwrap_test();
 
     let app_hash = &node.step(vec![], Timestamp::UNIX_EPOCH).app_hash;
     assert_eq!(
