@@ -18,7 +18,6 @@ serde_json = { workspace = true }
 # utils
 anyhow = { workspace = true }
 tracing = { workspace = true }
-# strum = { workspace = true }
 
 # nutypes
 ibc-proto = { workspace = true }
@@ -26,3 +25,8 @@ ibc-proto = { workspace = true }
 
 #clients
 clap = { workspace = true }
+
+[dev-dependencies]
+gears = { path = "../../gears", features = ["cli", "xmods", "governance", "utils" ] }
+data-encoding = { workspace = true }
+strum = { workspace = true }

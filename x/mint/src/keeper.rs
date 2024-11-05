@@ -28,14 +28,23 @@ pub struct MintKeeper<SK, BK, STK, M> {
     fee_collector: M,
 }
 
-// impl<SK, M> MintKeeper<SK, M> {
-// pub fn new(store_key: SK) -> Self {
-//     Self {
-//         store_key,
-//         _module_marker: PhantomData,
-//     }
-// }
-// }
+impl<SK, BK, STK, M> MintKeeper<SK, BK, STK, M> {
+    pub fn new(
+        store_key: SK,
+        staking_keeper: STK,
+        bank_keeper: BK,
+        module: M,
+        fee_collector: M,
+    ) -> Self {
+        Self {
+            store_key,
+            staking_keeper,
+            bank_keeper,
+            module,
+            fee_collector,
+        }
+    }
+}
 
 impl<SK: StoreKey, BK: MintingBankKeeper<SK, M>, STK: MintingStakingKeeper<SK, M>, M: Module>
     MintKeeper<SK, BK, STK, M>
