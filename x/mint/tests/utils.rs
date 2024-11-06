@@ -148,7 +148,7 @@ impl MintingStakingKeeper<SpaceKey, Modules> for MockStakingKeeper {
         gears::types::decimal256::Decimal256,
         gears::types::store::gas::errors::GasStoreErrors,
     > {
-        Ok(self.total_bonded_tokens.acquire_read().clone())
+        Ok(*self.total_bonded_tokens.acquire_read())
     }
 }
 
@@ -177,10 +177,7 @@ impl MintingBankKeeper<SpaceKey, Modules> for MockBankKeeper {
         _module: &Modules,
         amount: gears::types::base::coins::UnsignedCoins,
     ) -> Result<(), gears::x::errors::BankKeeperError> {
-        match &self.expected_mint_amount {
-            Some(exp_amount) => assert_eq!(exp_amount.acquire_read().clone(), amount),
-            None => (),
-        }
+        if let Some(exp_amount) = &self.expected_mint_amount { assert_eq!(exp_amount.acquire_read().clone(), amount) }
 
         Ok(())
     }
