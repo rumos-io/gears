@@ -246,23 +246,6 @@ impl<
         (p_result, store)
     }
 
-    pub fn send_coins_from_account_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        msg: &MsgSend,
-    ) -> Result<(), BankKeeperError> {
-        self.send_coins(ctx, msg.clone())?;
-
-        // Create account if recipient does not exist
-
-        if !self.auth_keeper.has_account(ctx, &msg.to_address)? {
-            self.auth_keeper
-                .create_new_base_account(ctx, &msg.to_address)?;
-        };
-
-        Ok(())
-    }
-
     fn send_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,

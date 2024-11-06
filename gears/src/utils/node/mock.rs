@@ -56,6 +56,7 @@ pub struct MockNode<App, G> {
 pub struct StepResponse {
     pub app_hash: Bytes,
     pub tx_responses: Vec<ResponseDeliverTx>,
+    pub height: u32,
 }
 
 impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
@@ -126,6 +127,7 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
         StepResponse {
             app_hash: self.app_hash.clone(),
             tx_responses,
+            height: self.height,
         }
     }
 

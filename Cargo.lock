@@ -3542,11 +3542,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "data-encoding",
  "gears",
  "ibc-proto 0.33.0",
  "prost",
  "serde",
  "serde_json",
+ "strum",
  "tracing",
 ]
 

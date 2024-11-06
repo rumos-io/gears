@@ -1,12 +1,12 @@
 use gears::baseapp::genesis::Genesis;
 use serde::{Deserialize, Serialize};
 
-use crate::{params::MintingParams, types::minter::Minter};
+use crate::{params::MintParams, types::minter::Minter};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MintGenesis {
     pub minter: Minter,
-    pub params: MintingParams,
+    pub params: MintParams,
 }
 
 impl Genesis for MintGenesis {

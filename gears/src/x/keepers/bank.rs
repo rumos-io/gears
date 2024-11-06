@@ -8,6 +8,7 @@ use crate::{
         address::AccAddress,
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
         denom::Denom,
+        msg::send::MsgSend,
         store::gas::errors::GasStoreErrors,
         tx::metadata::Metadata,
     },
@@ -44,6 +45,12 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         address: &AccAddress,
         module: &M,
         amount: UnsignedCoins,
+    ) -> Result<(), BankKeeperError>;
+
+    fn send_coins_from_account_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        msg: &MsgSend,
     ) -> Result<(), BankKeeperError>;
 
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
