@@ -26,7 +26,7 @@ pub trait ParamsKeeper<PSK: ParamsSubspaceKey> {
             .contains(key.as_ref())
     }
 
-    #[cfg(all(feature = "governance"))]
+    #[cfg(feature = "governance")]
     fn validate(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> bool;
 
     fn get<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(

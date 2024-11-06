@@ -31,7 +31,7 @@ impl Database for SledDb {
         let _ = self.0.insert(key, value).unwrap_or_corrupt();
     }
 
-    fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
+    fn iterator(&self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + '_ {
         self.0
             .iter()
             .map(|this| this.unwrap_or_corrupt())
@@ -43,10 +43,10 @@ impl Database for SledDb {
             })
     }
 
-    fn prefix_iterator<'a>(
-        &'a self,
+    fn prefix_iterator(
+        &self,
         prefix: Vec<u8>,
-    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + '_ {
         self.0
             .scan_prefix(prefix)
             .map(|this| this.unwrap_or_corrupt())

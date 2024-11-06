@@ -24,7 +24,7 @@ impl<T: Database> Database for PrefixDB<T> {
         self.db.put(key, value)
     }
 
-    fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
+    fn iterator(&self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + '_ {
         let prefix_length = self.prefix.len();
 
         self.db
@@ -35,10 +35,10 @@ impl<T: Database> Database for PrefixDB<T> {
             })
     }
 
-    fn prefix_iterator<'a>(
-        &'a self,
+    fn prefix_iterator(
+        &self,
         prefix: Vec<u8>,
-    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + '_ {
         let prefix = [self.prefix.clone(), prefix].concat();
         let prefix_length = prefix.len();
 

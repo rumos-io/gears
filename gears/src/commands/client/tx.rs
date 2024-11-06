@@ -152,7 +152,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>, F: NodeFetcher + Clone>(
     handler: &H,
     fetcher: &F,
 ) -> anyhow::Result<RuntxResult> {
-    let key = handle_key(&mut ctx)?;
+    let key = handle_key(&ctx)?;
 
     let messages = handler.prepare_tx(&mut ctx, inner, key.get_gears_public_key())?;
 

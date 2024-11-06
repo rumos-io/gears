@@ -153,6 +153,7 @@ fn open(path: impl AsRef<Path>, create: bool, backend: Backend) -> Result<Option
                     let mut file = OpenOptions::new()
                         .write(true)
                         .create(true)
+                        .truncate(true)
                         .open(&key_hash_path)
                         .map_err(|e| Error::FileIO {
                             msg: e.to_string(),

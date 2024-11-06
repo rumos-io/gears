@@ -42,16 +42,16 @@ impl Database for RocksDB {
             .unwrap_or_else(|e| panic!("unrecoverable database error {}", e))
     }
 
-    fn iterator<'a>(&'a self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
+    fn iterator(&self) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + '_ {
         self.db
             .iterator(rocksdb::IteratorMode::Start)
             .map(|res| res.unwrap_or_else(|e| panic!("unrecoverable database error {}", e)))
     }
 
-    fn prefix_iterator<'a>(
-        &'a self,
+    fn prefix_iterator(
+        &self,
         prefix: Vec<u8>,
-    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a {
+    ) -> impl Iterator<Item = (Box<[u8]>, Box<[u8]>)> + '_ {
         self.db
             .prefix_iterator(&prefix)
             .map(|res| res.unwrap_or_else(|e| panic!("unrecoverable database error {}", e)))

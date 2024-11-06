@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::HashMap,
     ops::RangeBounds,
     sync::{Arc, RwLock},
 };
@@ -9,7 +9,7 @@ use database::Database;
 use trees::iavl::Tree;
 
 use crate::{
-    cache::KVCache,
+    cache::{KVCache, KVCacheCollection},
     error::POISONED_LOCK,
     range::Range,
     store::{
@@ -61,7 +61,7 @@ impl<DB: Database> TransactionKVBank<DB> {
         }
     }
 
-    pub fn take_block_cache(&mut self) -> (BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>) {
+    pub fn take_block_cache(&mut self) -> KVCacheCollection {
         self.block.take()
     }
 

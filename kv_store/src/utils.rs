@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use std::{borrow::Cow, collections::VecDeque};
 
 /// Favours a over b if keys are equal (so make a the cache)

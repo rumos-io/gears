@@ -130,6 +130,13 @@ darling = "0.20"
 
 [workspace.lints.clippy]
 unused_async = "deny"
+# restriction = "warn" # opt out where this is redundant
+# pedantic = "warn" # opt out where this is redundant
+# exhaustive_structs = "allow"
+# single_call_fn = "allow"
+# single_char_lifetime_names = "allow"
+# implicit_return = "allow"
+# std_instead_of_core = "allow"
 
 [workspace.lints.rust]
 rust_2018_idioms  = "deny"
