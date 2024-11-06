@@ -255,7 +255,7 @@ where
                     .keeper
                     .modules_version(ctx)
                     .into_iter()
-                    .find(|this| this.0.name() == &module_name)
+                    .find(|this| this.0.name() == module_name)
                 {
                     Some((key, version)) => [ModuleVersion {
                         name: key.name().to_owned(),

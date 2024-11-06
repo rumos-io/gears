@@ -93,7 +93,7 @@ impl From<UnsignedCoin> for Vec<u8> {
 }
 
 /// Uint256Proto is a proto wrapper around Uint256 to allow for proto serialization.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Uint256Proto {
     pub uint: Uint256,
 }

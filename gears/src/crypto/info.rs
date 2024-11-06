@@ -26,6 +26,7 @@ use crate::{
 use super::keys::{GearsPublicKey, ReadAccAddress, SigningKey};
 
 /// Contains info required to sign a Tx
+#[derive(Debug)]
 pub struct SigningInfo<'a, K> {
     pub key: &'a K,
     pub sequence: u64,

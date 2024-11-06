@@ -16,6 +16,7 @@ use super::store::kv::immutable::{KVStore, KVStoreBackend};
 
 pub mod kv;
 
+#[derive(Debug)]
 pub struct QueryStoreOptions<'a, DB, SK>(
     &'a HashMap<SK, ApplicationKVBank<PrefixDB<DB>>>,
     u32,

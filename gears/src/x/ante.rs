@@ -562,6 +562,7 @@ impl<
     }
 }
 
+#[derive(Debug)]
 pub struct MetadataFromState<'a, DB, SK, BK, CTX, MK> {
     pub bank_keeper: &'a BK,
     pub ctx: &'a CTX,

@@ -7,6 +7,7 @@ use crate::{
 
 use super::space::GasParamsSpace;
 
+#[derive(Debug)]
 pub struct GasParamsSpaceMut<'a, DB> {
     pub(super) inner: PrefixStoreMut<'a, DB>,
 }

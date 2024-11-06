@@ -20,6 +20,7 @@ pub fn build_store<SK: StoreKey>() -> ApplicationMultiBank<MemDB, SK> {
     ApplicationMultiBank::new(Arc::new(MemDB::new())).expect("Failed to build store")
 }
 
+#[derive(Debug)]
 pub struct ContextOptions {
     height: u32,
     header: Header,

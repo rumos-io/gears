@@ -5,6 +5,7 @@ use crate::{
     types::store::{gas::errors::GasStoreErrors, prefix::PrefixStore},
 };
 
+#[derive(Debug)]
 pub struct GasParamsSpace<'a, DB> {
     pub(super) inner: PrefixStore<'a, DB>,
 }

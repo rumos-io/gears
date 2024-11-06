@@ -11,10 +11,12 @@ use k256::elliptic_curve::rand_core;
 use rand_core::OsRng;
 
 /// Used to specify the type of key to generate.
+#[derive(Debug)]
 pub enum KeyType {
     Secp256k1,
 }
 
+#[derive(Debug)]
 pub enum Backend<'a> {
     File(&'a Path),
     Test(&'a Path),

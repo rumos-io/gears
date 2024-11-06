@@ -10,6 +10,7 @@ use super::{
 
 pub type LedgerError = ledger_cosmos::Error;
 
+#[derive(Debug)]
 pub struct LedgerProxyKey {
     app: CosmosValidatorApp,
     address: AccAddress,

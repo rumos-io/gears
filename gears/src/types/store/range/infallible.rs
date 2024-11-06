@@ -12,6 +12,7 @@ enum InfallibleRangeBackend<'a, DB, RB, R> {
     Prefix(PrefixRange<'a, DB, RB, R>),
 }
 
+#[derive(Debug)]
 pub struct RangeIter<'a, DB, RB, R>(InfallibleRangeBackend<'a, DB, RB, R>);
 
 impl<DB: Database, RB: AsRef<[u8]>, R: RangeBounds<RB>> RangeIter<'_, DB, RB, R> {

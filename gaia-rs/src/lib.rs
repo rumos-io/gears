@@ -70,8 +70,10 @@ impl ApplicationInfo for GaiaApplication {
     const APP_VERSION: &'static str = env!("GIT_HASH");
 }
 
+#[derive(Debug)]
 pub struct GaiaCore;
 
+#[derive(Debug)]
 pub struct GaiaCoreClient;
 
 impl TxHandler for GaiaCoreClient {
@@ -187,6 +189,7 @@ impl<AI: ApplicationInfo> TryFrom<GaiaAuxCli<AI>> for GaiaAuxCmd {
     }
 }
 
+#[derive(Debug)]
 pub enum GaiaAuxCmd {
     Genutil(genutil::cmd::GenesisCmd),
     Bank(bank::aux::BankAuxCmd),
@@ -199,7 +202,7 @@ impl AuxHandler for GaiaCoreClient {
 
 impl Client for GaiaCoreClient {}
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum GaiaNodeQueryRequest {
     Bank(BankNodeQueryRequest),
     Auth(AuthNodeQueryRequest),
@@ -244,7 +247,7 @@ impl From<DistributionNodeQueryRequest> for GaiaNodeQueryRequest {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum GaiaNodeQueryResponse {
     Bank(BankNodeQueryResponse),

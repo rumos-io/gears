@@ -60,6 +60,7 @@ pub const KEY_PROCESSED_TIME: &str = "/processedTime";
 const KEY_PROCESSED_HEIGHT: &str = "/processedHeight";
 const KEY_ITERATE_CONSENSUS_STATE_PREFIX: &[u8; 22] = b"iterateConsensusStates";
 
+#[derive(Debug)]
 pub struct Context<'a, 'b, DB, SK, PSK> {
     pub gears_ctx: &'a mut TxContext<'b, DB, SK>,
     pub client_keeper: &'a ClientKeeper<SK, PSK>,
@@ -706,6 +707,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ExtClientValida
     }
 }
 
+#[derive(Debug)]
 pub struct ClientRouter;
 
 impl Router for ClientRouter {

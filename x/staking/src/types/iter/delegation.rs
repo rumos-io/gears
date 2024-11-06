@@ -5,15 +5,13 @@ use gears::{
     store::database::Database,
     types::{
         address::AccAddress,
-        store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
+        store::{gas::errors::GasStoreErrors, kv::Store, range::VectorRange},
     },
 };
-use std::{borrow::Cow, ops::Bound};
+use std::borrow::Cow;
 
 #[derive(Debug)]
-pub struct DelegationIterator<'a, DB>(
-    StoreRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)>,
-);
+pub struct DelegationIterator<'a, DB>(VectorRange<'a, DB>);
 
 impl<'a, DB: Database> DelegationIterator<'a, DB> {
     pub fn new(store: Store<'a, DB>, address: &AccAddress) -> DelegationIterator<'a, DB> {
