@@ -138,8 +138,8 @@ exhaustive_structs = "allow"
 implicit_return = "allow"
 single_call_fn = "allow"
 question_mark_used = "allow"
-# restriction = "warn" # opt out where this is redundant
-# pedantic = "warn" # opt out where this is redundant
+# restriction = { level = "warn", priority = -1 } # opt out where this is redundant
+# pedantic = { level = "warn", priority = -1 } # opt out where this is redundant
 
 
 [workspace.lints.rust]
