@@ -44,6 +44,7 @@ fn edit_validator_unbounded_no_changes() {
     let StepResponse {
         app_hash,
         mut tx_responses,
+        height: _,
     } = node.step(vec![txs], Timestamp::UNIX_EPOCH);
 
     let ResponseDeliverTx { code, log, .. } = tx_responses.pop().unwrap_test();
@@ -58,6 +59,7 @@ fn edit_validator_unbounded_no_changes() {
     let StepResponse {
         app_hash,
         tx_responses: _,
+        height: _,
     } = node.step(vec![], Timestamp::UNIX_EPOCH);
 
     assert_eq!(
@@ -143,6 +145,7 @@ fn edit_validator_unbounded_edit_desc() {
     let StepResponse {
         app_hash,
         mut tx_responses,
+        height: _,
     } = node.step(vec![txs], Timestamp::UNIX_EPOCH);
 
     let ResponseDeliverTx { code, log, .. } = tx_responses.pop().unwrap_test();
@@ -157,6 +160,7 @@ fn edit_validator_unbounded_edit_desc() {
     let StepResponse {
         app_hash,
         tx_responses: _,
+        height: _,
     } = node.step(vec![], Timestamp::UNIX_EPOCH);
 
     assert_eq!(
@@ -261,6 +265,7 @@ fn edit_validator_unbounded_edit_min_self_delegation() {
     let StepResponse {
         app_hash,
         mut tx_responses,
+        height: _,
     } = node.step(vec![txs], Timestamp::UNIX_EPOCH);
 
     let ResponseDeliverTx { code, log, .. } = tx_responses.pop().unwrap_test();
@@ -275,6 +280,7 @@ fn edit_validator_unbounded_edit_min_self_delegation() {
     let StepResponse {
         app_hash,
         tx_responses: _,
+        height: _,
     } = node.step(vec![], Timestamp::UNIX_EPOCH);
 
     assert_eq!(

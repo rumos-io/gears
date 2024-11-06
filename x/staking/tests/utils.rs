@@ -94,7 +94,7 @@ pub fn set_node(
             .baseapp_sbs_key(SubspaceKey::BaseApp)
             .genesis(genesis);
 
-    init_node(opt).0
+    init_node(opt)
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default)]
