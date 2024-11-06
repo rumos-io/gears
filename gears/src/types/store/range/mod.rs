@@ -11,7 +11,7 @@ use kv_store::{range::Range, store::prefix::range::PrefixRange};
 
 use super::gas::{errors::GasStoreErrors, range::GasRange};
 
-pub type VectorRange<'a, DB> = StoreRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)>;
+pub type VectoredStoreRange<'a, DB> = StoreRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)>;
 
 #[derive(Debug)]
 enum StoreRangeBackend<'a, DB, RB, R> {

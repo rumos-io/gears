@@ -1,11 +1,11 @@
-use std::ops::{Bound, RangeBounds};
+use std::ops::RangeBounds;
 
 use database::Database;
 use kv_store::store::prefix::immutable::ImmutablePrefixStore;
 
 use super::{
     gas::{errors::GasStoreErrors, prefix::GasPrefixStore},
-    range::StoreRange,
+    range::VectoredStoreRange,
 };
 
 pub mod mutable;
@@ -35,7 +35,7 @@ impl<'a, DB: Database> PrefixStore<'a, DB> {
     pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(
         self,
         range: R,
-    ) -> StoreRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)> {
+    ) -> VectoredStoreRange<'a, DB> {
         match self.0 {
             PrefixStoreBackend::Gas(var) => var.into_range(range).into(),
             PrefixStoreBackend::Kv(var) => var.into_range(range).into(),

@@ -155,7 +155,7 @@ impl From<Mode> for SignMode {
 }
 
 fn auth_info<K: GearsPublicKey>(
-    signing_infos: &Vec<SigningInfo<'_, K>>,
+    signing_infos: &[SigningInfo<'_, K>],
     fee: Fee,
     tip: Option<Tip>,
     mode: Mode,

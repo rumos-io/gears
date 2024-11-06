@@ -129,6 +129,7 @@ darling = "0.20"
 
 
 [workspace.lints.clippy]
+arc_with_non_send_sync = "allow"
 unused_async = "deny"
 # restriction = "warn" # opt out where this is redundant
 # pedantic = "warn" # opt out where this is redundant
