@@ -22,7 +22,7 @@ use gears::x::module::Module;
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
 const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
-    103, 108, 111, 98, 97, 108, 65, 99, 99, 111, 117, 110, 116, 078, 117, 109, 98, 101, 114,
+    103, 108, 111, 98, 97, 108, 65, 99, 99, 111, 117, 110, 116, 78, 117, 109, 98, 101, 114,
 ]; // "globalAccountNumber"
 
 #[derive(Debug, Clone)]
