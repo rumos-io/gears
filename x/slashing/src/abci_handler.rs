@@ -33,7 +33,7 @@ pub enum SlashingNodeQueryRequest {
     SigningInfos(QuerySigningInfosRequest),
     Params(QueryParamsRequest),
 }
-#[derive(Clone, Debug,Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub enum SlashingNodeQueryResponse {
     // SigningInfo(QuerySigningInfoResponse),
     SigningInfos(QuerySigningInfosResponse),

@@ -225,7 +225,7 @@ impl TryFrom<inner::QueryRedelegationsRequest> for QueryRedelegationsRequest {
     }
 }
 
-#[derive(Clone, Debug,PartialEq, Query, Protobuf)]
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
 #[query(url = "/cosmos.staking.v1beta1.Query/DelegatorValidators")]
 #[proto(raw = "inner::QueryDelegatorValidatorsRequest")]
 pub struct QueryDelegatorValidatorsRequest {

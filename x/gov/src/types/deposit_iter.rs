@@ -1,14 +1,14 @@
-use std::{borrow::Cow, ops::Bound};
+use std::borrow::Cow;
 
 use gears::{
     store::database::Database,
-    types::store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
+    types::store::{gas::errors::GasStoreErrors, kv::Store, range::VectoredStoreRange},
 };
 
 use crate::{errors::SERDE_JSON_CONVERSION, msg::deposit::Deposit};
 
 #[derive(Debug)]
-pub struct DepositIterator<'a, DB>(StoreRange<'a, DB, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)>);
+pub struct DepositIterator<'a, DB>(VectoredStoreRange<'a, DB>);
 
 impl<'a, DB: Database> DepositIterator<'a, DB> {
     pub fn new(store: Store<'a, DB>) -> DepositIterator<'a, DB> {

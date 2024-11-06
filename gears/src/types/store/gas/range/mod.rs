@@ -1,4 +1,7 @@
-use std::{borrow::Cow, ops::{Bound, RangeBounds}};
+use std::{
+    borrow::Cow,
+    ops::{Bound, RangeBounds},
+};
 
 use database::Database;
 use infallible::RangeIter;

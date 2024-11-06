@@ -273,7 +273,7 @@ impl QueryHandler for StakingQueryHandler {
     }
 }
 
-#[derive(Clone, Debug,PartialEq, Query)]
+#[derive(Clone, Debug, PartialEq, Query)]
 #[query(request)]
 pub enum StakingQuery {
     Validator(QueryValidatorRequest),

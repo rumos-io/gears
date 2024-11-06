@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::Bound};
+use std::borrow::Cow;
 
 use gears::{
     context::QueryableContext,
@@ -10,7 +10,7 @@ use gears::{
     },
     types::{
         address::ValAddress,
-        store::{gas::errors::GasStoreErrors, range::StoreRange},
+        store::{gas::errors::GasStoreErrors, range::VectoredStoreRange},
     },
 };
 
@@ -18,7 +18,7 @@ use crate::{keys::validator_slash_event_key_prefix, ValidatorSlashEvent};
 
 #[derive(Debug)]
 pub struct SlashEventIterator<'a, DB> {
-    ranges: Vec<StoreRange<'a, PrefixDB<DB>, Vec<u8>, (Bound<Vec<u8>>, Bound<Vec<u8>>)>>,
+    ranges: Vec<VectoredStoreRange<'a, PrefixDB<DB>>>,
     current: usize,
 }
 

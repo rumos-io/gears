@@ -139,10 +139,7 @@ where
             // 1. If there is no scheduled upgrade.
             // 2. If the plan is not ready.
             // 3. If the plan is ready and skip upgrade height is set for current height.
-            if is_none
-                || !should_execute
-                || (should_execute && self.keeper.is_skip_height(ctx.height()))
-            {
+            if is_none || !should_execute || self.keeper.is_skip_height(ctx.height()) {
                 match last_applied_plan {
                     Some(upg) if self.keeper.has_handler(&upg.name) => panic!(
                         "Wrong app version {}, upgrade handler is missing for {} upgrade plan",

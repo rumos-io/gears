@@ -92,7 +92,7 @@ impl QueryHandler for SlashingQueryHandler {
     }
 }
 
-#[derive(Clone,Debug, PartialEq, Query)]
+#[derive(Clone, Debug, PartialEq, Query)]
 pub enum SlashingQueryRequest {
     SigningInfo(QuerySigningInfoRequest),
     SigningInfos(QuerySigningInfosRequest),
