@@ -1,3 +1,4 @@
+use cosmwasm_std::Uint256;
 use kv_store::StoreKey;
 
 use crate::{
@@ -11,9 +12,16 @@ impl<SK: StoreKey, M: Module> GovernanceBankKeeper<SK, M> for MockBankKeeper {
     fn balance<DB: database::Database, CTX: crate::context::QueryableContext<DB, SK>>(
         &self,
         _: &CTX,
-        _: &address::AccAddress,
-        _: &crate::types::denom::Denom,
+        addr: &address::AccAddress,
+        denom: &crate::types::denom::Denom,
     ) -> Result<UnsignedCoin, GasStoreErrors> {
-        Ok(self.balance.clone().expect("balances field in mock is not set"))
+        Ok(self
+            .balance
+            .get(addr)
+            .cloned()
+            .unwrap_or_else(|| UnsignedCoin {
+                denom: denom.clone(),
+                amount: Uint256::zero(),
+            }))
     }
 }

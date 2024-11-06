@@ -169,7 +169,7 @@ impl Commission {
 }
 
 /// Description defines a validator description.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct EditDescription {
     /// moniker defines a human-readable name for the validator.
     pub moniker: Option<String>,
@@ -272,6 +272,26 @@ pub struct Description {
 impl Protobuf<Description> for Description {}
 
 impl Description {
+    pub fn try_new<T: Into<String>>(
+        moniker: T,
+        identity: T,
+        website: T,
+        security_contact: T,
+        details: T,
+    ) -> Result<Self, anyhow::Error> {
+        let desc = Self {
+            moniker: moniker.into(),
+            identity: identity.into(),
+            website: website.into(),
+            security_contact: security_contact.into(),
+            details: details.into(),
+        };
+
+        desc.ensure_length()?;
+
+        Ok(desc)
+    }
+
     /// create_updated_description creates a description with the base of current description
     /// supplemented by values from a given description. An error is
     /// returned if the resulting description contains an invalid length.
@@ -458,7 +478,6 @@ impl ValueRenderer for CreateValidator {
     }
 }
 
-/// CreateValidator defines a SDK message for creating a new validator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, AppMessage)]
 #[msg(url = "/cosmos.staking.v1beta1.MsgEditValidator")]
 pub struct EditValidator {

@@ -19,6 +19,10 @@ tracing = { workspace = true }
 tonic = { workspace = true }
 
 [dev-dependencies]
+bank = { path = "../bank" }
+auth ={ path = "../auth" }
 data-encoding = { workspace = true }
 strum = { workspace = true }
 gears = { path = "../../gears", features = ["cli", "xmods", "governance", "utils", "mocks"] }
+vec1 = { workspace = true }
+pretty_assertions = "1.4.1"

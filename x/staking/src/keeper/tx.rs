@@ -133,7 +133,10 @@ impl<
         // validator must already be registered
         let mut validator = self
             .validator(ctx, &msg.validator_address)?
-            .ok_or(anyhow::anyhow!("Account {} exists", msg.validator_address))?;
+            .ok_or(anyhow::anyhow!(
+                "Account not {} exists",
+                msg.validator_address
+            ))?;
 
         // replace all editable fields (clients should autofill existing values)
         let description = validator

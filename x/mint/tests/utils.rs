@@ -111,7 +111,7 @@ pub fn set_node(
     .baseapp_sbs_key(SubspaceKey::BaseApp)
     .genesis(GenesisSource::Default);
 
-    init_node(opt).0
+    init_node(opt)
 }
 
 #[derive(Debug, Clone, Default)]
@@ -248,6 +248,17 @@ impl BankKeeper<SpaceKey, Modules> for MockBankKeeper {
         _ctx: &mut CTX,
         _module: &Modules,
         _deposit: &gears::types::base::coins::UnsignedCoins,
+    ) -> Result<(), gears::x::errors::BankKeeperError> {
+        todo!()
+    }
+
+    fn send_coins_from_account_to_account<
+        DB: gears::store::database::Database,
+        CTX: gears::context::TransactionalContext<DB, SpaceKey>,
+    >(
+        &self,
+        _ctx: &mut CTX,
+        _msg: &gears::types::msg::send::MsgSend,
     ) -> Result<(), gears::x::errors::BankKeeperError> {
         todo!()
     }

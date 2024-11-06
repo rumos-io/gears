@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use address::AccAddress;
 use kv_store::StoreKey;
 
 use crate::{
@@ -21,7 +22,7 @@ use crate::{
 pub struct MockBankKeeper {
     pub get_denom_metadata: Option<Metadata>,
     pub balance_all: Vec<UnsignedCoin>,
-    pub balance: Option<UnsignedCoin>,
+    pub balance: HashMap<AccAddress, UnsignedCoin>,
     pub supply: HashMap<Denom, UnsignedCoin>,
 }
 
