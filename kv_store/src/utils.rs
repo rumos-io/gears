@@ -47,22 +47,15 @@ impl<'a> DoubleEndedIterator for MergedRange<'a> {
         let peek_a = self.a.back();
         let peek_b = self.b.back();
 
-        match peek_a {
-            Some(peek_a) => match peek_b {
-                Some(peek_b) => {
-                    // Both are valid.  Compare keys.
-                    if peek_a.0 > peek_b.0 {
-                        self.a.pop_back()
-                    } else if peek_a.0 == peek_b.0 {
-                        self.b.pop_back(); // effectively skip this
-                        return self.a.pop_back();
-                    } else {
-                        return self.b.pop_back();
-                    }
-                }
-                None => self.a.pop_back(),
-            },
-            None => self.b.pop_back(),
+        match (peek_a, peek_b) {
+            (Some(peek_a), Some(peek_b)) if peek_a.0 > peek_b.0 => self.a.pop_back(),
+            (Some(peek_a), Some(peek_b)) if peek_a.0 == peek_b.0 => {
+                self.b.pop_back();
+                self.a.pop_back()
+            }
+            (Some(_), Some(_)) => self.b.pop_back(),
+            (Some(_), None) => self.a.pop_back(),
+            (None, _) => self.b.pop_back(),
         }
     }
 }
