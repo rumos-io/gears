@@ -14,9 +14,6 @@ use std::marker::PhantomData;
 
 use self::kind::MeterKind;
 
-#[no_link]
-extern crate derive_more;
-
 use infinite_meter::InfiniteGasMeter;
 use tracing::debug;
 

@@ -33,7 +33,7 @@ pub struct SigningInfo<'a, K> {
 }
 
 pub fn create_signed_transaction_direct<M: TxMessage, K: SigningKey + GearsPublicKey>(
-    signing_infos: Vec<SigningInfo<K>>,
+    signing_infos: Vec<SigningInfo<'_, K>>,
     chain_id: ChainId,
     fee: Fee,
     tip: Option<Tip>,
@@ -89,7 +89,7 @@ pub fn create_signed_transaction_textual<
     K: SigningKey + ReadAccAddress + GearsPublicKey,
     F: NodeFetcher + Clone,
 >(
-    signing_infos: Vec<SigningInfo<K>>,
+    signing_infos: Vec<SigningInfo<'_, K>>,
     chain_id: ChainId,
     fee: Fee,
     tip: Option<Tip>,
@@ -154,7 +154,7 @@ impl From<Mode> for SignMode {
 }
 
 fn auth_info<K: GearsPublicKey>(
-    signing_infos: &Vec<SigningInfo<K>>,
+    signing_infos: &Vec<SigningInfo<'_, K>>,
     fee: Fee,
     tip: Option<Tip>,
     mode: Mode,

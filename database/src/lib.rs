@@ -1,4 +1,7 @@
-#![warn(rust_2018_idioms)]
+#[cfg(all(feature = "sled", feature = "rocksdb"))]
+fn compile_check() {
+    compile_error!("Can't use `sled` and `rocksdb` at one time. Chose only one DB")
+}
 
 pub mod error;
 mod memory;

@@ -135,3 +135,6 @@ missing_docs = "deny"
 missing_debug_implementations = "deny" # opt out where Debug is really redundant
 future_incompatible = "deny"
 unsafe-code = "deny"
+
+[workspace.lints.rust]
+rust_2018_idioms  = "deny"

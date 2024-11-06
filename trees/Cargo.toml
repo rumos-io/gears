@@ -3,6 +3,9 @@ edition = "2021"
 name = "trees"
 version = "0.1.0"
 
+[lints]
+workspace = true
+
 [dependencies]
 #local
 database = {path = "../database"}

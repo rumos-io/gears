@@ -77,7 +77,7 @@ where
     ) -> Result<(), EvidenceAlreadyExistsError> {
         for e in genesis.evidence {
             if self
-                .evidence::<InitContext<DB, SK>, DB, E>(ctx, e.hash())
+                .evidence::<InitContext<'_, DB, SK>, DB, E>(ctx, e.hash())
                 .unwrap_gas()
                 .is_some()
             {

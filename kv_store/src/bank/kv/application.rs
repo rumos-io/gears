@@ -50,7 +50,7 @@ impl<DB: Database> ApplicationKVBank<DB> {
 
     /// Read persistent database
     #[inline]
-    pub fn persistent(&self) -> std::sync::RwLockReadGuard<Tree<DB>> {
+    pub fn persistent(&self) -> std::sync::RwLockReadGuard<'_, Tree<DB>> {
         self.persistent.read().expect(POISONED_LOCK)
     }
 

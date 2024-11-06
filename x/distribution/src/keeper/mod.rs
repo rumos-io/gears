@@ -208,7 +208,7 @@ impl<
     /// withdraw rewards from a delegation
     pub fn withdraw_delegation_rewards<DB: Database>(
         &self,
-        ctx: &mut TxContext<DB, SK>,
+        ctx: &mut TxContext<'_, DB, SK>,
         delegator_address: &AccAddress,
         validator_address: &ValAddress,
     ) -> Result<Option<UnsignedCoins>, DistributionError> {
@@ -242,7 +242,7 @@ impl<
     /// withdraw validator commission
     pub fn withdraw_validator_commission<DB: Database>(
         &self,
-        ctx: &mut TxContext<DB, SK>,
+        ctx: &mut TxContext<'_, DB, SK>,
         validator_address: &ValAddress,
     ) -> Result<Option<UnsignedCoins>, DistributionError> {
         // fetch validator accumulated commission
@@ -321,7 +321,7 @@ impl<
     /// module account.
     pub fn fund_community_pool<DB: Database>(
         &self,
-        ctx: &mut TxContext<DB, SK>,
+        ctx: &mut TxContext<'_, DB, SK>,
         amount: UnsignedCoins,
         sender: &AccAddress,
     ) -> Result<(), DistributionError> {

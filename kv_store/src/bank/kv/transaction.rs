@@ -31,7 +31,7 @@ pub struct TransactionKVBank<DB> {
 impl<DB: Database> TransactionKVBank<DB> {
     /// Read persistent database
     #[inline]
-    fn persistent(&self) -> std::sync::RwLockReadGuard<Tree<DB>> {
+    fn persistent(&self) -> std::sync::RwLockReadGuard<'_, Tree<DB>> {
         self.persistent.read().expect(POISONED_LOCK)
     }
 
