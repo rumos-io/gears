@@ -60,7 +60,7 @@ fn calculate_password_hash(password: Option<impl AsRef<str>>) -> Result<String, 
             })?
             .to_string())
     } else {
-        Ok("".into())
+        Ok(String::new())
     }
 }
 

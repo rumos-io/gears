@@ -16,7 +16,7 @@ pub enum KeyType {
     Secp256k1,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Backend<'a> {
     File(&'a Path),
     Test(&'a Path),

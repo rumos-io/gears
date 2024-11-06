@@ -132,14 +132,15 @@ darling = "0.20"
 arc_with_non_send_sync = "allow"
 large_enum_variant = "allow"
 too_many_arguments = "allow"
-unused_async = "deny"
+single_char_lifetime_names = "allow"
+std_instead_of_core = "allow"
+exhaustive_structs = "allow"
+implicit_return = "allow"
+single_call_fn = "allow"
+question_mark_used = "allow"
 # restriction = "warn" # opt out where this is redundant
 # pedantic = "warn" # opt out where this is redundant
-# exhaustive_structs = "allow"
-# single_call_fn = "allow"
-# single_char_lifetime_names = "allow"
-# implicit_return = "allow"
-# std_instead_of_core = "allow"
+
 
 [workspace.lints.rust]
 rust_2018_idioms  = "deny"
