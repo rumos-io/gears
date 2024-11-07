@@ -13,7 +13,7 @@ members = [
   "keyring",
   "gears",
 
-  # macros
+  # # macros
   "macros/tx-derive",
   "macros/query-derive",
   "macros/protobuf-derive",
@@ -31,7 +31,9 @@ members = [
   "x/ibc-rs",
   "x/slashing",
   "x/staking",
-  "x/genutil", "x/upgrade", "x/mint",
+  "x/genutil", 
+  "x/upgrade", 
+  "x/mint",
 
   # new unsorted
 ]

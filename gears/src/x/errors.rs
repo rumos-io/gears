@@ -25,8 +25,8 @@ impl AccountNotFound {
     }
 }
 
-impl<const PREFIX: u8> From<BaseAddress<PREFIX>> for AccountNotFound {
-    fn from(value: BaseAddress<PREFIX>) -> Self {
+impl<T: address::AddressKind> From<BaseAddress<T>> for AccountNotFound {
+    fn from(value: BaseAddress<T>) -> Self {
         Self(value.to_string())
     }
 }
