@@ -16,6 +16,6 @@ sled = {version = "0.34.7", optional = true }
 [dev-dependencies]
 
 [features]
-default = [ "rocksdb"]
+default = []
 rocksdb = ["dep:rocksdb"]
 sled = ["dep:sled"]

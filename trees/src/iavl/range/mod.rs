@@ -9,6 +9,7 @@ use database::Database;
 
 use super::{node_db::NodeDB, Node};
 
+/// Range from tree. Loads nodes on requirement
 #[derive(Debug, Clone)]
 pub struct Range<'a, DB, RB, R> {
     range: R,

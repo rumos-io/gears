@@ -34,6 +34,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
 extensions = { path = "../extensions" }
+nz = { workspace = true }
 
 [[bench]]
 harness = false

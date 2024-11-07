@@ -7,8 +7,8 @@ members = [
   "core-types",
 
   # with local deps
-  # "address",
-  # "trees",
+  "address",
+  "trees",
   # "kv_store",
   # "keyring",
   # "gears",
