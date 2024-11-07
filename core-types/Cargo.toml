@@ -14,7 +14,6 @@ ibc-proto = { workspace = true }
 base64-serde = { workspace = true }
 base64 = { workspace = true }
 data-encoding = { workspace = true }
-
 tonic = { workspace = true } # included to allow easy conversion of errors to tonic::Status
 
 [dev-dependencies]

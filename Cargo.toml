@@ -7,33 +7,33 @@ members = [
   "core-types",
 
   # with local deps
-  "address",
-  "trees",
-  "kv_store",
-  "keyring",
-  "gears",
+  # "address",
+  # "trees",
+  # "kv_store",
+  # "keyring",
+  # "gears",
 
   # # macros
-  "macros/tx-derive",
-  "macros/query-derive",
-  "macros/protobuf-derive",
-  "macros/key-derive",
+  # "macros/tx-derive",
+  # "macros/query-derive",
+  # "macros/protobuf-derive",
+  # "macros/key-derive",
 
   # GAIA
-  "gaia-rs",
+  # "gaia-rs",
 
   # xmodules
-  "x/auth",
-  "x/bank",
-  "x/distribution",
-  "x/evidence",
-  "x/gov",
-  "x/ibc-rs",
-  "x/slashing",
-  "x/staking",
-  "x/genutil", 
-  "x/upgrade", 
-  "x/mint",
+  # "x/auth",
+  # "x/bank",
+  # "x/distribution",
+  # "x/evidence",
+  # "x/gov",
+  # "x/ibc-rs",
+  # "x/slashing",
+  # "x/staking",
+  # "x/genutil", 
+  # "x/upgrade", 
+  # "x/mint",
 
   # new unsorted
 ]
@@ -148,6 +148,6 @@ type_complexity = "allow"
 [workspace.lints.rust]
 rust_2018_idioms  = "deny"
 unsafe-code = "deny"
-# missing_docs = "deny"
+missing_docs = "deny"
 missing_debug_implementations = "deny" # opt out where Debug is really redundant
 future_incompatible = "deny"

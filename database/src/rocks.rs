@@ -1,3 +1,5 @@
+//! RocksDB database implementation
+
 use crate::{error::DatabaseError, DBBuilder, Database, DatabaseBuilder};
 use std::{path::Path, sync::Arc};
 
@@ -11,6 +13,7 @@ impl DatabaseBuilder<RocksDB> for DBBuilder {
     }
 }
 
+/// Database based on [rocksdb](https://rocksdb.org/) with help of [crate](https://docs.rs/rocksdb/latest/rocksdb/)
 #[derive(Debug, Clone)]
 pub struct RocksDB {
     db: Arc<DBWithThreadMode<SingleThreaded>>, // QA: Are we sure? Probably
@@ -19,6 +22,7 @@ pub struct RocksDB {
 // TODO: remove panics
 
 impl RocksDB {
+    /// Create new `self`
     pub fn new<P>(path: P) -> Result<RocksDB, DatabaseError>
     where
         P: AsRef<Path>,

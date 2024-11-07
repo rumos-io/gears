@@ -6,6 +6,7 @@ use std::{
 
 use crate::Database;
 
+/// Database which stores data in memory
 #[derive(Debug, Clone)]
 pub struct MemDB {
     store: Arc<RwLock<BTreeMap<Vec<u8>, Vec<u8>>>>,
@@ -18,6 +19,7 @@ impl Default for MemDB {
 }
 
 impl MemDB {
+    /// Create new `Self`
     pub fn new() -> MemDB {
         MemDB {
             store: Arc::new(RwLock::new(BTreeMap::new())),

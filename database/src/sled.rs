@@ -1,3 +1,5 @@
+//! sled database implementation
+
 use extensions::corruption::UnwrapCorrupt;
 
 use crate::{error::DatabaseError, DBBuilder, Database, DatabaseBuilder};
@@ -10,10 +12,12 @@ impl DatabaseBuilder<SledDb> for DBBuilder {
     }
 }
 
+/// Database based on sled [crate](https://docs.rs/sled/latest/sled/)
 #[derive(Debug, Clone)]
 pub struct SledDb(::sled::Db);
 
 impl SledDb {
+    /// Create new `self`
     pub fn new<P: AsRef<std::path::Path>>(path: P) -> Result<Self, DatabaseError> {
         Ok(Self(::sled::open(path.as_ref())?))
     }

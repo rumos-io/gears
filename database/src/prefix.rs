@@ -1,7 +1,10 @@
+//! Prefixed database
+
 use std::sync::Arc;
 
 use crate::Database;
 
+/// Struct to automatically add prefix to any key passed to db
 #[derive(Debug, Clone)]
 pub struct PrefixDB<T> {
     db: Arc<T>,
@@ -9,6 +12,7 @@ pub struct PrefixDB<T> {
 }
 
 impl<T: Database> PrefixDB<T> {
+    /// Create new `Self`
     pub fn new(db: Arc<T>, prefix: Vec<u8>) -> Self {
         PrefixDB { db, prefix }
     }
