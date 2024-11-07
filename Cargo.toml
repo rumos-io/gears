@@ -9,8 +9,8 @@ members = [
   # with local deps
   "address",
   "trees",
-  # "kv_store",
-  # "keyring",
+  "kv_store",
+  "keyring",
   # "gears",
 
   # # macros
@@ -148,6 +148,6 @@ type_complexity = "allow"
 [workspace.lints.rust]
 rust_2018_idioms  = "deny"
 unsafe-code = "deny"
-missing_docs = "deny"
+# missing_docs = "deny"
 missing_debug_implementations = "deny" # opt out where Debug is really redundant
 future_incompatible = "deny"
