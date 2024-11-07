@@ -9,8 +9,8 @@ use crate::types::{base::errors::CoinError, denom::Denom, errors::DenomError};
 use super::Coin;
 
 pub mod inner {
-    pub use core_types::base::coin::Coin;
-    pub use core_types::base::coin::IntProto;
+    pub use core_types::base::Coin;
+    pub use core_types::base::IntProto;
 }
 
 /// Coin defines a token with a denomination and an amount.

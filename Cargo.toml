@@ -11,29 +11,29 @@ members = [
   "trees",
   "kv_store",
   "keyring",
-  # "gears",
+  "gears",
 
   # # macros
-  # "macros/tx-derive",
-  # "macros/query-derive",
-  # "macros/protobuf-derive",
-  # "macros/key-derive",
+  "macros/tx-derive",
+  "macros/query-derive",
+  "macros/protobuf-derive",
+  "macros/key-derive",
 
   # GAIA
-  # "gaia-rs",
+  "gaia-rs",
 
   # xmodules
-  # "x/auth",
-  # "x/bank",
-  # "x/distribution",
-  # "x/evidence",
-  # "x/gov",
-  # "x/ibc-rs",
-  # "x/slashing",
-  # "x/staking",
-  # "x/genutil", 
-  # "x/upgrade", 
-  # "x/mint",
+  "x/auth",
+  "x/bank",
+  "x/distribution",
+  "x/evidence",
+  "x/gov",
+  "x/ibc-rs",
+  "x/slashing",
+  "x/staking",
+  "x/genutil", 
+  "x/upgrade", 
+  "x/mint",
 
   # new unsorted
 ]

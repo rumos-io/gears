@@ -4,8 +4,8 @@ use std::{num::ParseIntError, str::FromStr};
 use ux::u63;
 
 pub mod inner {
-    pub use core_types::auth::fee::Fee;
-    pub use core_types::base::coin::Coin;
+    pub use core_types::auth::Fee;
+    pub use core_types::base::Coin;
 }
 
 /// Gas represents gas amounts. It's a wrapper around u63. Gas amounts are represented as i64 in tendermint

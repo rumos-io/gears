@@ -2,6 +2,7 @@ pub mod options;
 use std::{
     fmt::Debug,
     marker::PhantomData,
+    num::NonZero,
     sync::{Arc, RwLock},
 };
 
@@ -104,13 +105,16 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, QueryError> {
         //TODO: request height u32
-        let version: u32 = request
-            .height
-            .try_into()
-            .map_err(|_| QueryError::InvalidHeight)?;
+        let version: NonZero<u32> = NonZero::new(
+            request
+                .height
+                .try_into()
+                .map_err(|_| QueryError::InvalidHeight)?,
+        )
+        .ok_or(QueryError::InvalidHeight)?;
 
         let store = self.multi_store.read().expect(POISONED_LOCK);
-        let ctx = QueryContext::new(QueryMultiStore::new(&*store, version)?, version)?;
+        let ctx = QueryContext::new(QueryMultiStore::new(&*store, Some(version))?, version.get())?;
 
         self.abci_handler
             .query(&ctx, request.clone())

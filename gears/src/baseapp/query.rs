@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use database::Database;
 use kv_store::query::QueryMultiStore;
 use serde::Serialize;
@@ -37,7 +39,10 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let version = request.height();
 
         let store = self.multi_store.read().expect(POISONED_LOCK);
-        let ctx = QueryContext::new(QueryMultiStore::new(&*store, version)?, version)?;
+        let ctx = QueryContext::new(
+            QueryMultiStore::new(&*store, NonZero::new(version))?,
+            version,
+        )?;
         Ok(self.abci_handler.typed_query(&ctx, request))
     }
 }
