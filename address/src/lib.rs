@@ -23,6 +23,7 @@ const BECH_32_PREFIX_CONS_ADDR: &str = constcat::concat!(
 
 const MAX_ADDR_LEN: u8 = 255;
 
+/// Address of user account. Common way to retrieve it using [from_bech32] fn 
 pub type AccAddress = BaseAddress<0>;
 pub type ValAddress = BaseAddress<1>;
 pub type ConsAddress = BaseAddress<2>;

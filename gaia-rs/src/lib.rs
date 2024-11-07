@@ -1,53 +1,50 @@
-use crate::abci_handler::GaiaABCIHandler;
-use crate::query::GaiaQuery;
-use crate::query::GaiaQueryResponse;
-use crate::store_keys::GaiaParamsStoreKey;
+use crate::{
+    abci_handler::GaiaABCIHandler,
+    query::{GaiaQuery, GaiaQueryResponse},
+    store_keys::GaiaParamsStoreKey,
+};
 use anyhow::Result;
-use auth::cli::query::AuthQueryHandler;
-use auth::query::QueryAccountRequest;
-use auth::query::QueryAccountResponse;
-use auth::AuthNodeQueryRequest;
-use auth::AuthNodeQueryResponse;
+use auth::{
+    cli::query::AuthQueryHandler,
+    query::{QueryAccountRequest, QueryAccountResponse},
+    AuthNodeQueryRequest, AuthNodeQueryResponse,
+};
 use axum::Router;
-use bank::cli::query::BankQueryHandler;
-use bank::types::query::QueryDenomMetadataRequest;
-use bank::types::query::QueryDenomMetadataResponse;
-use bank::BankNodeQueryRequest;
-use bank::BankNodeQueryResponse;
+use bank::{
+    cli::query::BankQueryHandler,
+    types::query::{QueryDenomMetadataRequest, QueryDenomMetadataResponse},
+    BankNodeQueryRequest, BankNodeQueryResponse,
+};
 use clap::Subcommand;
-use client::tx_command_handler;
-use client::GaiaQueryCommands;
-use client::WrappedGaiaQueryCommands;
-use distribution::DistributionNodeQueryRequest;
-use distribution::DistributionNodeQueryResponse;
-use gears::application::client::Client;
-use gears::application::handlers::client::NodeFetcher;
-use gears::application::handlers::client::{QueryHandler, TxHandler};
-use gears::application::handlers::AuxHandler;
-use gears::application::node::Node;
-use gears::application::ApplicationInfo;
-use gears::baseapp::NodeQueryHandler;
-use gears::baseapp::{QueryRequest, QueryResponse};
-use gears::commands::client::query::execute_query;
-use gears::commands::client::tx::ClientTxContext;
-use gears::commands::node::run::RouterBuilder;
-use gears::commands::NilAux;
-use gears::commands::NilAuxCommand;
-use gears::core::Protobuf;
-use gears::crypto::public::PublicKey;
-use gears::grpc::health::health_server;
-use gears::grpc::tx::tx_server;
-use gears::rest::RestState;
-use gears::types::address::AccAddress;
-use gears::types::tx::Messages;
+use client::{tx_command_handler, GaiaQueryCommands, WrappedGaiaQueryCommands};
+use distribution::{DistributionNodeQueryRequest, DistributionNodeQueryResponse};
+use gears::{
+    application::{
+        client::Client,
+        handlers::{
+            client::{NodeFetcher, QueryHandler, TxHandler},
+            AuxHandler,
+        },
+        node::Node,
+        ApplicationInfo,
+    },
+    baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
+    commands::{
+        client::{query::execute_query, tx::ClientTxContext},
+        node::run::RouterBuilder,
+        NilAux, NilAuxCommand,
+    },
+    core::Protobuf,
+    crypto::public::PublicKey,
+    grpc::{health::health_server, tx::tx_server},
+    rest::RestState,
+    types::{address::AccAddress, tx::Messages},
+};
 use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
 use serde::Serialize;
-use slashing::SlashingNodeQueryRequest;
-use slashing::SlashingNodeQueryResponse;
-use staking::cli::query::StakingQueryHandler;
-use staking::StakingNodeQueryRequest;
-use staking::StakingNodeQueryResponse;
+use slashing::{SlashingNodeQueryRequest, SlashingNodeQueryResponse};
+use staking::{cli::query::StakingQueryHandler, StakingNodeQueryRequest, StakingNodeQueryResponse};
 use tonic::transport::Server;
 use tonic::Status;
 use tower_layer::Identity;

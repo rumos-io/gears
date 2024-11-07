@@ -1,8 +1,3 @@
-#![allow(
-    clippy::type_complexity,
-    reason = "generics give better performance and usage of `type` pattern don't give any benefits to understanding in this case"
-)]
-
 use crate::{
     config::AppConfig,
     genesis::GenesisState,
