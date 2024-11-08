@@ -16,6 +16,8 @@ use crate::{
     },
 };
 
+/// Specific to `check_tx` ABCI method.
+///
 /// Mode to validate a transaction before letting
 /// them into local mempool. This mode doesn't execute a
 /// transaction only runs ante checks on them.

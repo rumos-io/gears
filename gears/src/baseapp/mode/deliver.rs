@@ -14,6 +14,8 @@ use crate::{
     types::tx::raw::TxWithRaw,
 };
 
+/// Specific to `deliver_tx` ABCI method.
+///
 /// Mode to execute transactions. This mode still run
 /// ante checks, but you may skip execution by checking
 /// `bool` flag in ante method. Futhermore this module

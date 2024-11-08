@@ -8,6 +8,8 @@ use crate::{
 
 use super::mode::{check::CheckTxMode, deliver::DeliverTxMode};
 
+/// Structure to hide state logic from application
+/// and sync state between different modes during blocks
 #[derive(Debug)]
 pub struct ApplicationState<DB, AH: ABCIHandler> {
     pub(super) check_mode: CheckTxMode<DB, AH>,
@@ -26,6 +28,8 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         }
     }
 
+    /// Update gas meter for block metering. This method should be called in each `begin_block`
+    /// to update meter according to [crate::baseapp::params::BlockParams]
     pub fn replace_meter(&mut self, max_gas: Gas) {
         match max_gas {
             Gas::Infinite => {
@@ -64,6 +68,10 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         }
     }
 
+    /// Commit changes from state store to application and persist changes to disk.
+    /// Returns application state hash.
+    ///
+    /// **Note**: changes from `check_tx` state is discarded and instead `deliver_tx` state used.
     pub fn commit(&mut self, multi_store: &mut ApplicationMultiBank<DB, AH::StoreKey>) -> [u8; 32] {
         self.check_mode.multi_store.tx_cache_clear();
         self.check_mode.multi_store.block_cache_clear();
