@@ -10,11 +10,19 @@ use super::{
 
 pub type LedgerError = ledger_cosmos::Error;
 
-#[derive(Debug)]
 pub struct LedgerProxyKey {
     app: CosmosValidatorApp,
     address: AccAddress,
     public_key: Secp256k1PubKey,
+}
+
+impl std::fmt::Debug for LedgerProxyKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LedgerProxyKey")
+            .field("address", &self.address)
+            .field("public_key", &self.public_key)
+            .finish()
+    }
 }
 
 impl LedgerProxyKey {
