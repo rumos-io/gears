@@ -47,6 +47,7 @@ pub use params::{
 
 pub use query::*;
 
+/// Core ABCI application which stores all data needed to execute application
 #[derive(Debug, Clone)]
 pub struct BaseApp<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
     state: Arc<RwLock<ApplicationState<DB, H>>>,
@@ -61,6 +62,10 @@ pub struct BaseApp<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: App
 impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     BaseApp<DB, PSK, H, AI>
 {
+    /// Create new `self`. Gas prices would be set from
+    /// params store which returns `Default` if not values is set.
+    ///
+    /// See [BlockParams] for details on which values is used
     pub fn new(db: DB, params_subspace_key: PSK, abci_handler: H, options: NodeOptions) -> Self {
         let multi_store = ApplicationMultiBank::new(Arc::new(db));
         let mut multi_store = match multi_store {
@@ -121,6 +126,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             .map(Into::into)
     }
 
+    /// Execute transaction for specific mode
     fn run_tx<MD: ExecutionMode<DB, H>>(
         &self,
         raw: Bytes,

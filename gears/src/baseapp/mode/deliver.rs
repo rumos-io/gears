@@ -14,6 +14,12 @@ use crate::{
     types::tx::raw::TxWithRaw,
 };
 
+/// Mode to execute transactions. This mode still run
+/// ante checks, but you may skip execution by checking
+/// `bool` flag in ante method. Futhermore this module
+/// state used during {begin/end}_block meaning state
+/// would be taken/drained and committed
+/// with application store layer.
 #[derive(Debug)]
 pub struct DeliverTxMode<DB, AH: ABCIHandler> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,

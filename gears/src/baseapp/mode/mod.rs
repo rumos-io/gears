@@ -17,6 +17,9 @@ use crate::{
 pub mod check;
 pub mod deliver;
 
+/// Execution mode or state of application. 
+/// It exists to split logic of checking a tx with `check_tx` and 
+/// execution with `deliver_tx`. Each mode should have own store and don't share any state
 pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
     fn runnable(ctx: &mut TxContext<'_, DB, AH::StoreKey>) -> Result<(), RunTxError>;
 

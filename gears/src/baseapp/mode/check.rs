@@ -16,6 +16,10 @@ use crate::{
     },
 };
 
+/// Mode to validate a transaction before letting
+/// them into local mempool. This mode doesn't execute a
+/// transaction only runs ante checks on them.
+/// Performs gas metering too
 #[derive(Debug)]
 pub struct CheckTxMode<DB, AH: ABCIHandler> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
