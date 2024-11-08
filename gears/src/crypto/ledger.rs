@@ -10,6 +10,7 @@ use super::{
 
 pub type LedgerError = ledger_cosmos::Error;
 
+/// Proxy structure between ledger device and rust code
 pub struct LedgerProxyKey {
     app: CosmosValidatorApp,
     address: AccAddress,
