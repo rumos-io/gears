@@ -2,9 +2,10 @@ use std::{borrow::Cow, marker::PhantomData, ops::Bound};
 
 use chrono::{DateTime, Utc};
 use gears::{
+    gas::store::errors::GasStoreErrors,
     store::database::Database,
     tendermint::types::time::timestamp::Timestamp,
-    types::store::{gas::errors::GasStoreErrors, kv::Store, range::VectoredStoreRange},
+    types::store::{kv::Store, range::VectoredStoreRange},
 };
 
 use crate::proposal::Proposal;

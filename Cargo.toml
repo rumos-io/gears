@@ -4,7 +4,8 @@ members = [
   # no local deps
   "database",
   "tendermint",
-  "core-types",
+  "core-types", 
+  "gas",
 
   # with local deps
   "address",

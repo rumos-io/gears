@@ -3,7 +3,7 @@ use crate::{
     ValidatorAccumulatedCommission, ValidatorOutstandingRewards,
 };
 use anyhow::anyhow;
-use gears::extensions::gas::GasResultExt;
+use gears::{extensions::gas::GasResultExt, gas::store::errors::GasStoreErrors};
 pub use gears::{
     context::init::InitContext,
     params::ParamsSubspaceKey,
@@ -23,7 +23,6 @@ use gears::{
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
         base::coins::{DecimalCoins, UnsignedCoins},
-        store::gas::errors::GasStoreErrors,
     },
     x::keepers::staking::DistributionStakingKeeper,
 };

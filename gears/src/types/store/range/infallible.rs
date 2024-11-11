@@ -1,13 +1,12 @@
 use std::{borrow::Cow, ops::RangeBounds};
 
 use database::Database;
+use gas::store::errors::GasStoreErrors;
 use kv_store::{range::Range, store::prefix::range::PrefixRange};
-
-use crate::types::store::gas::errors::GasStoreErrors;
 
 #[derive(Debug)]
 enum InfallibleRangeBackend<'a, DB, RB, R> {
-    Gas(crate::types::store::gas::range::infallible::RangeIter<'a, DB, RB, R>),
+    Gas(gas::store::range::infallible::RangeIter<'a, DB, RB, R>),
     Kv(Range<'a, DB, RB, R>),
     Prefix(PrefixRange<'a, DB, RB, R>),
 }
@@ -45,10 +44,10 @@ impl<'a, DB: Database, RB: AsRef<[u8]>, R: RangeBounds<RB>> Iterator for RangeIt
     }
 }
 
-impl<'a, DB, RB, R> From<crate::types::store::gas::range::infallible::RangeIter<'a, DB, RB, R>>
+impl<'a, DB, RB, R> From<gas::store::range::infallible::RangeIter<'a, DB, RB, R>>
     for RangeIter<'a, DB, RB, R>
 {
-    fn from(value: crate::types::store::gas::range::infallible::RangeIter<'a, DB, RB, R>) -> Self {
+    fn from(value: gas::store::range::infallible::RangeIter<'a, DB, RB, R>) -> Self {
         Self(InfallibleRangeBackend::Gas(value))
     }
 }

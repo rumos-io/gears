@@ -17,7 +17,7 @@ use self::kind::MeterKind;
 use infinite_meter::InfiniteGasMeter;
 use tracing::debug;
 
-pub type FiniteGas = super::auth::gas::Gas;
+pub type FiniteGas = crate::Gas;
 
 #[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
 pub enum GasMeteringErrors {

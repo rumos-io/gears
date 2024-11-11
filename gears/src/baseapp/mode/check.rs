@@ -1,4 +1,7 @@
 use database::Database;
+use gas::metering::{
+    basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::BlockKind, Gas, GasMeter,
+};
 use kv_store::bank::multi::TransactionMultiBank;
 use tendermint::types::proto::event::Event;
 
@@ -7,13 +10,7 @@ use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::errors::RunTxError,
     context::{tx::TxContext, TransactionalContext},
-    types::{
-        gas::{
-            basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::BlockKind, Gas,
-            GasMeter,
-        },
-        tx::raw::TxWithRaw,
-    },
+    types::tx::raw::TxWithRaw,
 };
 
 /// Specific to `check_tx` ABCI method.

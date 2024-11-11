@@ -1,10 +1,9 @@
 use database::Database;
 use kv_store::bank::multi::ApplicationMultiBank;
 
-use crate::{
-    application::handlers::node::ABCIHandler,
-    types::gas::{basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, Gas, GasMeter},
-};
+use crate::application::handlers::node::ABCIHandler;
+
+use gas::metering::{basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, Gas, GasMeter};
 
 use super::mode::{check::CheckTxMode, deliver::DeliverTxMode};
 

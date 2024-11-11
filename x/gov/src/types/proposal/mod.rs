@@ -4,11 +4,12 @@ use chrono::{DateTime, SubsecRound, Utc};
 use gears::{
     core::{errors::CoreError, Protobuf},
     error::ProtobufError,
+    gas::store::errors::GasStoreErrors,
     store::database::Database,
     tendermint::types::time::timestamp::Timestamp,
     types::{
         base::coins::UnsignedCoins,
-        store::{gas::errors::GasStoreErrors, kv::Store, range::VectoredStoreRange},
+        store::{kv::Store, range::VectoredStoreRange},
         uint::Uint256,
     },
 };

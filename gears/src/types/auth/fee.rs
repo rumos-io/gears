@@ -14,7 +14,7 @@ use crate::types::base::coins::UnsignedCoins;
 use crate::types::base::errors::CoinError;
 use crate::types::base::errors::CoinsError;
 
-use super::gas::{Gas, GasError};
+use gas::{Gas, GasError};
 
 pub mod inner {
     pub use core_types::auth::Fee;

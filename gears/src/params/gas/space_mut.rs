@@ -1,9 +1,7 @@
 use database::Database;
+use gas::store::errors::GasStoreErrors;
 
-use crate::{
-    params::{parsed::Params, ParamKind, ParamsDeserialize, ParamsSerialize},
-    types::store::{gas::errors::GasStoreErrors, prefix::mutable::PrefixStoreMut},
-};
+use crate::{params::{parsed::Params, ParamKind, ParamsDeserialize, ParamsSerialize}, types::store::prefix::mutable::PrefixStoreMut};
 
 use super::space::GasParamsSpace;
 

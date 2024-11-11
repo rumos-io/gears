@@ -1,8 +1,9 @@
 use std::borrow::Cow;
 
 use gears::{
+    gas::store::errors::GasStoreErrors,
     store::database::Database,
-    types::store::{gas::errors::GasStoreErrors, kv::Store, range::VectoredStoreRange},
+    types::store::{kv::Store, range::VectoredStoreRange},
 };
 
 use crate::{errors::SERDE_JSON_CONVERSION, msg::weighted_vote::MsgVoteWeighted};

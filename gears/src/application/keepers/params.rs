@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use database::Database;
+use gas::store::errors::GasStoreErrors;
 use kv_store::StoreKey;
 
 use crate::{
@@ -10,7 +11,6 @@ use crate::{
         infallible_subspace, infallible_subspace_mut, ParamsDeserialize, ParamsSerialize,
         ParamsSubspaceKey,
     },
-    types::store::gas::errors::GasStoreErrors,
 };
 
 pub trait ParamsKeeper<PSK: ParamsSubspaceKey> {

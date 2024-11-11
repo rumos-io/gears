@@ -1,12 +1,11 @@
 use database::Database;
+use gas::metering::{
+    basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::BlockKind, Gas, GasMeter,
+};
 use kv_store::bank::multi::TransactionMultiBank;
 use tendermint::types::proto::event::Event;
 
 use super::ExecutionMode;
-use crate::types::gas::basic_meter::BasicGasMeter;
-use crate::types::gas::infinite_meter::InfiniteGasMeter;
-use crate::types::gas::kind::BlockKind;
-use crate::types::gas::{Gas, GasMeter};
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::errors::RunTxError,

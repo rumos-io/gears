@@ -2,6 +2,7 @@ use std::{collections::HashMap, marker::PhantomData, ops::Mul};
 
 use gears::core::errors::CoreError;
 use gears::extensions::gas::GasResultExt;
+use gears::gas::store::errors::GasStoreErrors;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::{
     application::keepers::params::ParamsKeeper,
@@ -15,7 +16,6 @@ use gears::{
     types::{
         address::{AccAddress, ValAddress},
         decimal256::Decimal256,
-        store::gas::errors::GasStoreErrors,
     },
     x::{
         keepers::{gov::GovernanceBankKeeper, staking::GovStakingKeeper},

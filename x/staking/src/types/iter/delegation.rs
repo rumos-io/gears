@@ -2,10 +2,11 @@ use crate::{consts::keeper::DELEGATION_KEY, Delegation};
 use gears::{
     core::Protobuf,
     extensions::corruption::UnwrapCorrupt,
+    gas::store::errors::GasStoreErrors,
     store::database::Database,
     types::{
         address::AccAddress,
-        store::{gas::errors::GasStoreErrors, kv::Store, range::VectoredStoreRange},
+        store::{kv::Store, range::VectoredStoreRange},
     },
 };
 use std::borrow::Cow;

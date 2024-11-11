@@ -134,7 +134,7 @@ impl MintingStakingKeeper<SpaceKey, Modules> for MockStakingKeeper {
     >(
         &self,
         _ctx: &CTX,
-    ) -> Result<gears::types::denom::Denom, gears::types::store::gas::errors::GasStoreErrors> {
+    ) -> Result<gears::types::denom::Denom, gears::gas::store::errors::GasStoreErrors> {
         Ok(Denom::from_str("uatom").unwrap_test())
     }
 
@@ -144,10 +144,8 @@ impl MintingStakingKeeper<SpaceKey, Modules> for MockStakingKeeper {
     >(
         &self,
         _ctx: &CTX,
-    ) -> Result<
-        gears::types::decimal256::Decimal256,
-        gears::types::store::gas::errors::GasStoreErrors,
-    > {
+    ) -> Result<gears::types::decimal256::Decimal256, gears::gas::store::errors::GasStoreErrors>
+    {
         Ok(*self.total_bonded_tokens.acquire_read())
     }
 }
@@ -234,7 +232,7 @@ impl BankKeeper<SpaceKey, Modules> for MockBankKeeper {
         _base: &gears::types::denom::Denom,
     ) -> Result<
         Option<gears::types::tx::metadata::Metadata>,
-        gears::types::store::gas::errors::GasStoreErrors,
+        gears::gas::store::errors::GasStoreErrors,
     > {
         todo!()
     }
@@ -277,7 +275,7 @@ impl BalancesKeeper<SpaceKey, Modules> for MockBankKeeper {
             Option<gears::extensions::pagination::PaginationResult>,
             Vec<gears::types::base::coin::UnsignedCoin>,
         ),
-        gears::types::store::gas::errors::GasStoreErrors,
+        gears::gas::store::errors::GasStoreErrors,
     > {
         todo!()
     }
@@ -291,7 +289,7 @@ impl BalancesKeeper<SpaceKey, Modules> for MockBankKeeper {
         _denom: &gears::types::denom::Denom,
     ) -> Result<
         Option<gears::types::base::coin::UnsignedCoin>,
-        gears::types::store::gas::errors::GasStoreErrors,
+        gears::gas::store::errors::GasStoreErrors,
     > {
         Ok(self.supply.acquire_read().clone())
     }

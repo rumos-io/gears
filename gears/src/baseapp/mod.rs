@@ -11,14 +11,12 @@ use crate::{
     context::{query::QueryContext, simple::SimpleContext, tx::TxContext},
     error::POISONED_LOCK,
     params::ParamsSubspaceKey,
-    types::{
-        gas::{descriptor::BLOCK_GAS_DESCRIPTOR, kind::BlockKind, FiniteGas, Gas, GasMeter},
-        tx::raw::TxWithRaw,
-    },
+    types::tx::raw::TxWithRaw,
 };
 use bytes::Bytes;
 use database::Database;
 use errors::QueryError;
+use gas::metering::{descriptor::BLOCK_GAS_DESCRIPTOR, kind::BlockKind, FiniteGas, Gas, GasMeter};
 use kv_store::{
     bank::multi::{ApplicationMultiBank, TransactionMultiBank},
     query::QueryMultiStore,

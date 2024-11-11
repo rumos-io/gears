@@ -1902,6 +1902,21 @@ version = "0.1.0"
 source = "git+https://github.com/NYBACHOK/gancellation-token.git#9e42b37bfa569a0d8aa2c09ebe025b4274aead68"
 
 [[package]]
+name = "gas"
+version = "0.1.0"
+dependencies = [
+ "core-types",
+ "cosmwasm-std",
+ "database",
+ "derive_more 1.0.0",
+ "extensions",
+ "kv_store",
+ "thiserror",
+ "tracing",
+ "ux",
+]
+
+[[package]]
 name = "gears"
 version = "0.1.0"
 dependencies = [
@@ -1922,6 +1937,7 @@ dependencies = [
  "dirs",
  "extensions",
  "former",
+ "gas",
  "handlebars",
  "hex 0.4.3",
  "http 0.2.12",

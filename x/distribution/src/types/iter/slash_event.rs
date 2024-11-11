@@ -4,14 +4,12 @@ use gears::{
     context::QueryableContext,
     core::Protobuf,
     extensions::corruption::UnwrapCorrupt,
+    gas::store::errors::GasStoreErrors,
     store::{
         database::{prefix::PrefixDB, Database},
         StoreKey,
     },
-    types::{
-        address::ValAddress,
-        store::{gas::errors::GasStoreErrors, range::VectoredStoreRange},
-    },
+    types::{address::ValAddress, store::range::VectoredStoreRange},
 };
 
 use crate::{keys::validator_slash_event_key_prefix, ValidatorSlashEvent};

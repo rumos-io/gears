@@ -3,6 +3,7 @@ use std::collections::HashSet;
 
 use gears::context::InfallibleContext;
 use gears::context::InfallibleContextMut;
+use gears::gas::store::errors::GasStoreErrors;
 use gears::params::gas;
 use gears::params::infallible_subspace;
 use gears::params::infallible_subspace_mut;
@@ -10,7 +11,6 @@ use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
 use gears::params::ParamsSubspaceKey;
-use gears::types::store::gas::errors::GasStoreErrors;
 use gears::{
     context::{QueryableContext, TransactionalContext},
     store::{

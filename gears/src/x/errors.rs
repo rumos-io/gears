@@ -2,17 +2,16 @@ use std::{fmt::Display, num::NonZero};
 
 use address::{AccAddress, BaseAddress};
 use cosmwasm_std::Uint256;
+use gas::{
+    metering::GasMeteringErrors,
+    store::errors::{GasStoreErrorKinds, GasStoreErrors},
+};
 use thiserror::Error;
 
 use crate::{
     application::handlers::node::TxError,
     signing::{errors::SigningErrors, renderer::amino_renderer::RenderError},
-    types::{
-        base::errors::CoinsError,
-        denom::Denom,
-        gas::GasMeteringErrors,
-        store::gas::errors::{GasStoreErrorKinds, GasStoreErrors},
-    },
+    types::{base::errors::CoinsError, denom::Denom},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, thiserror::Error)]

@@ -13,8 +13,8 @@ use crate::crypto::keys::GearsPublicKey;
 use crate::crypto::ledger::LedgerProxyKey;
 use crate::runtime::runtime;
 use crate::types::auth::fee::Fee;
-use crate::types::auth::gas::Gas;
 use crate::types::tx::raw::TxRaw;
+use gas::Gas;
 
 use super::keys::KeyringBackend;
 

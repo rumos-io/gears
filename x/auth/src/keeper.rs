@@ -3,6 +3,7 @@ use crate::{AuthParamsKeeper, AuthsParams};
 use bytes::Bytes;
 use gears::context::init::InitContext;
 use gears::extensions::gas::GasResultExt;
+use gears::gas::store::errors::GasStoreErrors;
 use prost::Message;
 
 use gears::application::keepers::params::ParamsKeeper;
@@ -16,7 +17,6 @@ use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::types::account::{Account, BaseAccount, ModuleAccount};
 use gears::types::address::AccAddress;
-use gears::types::store::gas::errors::GasStoreErrors;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
 

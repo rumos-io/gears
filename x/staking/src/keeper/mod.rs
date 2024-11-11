@@ -12,6 +12,7 @@ use gears::{
         QueryableContext, TransactionalContext,
     },
     extensions::gas::GasResultExt,
+    gas::store::errors::GasStoreErrors,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -25,7 +26,6 @@ use gears::{
         address::{AccAddress, ValAddress},
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
         decimal256::Decimal256,
-        store::gas::errors::GasStoreErrors,
         uint::Uint256,
     },
     x::{
