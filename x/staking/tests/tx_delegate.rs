@@ -23,7 +23,7 @@ mod utils;
 const GENESIS_FILE_PATH: &str = "./tests/assets/tx_edit_validator.json";
 
 #[test]
-fn create_validator_unbounded() {
+fn create_delegation() {
     let mut node: gears::utils::node::MockNode<
         gears::baseapp::BaseApp<
             gears::store::database::MemDB,
@@ -101,5 +101,47 @@ fn create_validator_unbounded() {
             balance: Some(UnsignedCoin::from_str("1000uatom").unwrap_test())
         }),
         delegation_response
+    );
+}
+
+#[test]
+fn create_delegation_fails_due_non_existed_validator() {
+    let mut node: gears::utils::node::MockNode<
+        gears::baseapp::BaseApp<
+            gears::store::database::MemDB,
+            utils::SubspaceKey,
+            utils::MockStakingAbciHandler,
+            gears::utils::node::MockApplication,
+        >,
+        utils::GenesisState,
+    > = set_node(GenesisSource::File(GENESIS_FILE_PATH.into()));
+
+    let _ = node.step(vec![], Timestamp::UNIX_EPOCH);
+
+    let user_0 = User::from_bech32(USER_0, 1).unwrap_test();
+    let user_1 = User::from_bech32(USER_1, 1).unwrap_test();
+
+    let msg = Message::Delegate(DelegateMsg {
+        validator_address: user_1.address().into(),
+        amount: "1000uatom".parse().expect("hardcoded is valid"),
+        delegator_address: user_0.address(),
+    });
+
+    let txs = generate_tx(vec1::vec1![msg], 0, &user_0, node.chain_id().clone());
+
+    let StepResponse {
+        app_hash,
+        mut tx_responses,
+        height: _,
+    } = node.step(vec![txs], Timestamp::UNIX_EPOCH);
+
+    let ResponseDeliverTx { code, log, .. } = tx_responses.pop().unwrap_test();
+
+    assert!(code != 0, "tx log: {log}");
+    assert_eq!(log, "account not found");
+
+    assert_eq!(
+        data_encoding::HEXLOWER.encode(&app_hash),
+        "0ecaa53faf2584b6d5af8addc4e8afa8854305cc9cd4276a8106110452cc9828"
     );
 }
